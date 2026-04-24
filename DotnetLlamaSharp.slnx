@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DotnetLlamaSharp.Domain/DotnetLlamaSharp.Domain.csproj" />
+  <Project Path="DotnetLlamaSharp.Infrastructure/DotnetLlamaSharp.Infrastructure.csproj" />
+  <Project Path="DotnetLlamaSharp/DotnetLlamaSharp.csproj" />
+</Solution>
