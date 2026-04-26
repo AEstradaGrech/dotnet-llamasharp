@@ -14,10 +14,10 @@ namespace DotnetLlamaSharp.Services
             _logger = logger;
         }
 
-        public async Task<EmbeddingsResponse> GenerateEmbeddings(string text, int? dimensions, string? model)
+        public async Task<ModelEmbeddings> GenerateEmbeddings(string text, int? dimensions, string? model)
             => await GenerateEmbeddings(string.IsNullOrEmpty(text) ? new List<string>() : new List<string> { text }, dimensions, model);
 
-        public async Task<EmbeddingsResponse> GenerateEmbeddings(List<string> texts, int? dimensions = null, string? model = null)
+        public async Task<ModelEmbeddings> GenerateEmbeddings(List<string> texts, int? dimensions = null, string? model = null)
         {
             if (texts.Count() == 0)
                 throw new InvalidOperationException("No texts to embed found");
@@ -34,7 +34,7 @@ namespace DotnetLlamaSharp.Services
             for (int i = 0; i < texts.Count(); i++)
                 textEmbeddings.Add(new TextEmbedding(texts[i], result[i].Vector, result[i].Dimensions));
 
-            return new EmbeddingsResponse { Model = sample.ModelId ?? "default", GeneratedEmbeddings = textEmbeddings };
+            return new ModelEmbeddings { Model = sample.ModelId ?? "default", GeneratedEmbeddings = textEmbeddings };
         }
     }
 }

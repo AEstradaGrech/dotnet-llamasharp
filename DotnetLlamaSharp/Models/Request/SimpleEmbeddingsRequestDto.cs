@@ -1,6 +1,6 @@
 ﻿namespace DotnetLlamaSharp.Models.Request
 {
-    public class SimpleEmbeddingsRequest
+    public class SimpleEmbeddingsRequestDto
     {
         public string? Model { get; set; } = null;
         public int? Dimensions { get; set; } = null;

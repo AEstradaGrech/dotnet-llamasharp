@@ -48,6 +48,7 @@ try
         .AddOllamaEmbeddingsGenerator(builder.Configuration)
         .AddChromaClient(builder.Configuration)
         .AddPdfDocumentLoader()
+        .AddWordDocumentLoader()
         .AddAutoMapper(cfg => {
             cfg.AddMaps(new[] {
                 typeof(DocumentsMappingProfile)

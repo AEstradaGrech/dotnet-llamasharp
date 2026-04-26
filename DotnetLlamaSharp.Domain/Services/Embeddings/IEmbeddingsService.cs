@@ -7,7 +7,7 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
 {
     public interface IEmbeddingsService
     {
-        Task<EmbeddingsResponse> GenerateEmbeddings(string text, int? dimensions = null, string? model = null);
-        Task<EmbeddingsResponse> GenerateEmbeddings(List<string> texts, int? dimensions = null, string? model = null);
+        Task<ModelEmbeddings> GenerateEmbeddings(string text, int? dimensions = null, string? model = null);
+        Task<ModelEmbeddings> GenerateEmbeddings(List<string> texts, int? dimensions = null, string? model = null);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Primitives.Embeddings;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;
@@ -23,11 +24,11 @@ namespace DotnetLlamaSharp.Mappers
             //Domain Object to DTO
             CreateMap<ChatMessage, ChatMessageDto>()
                 .ReverseMap();
-            CreateMap<ChatPromptResponse, ChatPromptResponseDto>();
+            CreateMap<ChatPrompt, ChatPromptResponseDto>();
             //DTO to Domain Object
             CreateMap<ChatPromptRequestDto, ChatPromptRequest>();
 
-            CreateMap<EmbeddingsResponse, EmbeddingsResponseDto>()
+            CreateMap<ModelEmbeddings, EmbeddingsResponseDto>()
                 .ForMember(dest => dest.Dimensions, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.First().Dimensions : 0))
                 .ForMember(dest => dest.Embeddings, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.Select(x => x.Vector) : new List<ReadOnlyMemory<float>>()));
         }

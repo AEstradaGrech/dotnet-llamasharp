@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Common;
@@ -39,7 +40,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             => await _embeddingsGenerator.GenerateAsync(texts);
 
         // call to '/api/generate' endpoint for single Q&A inference
-        public async Task<ChatPromptResponse> SimplePrompt(ChatPromptRequest request)
+        public async Task<ChatPrompt> SimplePrompt(ChatPromptRequest request)
         {
             if (string.IsNullOrEmpty(request.SystemMessage))
                 request.SystemMessage = "You are a helpful assistant";
@@ -53,7 +54,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             request.ChatHistory.Add(_mapper.Map<Message, ChatMessage>(response));
 
-            return new ChatPromptResponse { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
+            return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
         }
 
         public IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(ChatPromptRequest request)
@@ -61,7 +62,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
 
         // call to '/api/chat' endpoint to handle user-assistant chat turns
-        public async Task<ChatPromptResponse> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate)
+        public async Task<ChatPrompt> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate)
         {
             var sb = new System.Text.StringBuilder();
 
@@ -71,7 +72,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             request.ChatHistory.Add(_mapper.Map<Message, ChatMessage>(response));
 
-            return new ChatPromptResponse { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
+            return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
         }
 
         public IAsyncEnumerable<ChatResponseStream?> ChatPromptStream(ChatPromptRequest request, bool bWithSysmsgUpdate = false)

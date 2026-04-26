@@ -1,7 +1,7 @@
 ﻿
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {
-    public class ChatPromptResponse
+    public class ChatPrompt
     {
         public string Model { get; set; }
         public string Input { get; set; }

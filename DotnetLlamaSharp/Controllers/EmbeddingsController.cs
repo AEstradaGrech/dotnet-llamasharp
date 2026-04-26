@@ -18,12 +18,12 @@ namespace DotnetLlamaSharp.Controllers
         private readonly IMapper _mapper = mapper;
 
         [HttpPost("/embeddings/text")]
-        public async Task<IActionResult> EmbedText([FromBody] SimpleEmbeddingsRequest request)
-            => Ok(_mapper.Map<EmbeddingsResponse, EmbeddingsResponseDto>(await _service.GenerateEmbeddings(request.Texts.Any() ? request.Texts.FirstOrDefault() : "", request.Dimensions, request.Model)));
+        public async Task<IActionResult> EmbedText([FromBody] SimpleEmbeddingsRequestDto request)
+            => Ok(_mapper.Map<ModelEmbeddings, EmbeddingsResponseDto>(await _service.GenerateEmbeddings(request.Texts.Any() ? request.Texts.FirstOrDefault() : "", request.Dimensions, request.Model)));
 
         [HttpPost("/embeddings/texts")]
-        public async Task<IActionResult> EmbedTexts([FromBody] SimpleEmbeddingsRequest request)
-            => Ok(_mapper.Map<EmbeddingsResponse, EmbeddingsResponseDto>(await _service.GenerateEmbeddings(request.Texts, request.Dimensions, request.Model)));
+        public async Task<IActionResult> EmbedTexts([FromBody] SimpleEmbeddingsRequestDto request)
+            => Ok(_mapper.Map<ModelEmbeddings, EmbeddingsResponseDto>(await _service.GenerateEmbeddings(request.Texts, request.Dimensions, request.Model)));
 
         [HttpPost("/embeddings/request")]
         public async Task<IActionResult> GetEmbeddings([FromBody] EmbedRequest request)

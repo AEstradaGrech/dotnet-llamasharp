@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+
+namespace DotnetLlamaSharp.Domain.Models.Request
 {
     public class ChatPromptRequest
     {

@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
 using Microsoft.AspNetCore.Mvc;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using Microsoft.SemanticKernel.Connectors.Chroma;
 #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 namespace DotnetLlamaSharp.Domain.Repositories.Chroma
@@ -9,8 +10,12 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
     {
         Task<IAsyncEnumerable<string>> GetDbCollections();
 
-        Task<ChromaCollectionModel> GetCollection(string collectionName);
-        Task<string> CreateCollection(string collectionName);
+        Task<ChromaCollectionModel> GetCollection(string collection);
+        Task<ChromaCollectionModel> CreateCollection(string collection);
+        Task<bool> DeleteCollection(string collection);
+        Task<ChromaChunk> GetChunkById(string collection, string id);
+        Task<ChromaChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true);
+        Task<bool> DeleteChunk(string collection, string id);
         /*
           CreateCollectionAsync(String, CancellationToken)	
             Creates Chroma collection.
