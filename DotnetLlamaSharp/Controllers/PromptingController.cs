@@ -1,6 +1,7 @@
-﻿using DotnetLlamaSharp.Models.Api.Prompting.Request;
-using DotnetLlamaSharp.Services.Inference.Interfaces;
-using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Services.Prompting;
+using DotnetLlamaSharp.Models.Request;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -8,31 +9,41 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PromptingController(IOllamaSharpService ollamaService, ILogger<PromptingController> logger) : ControllerBase
+    public class PromptingController(IOllamaSharpService ollamaService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
     {
         private readonly IOllamaSharpService _ollamaService = ollamaService;
+        private readonly IMapper _mapper = mapper;
         private readonly ILogger<PromptingController> _logger = logger;
 
-        [HttpGet("/test-stream")]
-        public async Task TestStream()
-        {
-            Response.StatusCode = (int)HttpStatusCode.OK;
-            Response.ContentType = "text/event-stream";
-            var stream = _ollamaService.ChatPromptStream(new ChatPromptRequest { Model = "llama3.1:8b", Prompt = "Hi", SystemMessage = "You are Josef K., main character of The Process, by Kafka" });
-            await foreach (var chunk in stream.WithCancellation(HttpContext.RequestAborted))
-            {
-                if (chunk == null) continue;
-                _logger.LogInformation(chunk.Message.Content);
-                var bytes = System.Text.Encoding.UTF8.GetBytes(chunk.Message.Content ?? string.Empty);
-                await Response.Body.WriteAsync(bytes, 0, bytes.Length, HttpContext.RequestAborted);
-                await Response.Body.FlushAsync(HttpContext.RequestAborted);
-            }
-        }
+        //[HttpGet("/test-stream")]
+        //public async Task TestStream()
+        //{
+        //    Response.StatusCode = (int)HttpStatusCode.OK;
+        //    Response.ContentType = "text/event-stream";
+        //    var stream = _ollamaService.ChatPromptStream(new ChatPromptRequestDto { Model = "llama3.1:8b", Prompt = "Hi", SystemMessage = "You are Josef K., main character of The Process, by Kafka" });
+        //    await foreach (var chunk in stream.WithCancellation(HttpContext.RequestAborted))
+        //    {
+        //        if (chunk == null) continue;
+        //        _logger.LogInformation(chunk.Message.Content);
+        //        var bytes = System.Text.Encoding.UTF8.GetBytes(chunk.Message.Content ?? string.Empty);
+        //        await Response.Body.WriteAsync(bytes, 0, bytes.Length, HttpContext.RequestAborted);
+        //        await Response.Body.FlushAsync(HttpContext.RequestAborted);
+        //    }
+        //}
+        //[HttpGet("/test-embeddings")]
+        //public async Task<IActionResult> TestEmbeddings()
+        //{
+        //    var result = await _ollamaService.GenerateEmbeddings("Mi barba tiene tres pelos");
 
+        //    if (result != null)
+        //        return Ok(result);
+
+        //    return StatusCode((int)HttpStatusCode.InternalServerError);
+        //}
         [HttpPost("/simple/prompt")]
-        public async Task<IActionResult> SimplePrompt([FromBody]ChatPromptRequest request)
+        public async Task<IActionResult> SimplePrompt([FromBody]ChatPromptRequestDto request)
         {
-            var response = await _ollamaService.SimplePrompt(request);
+            var response = await _ollamaService.SimplePrompt(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request));
 
             if (response != null)
                 return Ok(response);
@@ -41,14 +52,14 @@ namespace DotnetLlamaSharp.Controllers
         }
 
         [HttpPost("/simple/prompt/stream")]
-        public async Task SimplePromptStream([FromBody] ChatPromptRequest request)
+        public async Task SimplePromptStream([FromBody] ChatPromptRequestDto request)
         {
             Response.StatusCode = (int)HttpStatusCode.OK;
             Response.ContentType = "text/event-stream";
 
             // Get the streaming enumerable from the service.
             // returns the _client.GenerateAsync(...) enumerable directly so the controller can iterate the stream.
-            var stream = _ollamaService.SimplePromptStream(request);
+            var stream = _ollamaService.SimplePromptStream(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request));
 
             try
             {
@@ -76,9 +87,9 @@ namespace DotnetLlamaSharp.Controllers
         }
 
         [HttpPost("/chat/prompt")]
-        public async Task<IActionResult> ChatPrompt([FromBody] ChatPromptRequest request)
+        public async Task<IActionResult> ChatPrompt([FromBody] ChatPromptRequestDto request)
         {
-            var response = await _ollamaService.ChatPrompt(request);
+            var response = await _ollamaService.ChatPrompt(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request));
 
             if (response != null)
                 return Ok(response);
@@ -87,9 +98,9 @@ namespace DotnetLlamaSharp.Controllers
         }
 
         [HttpPost("/guided/chat/prompt")]
-        public async Task<IActionResult> GuidedChatPrompt([FromBody] ChatPromptRequest request)
+        public async Task<IActionResult> GuidedChatPrompt([FromBody] ChatPromptRequestDto request)
         {
-            var response = await _ollamaService.ChatPrompt(request, bWithSysmsgUpdate: true);
+            var response = await _ollamaService.ChatPrompt(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request), bWithSysmsgUpdate: true);
 
             if (response != null)
                 return Ok(response);

@@ -1,4 +1,5 @@
 using DotnetLlamaSharp.Extensions;
+using DotnetLlamaSharp.Mappers;
 using Microsoft.Extensions.DependencyModel;
 using Microsoft.OpenApi;
 using Serilog;
@@ -42,7 +43,16 @@ try
     //builder.Services.AddOpenApi();
 
     builder.Services
+        .AddConfigurations(builder.Configuration)
         .AddOllamaSharpApiClient(builder.Configuration)
+        .AddOllamaEmbeddingsGenerator(builder.Configuration)
+        .AddChromaClient(builder.Configuration)
+        .AddPdfDocumentLoader()
+        .AddAutoMapper(cfg => {
+            cfg.AddMaps(new[] {
+                typeof(DocumentsMappingProfile)
+            });
+        })
         .AddServicesFromAssemblies(DependencyContext.Default.RuntimeLibraries
             .SelectMany(lib => lib.GetDefaultAssemblyNames(DependencyContext.Default)
                 .Where(x => x.Name.Contains(Assembly.GetEntryAssembly().GetName().Name))
@@ -51,7 +61,7 @@ try
         .AddCorsPolicy()
         //.AddEndpointsApiExplorer()
         .AddSwaggerGen(cfg => {
-            cfg.SwaggerDoc("Healthcheck", new OpenApiInfo { Title = "Healthcheck", Version = "v1" });
+            cfg.SwaggerDoc("ApiManagement", new OpenApiInfo { Title = "ApiManagement", Version = "v1" });
             cfg.SwaggerDoc("Prompting", new OpenApiInfo { Title = "Prompting", Version = "v1" });
         });
     
@@ -62,7 +72,7 @@ try
 
     app.UseSwagger()
        .UseSwaggerUI(cfg => {
-        cfg.SwaggerEndpoint("/swagger/Healthcheck/swagger.json", "Healthcheck");
+        cfg.SwaggerEndpoint("/swagger/ApiManagement/swagger.json", "ApiManagement");
         cfg.SwaggerEndpoint("/swagger/Prompting/swagger.json", "Prompting");
        });
     

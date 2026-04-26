@@ -1,4 +1,4 @@
-﻿namespace DotnetLlamaSharp.Models.Api.Prompting
+﻿namespace DotnetLlamaSharp.Models.Common
 {
     public class ChatMessageDto
     {
@@ -6,9 +6,9 @@
         public ChatMessageDto(string role, string message)
         {
             Role = role;
-            Message = message;
+            Content = message;
         }
         public string Role { get; set; }
-        public string Message { get; set; }
+        public string Content { get; set; }
     }
 }

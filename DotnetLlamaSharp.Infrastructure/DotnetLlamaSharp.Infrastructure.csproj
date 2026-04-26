@@ -7,7 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Settings\" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.7" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Chroma" Version="1.74.0-alpha" />
+    <PackageReference Include="OllamaSharp" Version="5.4.25" />
+    <PackageReference Include="PdfPig" Version="0.1.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotnetLlamaSharp.Domain\DotnetLlamaSharp.Domain.csproj" />
   </ItemGroup>
 
 </Project>

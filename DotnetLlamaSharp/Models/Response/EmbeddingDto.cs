@@ -1,0 +1,4 @@
+﻿namespace DotnetLlamaSharp.Models.Response
+{
+    
+}

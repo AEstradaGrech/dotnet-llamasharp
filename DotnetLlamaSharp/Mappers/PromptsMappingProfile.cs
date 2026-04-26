@@ -1,0 +1,35 @@
+﻿using AutoMapper;
+using DotnetLlamaSharp.Domain.Models.Primitives.Embeddings;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Models.Common;
+using DotnetLlamaSharp.Models.Request;
+using DotnetLlamaSharp.Models.Response;
+using OllamaSharp.Models.Chat;
+
+namespace DotnetLlamaSharp.Mappers
+{
+    public class PromptsMappingProfile : Profile
+    {
+        public PromptsMappingProfile()
+        {
+            //Ollama Model to Domain Object
+            CreateMap<Message, ChatMessage>()
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
+            
+            //Domain Object to OllamaModels
+            CreateMap<ChatMessage, Message>()
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => new ChatRole(src.Role)));
+
+            //Domain Object to DTO
+            CreateMap<ChatMessage, ChatMessageDto>()
+                .ReverseMap();
+            CreateMap<ChatPromptResponse, ChatPromptResponseDto>();
+            //DTO to Domain Object
+            CreateMap<ChatPromptRequestDto, ChatPromptRequest>();
+
+            CreateMap<EmbeddingsResponse, EmbeddingsResponseDto>()
+                .ForMember(dest => dest.Dimensions, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.First().Dimensions : 0))
+                .ForMember(dest => dest.Embeddings, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.Select(x => x.Vector) : new List<ReadOnlyMemory<float>>()));
+        }
+    }
+}

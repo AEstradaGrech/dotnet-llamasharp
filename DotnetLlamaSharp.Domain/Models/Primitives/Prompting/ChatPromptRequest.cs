@@ -1,4 +1,4 @@
-﻿namespace DotnetLlamaSharp.Models.Api.Prompting.Request
+﻿namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {
     public class ChatPromptRequest
     {
@@ -7,6 +7,6 @@
         public string Model { get; set; } = string.Empty;
         public int MaxTokens { get; set; } = 600;  
         public float Temperature { get; set; } = 0.7f;
-        public List<ChatMessageDto> ChatHistory { get; set; } = new List<ChatMessageDto>();
+        public List<ChatMessage> ChatHistory { get; set; } = new List<ChatMessage>();
     }
 }

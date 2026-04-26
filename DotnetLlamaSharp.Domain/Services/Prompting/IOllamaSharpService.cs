@@ -1,12 +1,9 @@
-﻿using DotnetLlamaSharp.Models.Api.Prompting.Request;
-using DotnetLlamaSharp.Models.Api.Prompting.Response;
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using MicrosoftAI = Microsoft.Extensions.AI;
 
-namespace DotnetLlamaSharp.Services.Inference.Interfaces
+namespace DotnetLlamaSharp.Domain.Services.Prompting
 {
     public interface IOllamaSharpService
     {
@@ -14,5 +11,6 @@ namespace DotnetLlamaSharp.Services.Inference.Interfaces
         IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(ChatPromptRequest request);
         Task<ChatPromptResponse> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         IAsyncEnumerable<ChatResponseStream?> ChatPromptStream(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
+        Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request);
     }
 }

@@ -1,0 +1,28 @@
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
+
+namespace DotnetLlamaSharp.Domain.Services.DocumentLoader
+{
+    public abstract class BaseDocumentLoader
+    {
+        protected readonly string _basePath;
+        public BaseDocumentLoader(string docsFolder)
+        {
+            _basePath = Path.Combine(
+               Directory.GetParent(Directory.GetCurrentDirectory()).FullName,
+               "DotnetLlamaSharp.Infrastructure",
+               "Data",
+               "Resources",
+                docsFolder
+           );
+        }
+        public abstract Task<Document> LoadDocument(string fileName);
+        public abstract Task<DocumentPage> LoadPage(string fileName, int page);
+        public abstract Task<List<DocumentPage>> LoadPages(string fileName, int startIndex, int batchSize);
+
+        protected void validate(string loaderName)
+        {
+            if (string.IsNullOrEmpty(_basePath))
+                throw new ArgumentNullException($"No folder path specified for {loaderName} loader");
+        }
+    }
+}
