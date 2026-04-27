@@ -1,4 +1,5 @@
 ﻿
+using DocumentFormat.OpenXml.Wordprocessing;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Infrastructure.Settings;
@@ -28,31 +29,81 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         public async Task<IAsyncEnumerable<string>> GetDbCollections()
             => _dbClient.ListCollectionsAsync();
 
-        public async Task<ChromaCollectionModel> GetCollection(string collectionName)
-            => await _dbClient.GetCollectionAsync(collectionName);
-
-        public async Task<ChromaCollectionModel> CreateCollection(string collectionName)
+        public async Task<ChromaCollection> GetCollection(string name)
         {
-            try
-            {
-                var collection = await _dbClient.GetCollectionAsync(collectionName);
+            var collection = await _dbClient.GetCollectionAsync(name);
 
-                if (collection != null)
-                    throw new InvalidOperationException($"Collection {collectionName} already exists");
-
-                await _dbClient.CreateCollectionAsync(collectionName);
-                
-                return await GetCollection(collectionName);
-            }
-            catch (Exception ex)
+            if(collection != null)
             {
-                _logger.LogError($"{nameof(ChromaRepository)} >> {nameof(CreateCollection)} >> {ex.Message}");
-                throw new InvalidOperationException($"An error has occured while creating the ChromaDB collection: {collectionName}");
+                var data = await GetChunkById(name, "0");
+
+                if (data == null)
+                    throw new ArgumentNullException($"{nameof(GetCollection)} >> no collection data found ");
+
+                return new ChromaCollection { Id = collection.Id, Name = collection.Name, Metadata = data.Metadata };
             }
+
+            return null;
+        }
+
+        public async Task<bool> CollectionExists(string name)
+        {
+            var collection = await _dbClient.GetCollectionAsync(name);
+
+            return collection != null;
+        }
+
+        public async Task<ChromaCollection> CreateCollection(string name, string description)
+        {
+            var metadata = new Dictionary<string, object>
+            {
+                { "name", name },
+                { "description", description },
+                { "chunks", 0 }
+            };
+
+            return await CreateCollection(name, new ChromaChunk { Id = "0", Text = description, Metadata = metadata });
+        }
+
+        public async Task<ChromaCollection> CreateCollection(string name, ChromaChunk data)
+        {
+            if(await CollectionExists(name))
+                throw new InvalidDataException("An error has occured while creating the chroma collection: a collection with name {name} already exists");
+
+            await _dbClient.CreateCollectionAsync(name);
+
+            var collection = await _dbClient.GetCollectionAsync(name);
+
+            if (collection == null)
+                throw new ArgumentNullException($"An error has occured while creating the chroma collection: {name}");
+
+            if (!data.Metadata.ContainsKey("name"))
+                data.Metadata.Add("name", name);
+
+            if (!data.Metadata.ContainsKey("chunks"))
+                data.Metadata.Add("chunks", 0);
+            
+            if (!string.IsNullOrEmpty(data.Text) && !data.Metadata.ContainsKey("description"));
+                data.Metadata.Add("description", data.Text);
+
+            data.Id = "0";
+            data.Embedding = null;
+
+            await _dbClient.UpsertEmbeddingsAsync(name, [data.Id], [], data.MetadataArray);
+
+            var dataInsert = await getCollectionData(name);
+
+            if (dataInsert == null)
+                throw new InvalidDataException($"An error has occured while creating the collection {name}: Collection data insert is null");
+
+            return new ChromaCollection { Id = collection.Id, Name = name, Metadata = data.Metadata };
         }
 
         public async Task<ChromaChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true)
         {
+            if (!await CollectionExists(collection))
+                throw new InvalidOperationException($"No Chroma Collection has been found with name: {collection}");
+
             if (string.IsNullOrEmpty(chunk.Id))
                 throw new InvalidOperationException("Chroma chunk has no ID");
             
@@ -67,10 +118,18 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 chunk.Metadata.Add("text", chunk.Text);
             }
 
-            var metas = chunk.Metadata.Select(x => new { x.Key, x.Value }).ToArray();
-                await _dbClient.UpsertEmbeddingsAsync(collection, [chunk.Id], [chunk.Embedding], metas);
+            var current = await GetChunkById(collection, chunk.Id);
+
+            bool isInsert = chunk == null;
+            
+            var metas = chunk.MetadataArray;
+                
+            await _dbClient.UpsertEmbeddingsAsync(collection, [chunk.Id], [chunk.Embedding], metas);
             
             var upsert = await _dbClient.GetEmbeddingsAsync(collection, [chunk.Id]);
+
+            if (isInsert)
+                await updateCollectionChunksCount(collection, bIncrease: true);
 
             return await GetChunkById(collection, chunk.Id);
         }
@@ -107,7 +166,30 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var chunk = await GetChunkById(collection, id);
             
-            return chunk == null;
+            bool bSucceeded = chunk == null;
+
+            if (bSucceeded)
+                await updateCollectionChunksCount(collection, bIncrease: false);
+
+            return bSucceeded;
         }
+
+        private async Task<int> updateCollectionChunksCount(string name, bool bIncrease)
+        {
+            var collectionChunk = await getCollectionData(name);
+
+            int chunks = Convert.ToInt32(collectionChunk.Metadata["chunks"]) + (bIncrease ? 1 : -1);
+
+            collectionChunk.Metadata["chunks"] = chunks;
+
+            await _dbClient.UpsertEmbeddingsAsync(name, ["0"], [], collectionChunk.MetadataArray);
+
+            var update = await GetChunkById(name, "0");
+
+            return Convert.ToInt32(update.Metadata["chunks"]);
+        }
+
+        private async Task<ChromaChunk> getCollectionData(string collection)
+            => await GetChunkById(collection, "0");
     }
 }

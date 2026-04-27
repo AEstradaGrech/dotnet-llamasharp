@@ -2,7 +2,7 @@
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using Microsoft.Extensions.AI;
 
-namespace DotnetLlamaSharp.Services
+namespace DotnetLlamaSharp.Services.Embeddings
 {
     public class EmbeddingsService : IEmbeddingsService
     {

@@ -9,9 +9,10 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
     public interface IChromaRepository
     {
         Task<IAsyncEnumerable<string>> GetDbCollections();
-
-        Task<ChromaCollectionModel> GetCollection(string collection);
-        Task<ChromaCollectionModel> CreateCollection(string collection);
+        Task<bool> CollectionExists(string name);
+        Task<ChromaCollection> GetCollection(string collection);
+        Task<ChromaCollection> CreateCollection(string collection, string description);
+        Task<ChromaCollection> CreateCollection(string name, ChromaChunk data);
         Task<bool> DeleteCollection(string collection);
         Task<ChromaChunk> GetChunkById(string collection, string id);
         Task<ChromaChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true);
