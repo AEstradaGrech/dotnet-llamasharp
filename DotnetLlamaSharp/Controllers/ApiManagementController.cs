@@ -9,11 +9,11 @@ namespace DotnetLlamaSharp.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class ApiManagementController(IOllamaApiClient ollama, IOptions<OllamaApiSettings> apiSettings, IOptions<RequestOptions> ollamaSettings, ILogger<ApiManagementController> logger) : ControllerBase
+    public class ApiManagementController(IOllamaApiClient ollama, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> ollamaSettings, ILogger<ApiManagementController> logger) : ControllerBase
     {
         private readonly IOllamaApiClient _ollama = ollama;
         private readonly ILogger<ApiManagementController> _logger = logger;
-        private readonly OllamaApiSettings _apiSettings = apiSettings.Value;
+        private readonly ApiSettings _apiSettings = apiSettings.Value;
         private readonly RequestOptions _ollamaSettings = ollamaSettings.Value;
 
         [HttpGet("/check")]

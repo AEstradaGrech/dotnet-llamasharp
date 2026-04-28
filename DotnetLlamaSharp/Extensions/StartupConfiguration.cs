@@ -9,7 +9,9 @@ using OllamaSharp;
 using OllamaSharp.Models;
 using System.Net;
 using System.Reflection;
+using Microsoft.Extensions.Options;
 using static OllamaSharp.OllamaApiClient;
+using DotnetLlamaSharp.Infrastructure.Exceptions;
 
 namespace DotnetLlamaSharp.Extensions
 {
@@ -46,9 +48,7 @@ namespace DotnetLlamaSharp.Extensions
         public static IServiceCollection AddConfigurations(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<RequestOptions>(configuration.GetSection("OllamaSettings"));
-            services.Configure<OllamaApiSettings>(configuration.GetSection(nameof(OllamaApiSettings)));
-            services.Configure<ChromaDbSettings>(configuration.GetSection(nameof(ChromaDbSettings)));
-
+            services.Configure<ApiSettings>(configuration.GetSection(nameof(ApiSettings)));
             return services;
         }
 
@@ -77,8 +77,14 @@ namespace DotnetLlamaSharp.Extensions
 #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         public static IServiceCollection AddChromaClient(this IServiceCollection services, IConfiguration configuration, ServiceLifetime lifetime = ServiceLifetime.Scoped)
             => lifetime switch {
-                ServiceLifetime.Transient => services.AddTransient<IChromaClient, ChromaClient>(cfg => new ChromaClient(configuration.GetSection(nameof(ChromaDbSettings)).GetValue<string>(nameof(ChromaDbSettings.ServerUrl)))),
-                ServiceLifetime.Scoped => services.AddScoped<IChromaClient, ChromaClient>(cfg => new ChromaClient(configuration.GetSection(nameof(ChromaDbSettings)).GetValue<string>(nameof(ChromaDbSettings.ServerUrl)))),
+                ServiceLifetime.Transient => services.AddTransient<IChromaClient, ChromaClient>(sp => {
+                    var settings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
+                    return new ChromaClient(settings.ServerByKey("chroma"));
+                }),
+                ServiceLifetime.Scoped => services.AddScoped<IChromaClient, ChromaClient>(sp => {
+                    var settings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
+                    return new ChromaClient(settings.ServerByKey("chroma"));
+                }),
                 _ => services
             };
         private static IApplicationBuilder ConfigureGlobalErrorHandler(this IApplicationBuilder app)
@@ -92,9 +98,12 @@ namespace DotnetLlamaSharp.Extensions
                     var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
                     if (contextFeature != null)
                     {
+                        if (contextFeature.Error is HttpException)
+                            context.Response.StatusCode = (int)((HttpException)contextFeature.Error).StatusCode;
+
                         await context.Response.WriteAsync(new ApiError(
                             context.Response.StatusCode, 
-                            $"Internal Server Error. Exception Message :: {contextFeature.Error.Message}")
+                            $"Application Error :: {contextFeature.Error.GetType().Name} >> {contextFeature.Error.Message}")
                             .ToString());
                     }
                 });
@@ -105,52 +114,40 @@ namespace DotnetLlamaSharp.Extensions
 
         // Default Ollamasharp registration.
         public static IServiceCollection AddOllamaSharpApiClient(this IServiceCollection services, IConfiguration appConfig)
-        {
-            var ollamaCfg = appConfig.GetSection(nameof(OllamaApiSettings));
-            //TODO: GetAppsettingsConfig 4 llama
-            services.AddScoped<IOllamaApiClient, OllamaApiClient>(cfg =>
-            {
+            => services.AddScoped<IOllamaApiClient, OllamaApiClient>(sp => {
+                var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
                 var settings = new Configuration
                 {
-                    Uri = new Uri(ollamaCfg.GetValue<string>(nameof(OllamaApiSettings.ServerUrl))),
-                    Model = ollamaCfg.GetValue<string>(nameof(OllamaApiSettings.DefaultModel))
+                    Uri = new Uri(config.ServerByKey("ollama")),
+                    Model = config.DefaultModel
                 };
                 return new OllamaApiClient(settings);
             });
-
-            return services;
-        }
 
         public static IServiceCollection AddOllamaEmbeddingsGenerator(this IServiceCollection services, IConfiguration appConfig)
-        {
-            var ollamaCfg = appConfig.GetSection(nameof(OllamaApiSettings));
-            //TODO: GetAppsettingsConfig 4 llama
-            services.AddScoped<IEmbeddingGenerator<string, Embedding<float>>, OllamaApiClient>(cfg => {
-                var settings = new Configuration
-                {
-                    Uri = new Uri(ollamaCfg.GetValue<string>(nameof(OllamaApiSettings.ServerUrl))),
-                    Model = ollamaCfg.GetValue<string>(nameof(OllamaApiSettings.DefaultEmbedder))
-                };
-                return new OllamaApiClient(settings);
-            });
-            return services;
-        }
+            => services.AddScoped<IEmbeddingGenerator<string, Embedding<float>>, OllamaApiClient>(sp => {
+                    var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
+                    var settings = new Configuration
+                    {
+                        Uri = new Uri(config.ServerByKey("ollama")),
+                        Model = config.DefaultEmbedder
+                    };
+                    return new OllamaApiClient(settings);
+                });
+
+        
         // IChatClient is for Microsoft.Extensions.AI, IOllamaApiClient is for OllamaSharp, you can register both if you want to use them side by side
         public static IServiceCollection AddOllamaIChatClient(this IServiceCollection services, IConfiguration appConfig)
-        {
-            var ollamaCfg = appConfig.GetSection(nameof(OllamaApiSettings));
-
-            services.AddScoped<IChatClient>(cfg =>
-            {
+            => services.AddScoped<IChatClient>(sp => {
+                var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
                 var settings = new Configuration
                 {
-                    Uri = new Uri(ollamaCfg.GetValue<string>(nameof(OllamaApiSettings.ServerUrl))),
-                    Model = ollamaCfg.GetValue<string>(nameof(OllamaApiSettings.DefaultModel))
+                    Uri = new Uri(config.ServerByKey("ollama")),
+                    Model = config.DefaultModel
                 };
                 return new OllamaApiClient(settings);
             });
-            return services;
-        }
+
 
         //TODO: KernelImpl -> IChatCompletionService is for Semantic Kernel, you can register it side by side with the other two if you want to use them together
     }

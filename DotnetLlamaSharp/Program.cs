@@ -51,7 +51,9 @@ try
         .AddWordDocumentLoader()
         .AddAutoMapper(cfg => {
             cfg.AddMaps(new[] {
-                typeof(DocumentsMappingProfile)
+                typeof(DocumentsMappingProfile),
+                typeof(PromptsMappingProfile),
+                typeof(EmbeddingsMappingProfile)
             });
         })
         .AddServicesFromAssemblies(DependencyContext.Default.RuntimeLibraries

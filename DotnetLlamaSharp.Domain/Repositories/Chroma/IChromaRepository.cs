@@ -13,34 +13,20 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<ChromaCollection> GetCollection(string collection);
         Task<ChromaCollection> CreateCollection(string collection, string description);
         Task<ChromaCollection> CreateCollection(string name, ChromaChunk data);
+        Task<ChromaCollection> UpdateCollectionData(string name, Dictionary<string, object> metadata);
         Task<bool> DeleteCollection(string collection);
         Task<ChromaChunk> GetChunkById(string collection, string id);
-        Task<ChromaChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true);
+        Task<ChromaChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null);
+        Task<int> InsertChunks(string collection, List<ChromaChunk> chunks, bool bAddTextAsMeta = true, Dictionary<string, object> extraMetas = null);
         Task<bool> DeleteChunk(string collection, string id);
-        /*
-          CreateCollectionAsync(String, CancellationToken)	
-            Creates Chroma collection.
 
-            DeleteCollectionAsync(String, CancellationToken)	
-            Removes collection by name.
-
-            DeleteEmbeddingsAsync(String, String[], CancellationToken)	
-            Removes embeddings from specified collection.
-
-            GetCollectionAsync(String, CancellationToken)	
-            Returns collection model instance by name.
-
-            GetEmbeddingsAsync(String, String[], String[], CancellationToken)	
-            Returns embeddings from specified collection.
-
-            ListCollectionsAsync(CancellationToken)	
-            Returns all collection names.
-
-            QueryEmbeddingsAsync(String, ReadOnlyMemory<Single>[], Int32, String[], CancellationToken)	
-            Searches nearest embeddings by distance in specified collection.
-
-            UpsertEmbeddingsAsync(String, String[], ReadOnlyMemory<Single>[], Object[], CancellationToken)	
-            Upserts embedding to specified collection.
-         */
+        //_client methods:
+        IAsyncEnumerable<string> RequestCollectionList();
+        Task<ChromaCollectionModel> RequestCollection(string name);
+        Task<ChromaCollectionModel> RequestNewCollection(string name);
+        Task RequestCollectionDelete(string name);
+        Task<ChromaEmbeddingsModel> RequestEmbeddings(string collectionId, List<string> ids, List<string> metadatas = null);
+        Task RequestUpsert(string collectionId, List<string> ids, List<ReadOnlyMemory<float>> embeddings, List<object[]> metadatas = null);
+        Task RequestDelete(string collectionId, List<string> ids);
     }
 }

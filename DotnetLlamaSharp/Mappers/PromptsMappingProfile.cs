@@ -27,10 +27,6 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<ChatPrompt, ChatPromptResponseDto>();
             //DTO to Domain Object
             CreateMap<ChatPromptRequestDto, ChatPromptRequest>();
-
-            CreateMap<ModelEmbeddings, EmbeddingsResponseDto>()
-                .ForMember(dest => dest.Dimensions, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.First().Dimensions : 0))
-                .ForMember(dest => dest.Embeddings, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.Select(x => x.Vector) : new List<ReadOnlyMemory<float>>()));
         }
     }
 }
