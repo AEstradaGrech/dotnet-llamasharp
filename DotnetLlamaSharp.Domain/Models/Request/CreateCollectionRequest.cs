@@ -13,6 +13,7 @@ namespace DotnetLlamaSharp.Domain.Models.Request
         public int ChunkSize { get; set; } = 512;
         public int ChunkOverlap { get; set; } = 50;
         public int InitialSkip { get; set; } = 0;
-        public Dictionary<string, string> Metadata { get; set; }
+        public int MinTextToChunk { get; set; } = 0;
+        public Dictionary<string, object> Metadata { get; set; }
     }
 }

@@ -164,7 +164,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             if (selectedChunks.Count() == 0)
                 throw new InvalidOperationException($"Invalid batch insert for collection: {collectionName} >> No embeddings to insert");
-            
+
+            //Unable to cast object of type 'System.Text.Json.JsonElement' to type 'System.IConvertible'
             var totalChunks = Convert.ToInt32(collection.Metadata["chunks"]);
             
             for (int i = 0; i<selectedChunks.Count(); i++)

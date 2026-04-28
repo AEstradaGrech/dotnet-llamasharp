@@ -3,8 +3,12 @@
     public class CreateCollectionRequestDto
     {
         public string Name { get; set; }
-        public int EmbeddingDimensions { get; set; } = 512;
+        public string EmbeddingModel { get; set; }
+        public int Dimensions { get; set; }
         public string FileName { get; set; }
-        public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+        public int ChunkSize { get; set; } = 512;
+        public int ChunkOverlap { get; set; } = 50;
+        public int InitialSkip { get; set; } = 0;
+        public Dictionary<string, object> Metadata { get; set; }
     }
 }
