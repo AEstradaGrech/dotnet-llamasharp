@@ -24,8 +24,8 @@ namespace DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders
             using var document = PdfDocument.Open(fullPath);
 
             foreach (var page in document.GetPages())
-                if(!string.IsNullOrEmpty(page.Text))
-                    pages.Add(new DocumentPage(page.Number, page.Text));
+                if(!string.IsNullOrEmpty(page.Text.Trim()))
+                    pages.Add(new DocumentPage(page.Number, page.Text.Trim()));
             
             return Task.FromResult(new Document(fileName, "pdf", document.NumberOfPages, pages));
         }

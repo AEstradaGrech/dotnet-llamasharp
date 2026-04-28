@@ -43,18 +43,20 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 int currentChunkSize = 0;
                 var newChunks = new List<ChromaChunk>();
                 // await _repo.CreateCollection(request.Name) <- Añade CollectionChunk (ID=0) w/description & metas.totalChunks <-ChunkUpsert tiene que actualizar INCLUYE COL_CHUNK_SIZE & CHUNKED_FILE NAMES
-                for (int i = 0; i < document.TotalPages; i++)
+                for (int i = 0; i < document.Pages.Count; i++)
                 {
                     var page = document.Pages[i];
 
                     if (page.Length <= request.ChunkSize)
                     {
-                        if (currentChunkSize + page.Length > request.ChunkSize)
+                        //Accummulate
+
+                        if(currentChunkSize + page.Length >= request.ChunkSize)
                         {
-                            newChunks.Add(await EmbedChunkFromPages(chunkPages, request.ChunkSize, _settings.DefaultEmbedder));
+                            
+                            newChunks.AddRange(ChunkPages(chunkPages, request.FileName, request.ChunkSize));
                             chunkPages.Clear();
-                            chunkPages.Add(page);
-                            continue;
+                            currentChunkSize = 0;
                         }
                         else
                         {
@@ -62,7 +64,19 @@ namespace DotnetLlamaSharp.Services.Embeddings
                             chunkPages.Add(page);
                         }
                     }
-                    else newChunks.AddRange(await SplitAndEmbed(page, request.ChunkSize, _settings.DefaultModel));
+                    else
+                    {
+                        // ProcessCurrent with accumulated
+                        
+                        if(chunkPages.Count > 0)
+                        {
+                            newChunks.AddRange(ChunkPages(chunkPages, request.FileName, request.ChunkSize));
+                            chunkPages.Clear();
+                            currentChunkSize = 0;
+                        }
+                        var chromaChunks = SplitAndChunk(page, request.FileName, request.ChunkSize);
+                        newChunks.AddRange(chromaChunks);
+                    }
                 }
 
                 //BatchInsert
@@ -71,7 +85,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 for (int i = 0; i < (int)Math.Ceiling((decimal)(newChunks.Count() / 50)); i++)
                 {
                     var batch = newChunks.Skip(i * 50).Take(50).ToList();
-
+                    //EmbeddChunks
+                    //Add request (extra) metas
                     await _chromaRepo.InsertChunks(request.Name, batch, bAddTextAsMeta: true, extraMetas: extraMetas);
                 }
 
@@ -92,86 +107,103 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             }
         }
-
-        private async Task<ChromaChunk> EmbedChunkFromPages(List<DocumentPage> pages, int embeddingsDimensions, string model)
+        private List<ChromaChunk> ChunkPages(List<DocumentPage> pages, string docName, int chunkSize)
         {
-            var sb = new StringBuilder();
+            var chunks = new List<ChromaChunk>();
+            var pagesIdx = new List<int>();
             var metadata = new Dictionary<string, object>();
-            var pagesTag = "";
-            metadata.Add("pages", pagesTag);
-            var size = 0;
-            pages.ForEach(page =>
+            metadata.Add("document", docName);
+            var totalLength = chunks.Sum(c => c.Text.Length);
+            if (totalLength > chunkSize)
             {
-                sb.Append(page.Text.Trim())
-                  .Append("\n");
-                size += page.Length;
-                pagesTag += $"{page.PageNumber}, ";
-            });
+                int totalNewChunks = (int)Math.Ceiling((decimal)((float)totalLength / (float)chunkSize));
 
-            var newChunk = await GetEmbeddedChunk(sb.ToString().Trim(), embeddingsDimensions, model);
+                float chunkLength = totalLength / totalNewChunks;
+                int currentChunkSize = 0;
+                var chunkBuilder = new StringBuilder();
+                pages.ForEach(page =>
+                {
+                    pagesIdx.Add(page.PageNumber);
+                    page.Text.Split(".").ToList().ForEach(sentence => {
+                        currentChunkSize += sentence.Length;
+                        chunkBuilder
+                        .Append(sentence)
+                        .Append(".");
+                        if (currentChunkSize >= chunkLength)
+                        {
+                            metadata.Add("pages", pagesIdx);
+                            chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString(), Metadata = metadata });
+                            currentChunkSize = 0;
+                            pagesIdx = new List<int>();
+                            chunkBuilder = new StringBuilder();
+                        }
+                    });
+                });
+            }
+            else
+            {
+                var sb = new StringBuilder();
+                pages.ForEach(page =>
+                {
+                    sb.Append(page.Text)
+                      .Append("\n");
 
-            newChunk.Metadata["pages"] = pagesTag.Trim().Substring(0, pagesTag.Length - 1);
-            
-            return newChunk;
+                    if (!pagesIdx.Contains(page.PageNumber))
+                        pagesIdx.Add(page.PageNumber);
+                });
+                metadata.Add("pages", pagesIdx);
+                chunks.Add(new ChromaChunk { Text = sb.ToString(), Metadata = metadata });
+            }
+
+            return chunks;
         }
+       
 
-        private async Task<ChromaChunk> GetEmbeddedChunk(string text, int dimensions, string model)
+        private async Task<ChromaChunk> GetUnprocessedChunk(string text, int dimensions, string model)
         {
             var metadata = new Dictionary<string, object>();
             metadata.Add("model", model);
             metadata.Add("size", text.Length);
             metadata.Add("dimensions", dimensions);
-            var embedding = await _embeddingsService.GenerateEmbeddings(text, dimensions, model);
-            if (!embedding.GeneratedEmbeddings.Any())
-                throw new ArgumentNullException($"An error has occured while generating text embeddings");
+            //var embedding = await _embeddingsService.GenerateEmbeddings(text, dimensions, model);
+            //if (!embedding.GeneratedEmbeddings.Any())
+            //    throw new ArgumentNullException($"An error has occured while generating text embeddings");
             return new ChromaChunk
             {
                 Text = text,
-                Embedding = embedding.GeneratedEmbeddings.First().Vector,
+                //Embedding = embedding.GeneratedEmbeddings.First().Vector,
                 Metadata = metadata
             };
         }
-        private async Task<List<ChromaChunk>> SplitAndEmbed(DocumentPage page, int dimensions, string model)
+        private List<ChromaChunk> SplitAndChunk(DocumentPage page, string docName,  int chunkSize)
         {
-            var newChunks = new List<ChromaChunk>();
-
-            if(page.Length <= dimensions * 2f)
-            {
-                for(int i = 0; i<2; i++)
+            var chunks = new List<ChromaChunk>();
+            var metadata = new Dictionary<string, object>();
+            metadata.Add("document", docName);
+            metadata.Add("pages", new List<int>(page.PageNumber));
+            int totalNewChunks = (int)Math.Ceiling((decimal)((float)page.Text.Length / (float)chunkSize));
+            float chunkLength = page.Text.Length / totalNewChunks;
+            int currentChunkSize = 0;
+            var chunkBuilder = new StringBuilder();
+            var currentToken = "";
+            page.Text.Split(".").ToList().ForEach(sentence => {
+                sentence.Split(" ").ToList().ForEach(token =>
                 {
-                    var text = page.Text.Substring(0 * dimensions, i == 0 ? dimensions : dimensions * i);
-
-                    var newChunk = await GetEmbeddedChunk(text, dimensions, model);
-
-                    newChunk.Metadata.Add("pages", $"{page.PageNumber}");
-                    newChunk.Metadata.Add("page_part", i);
-
-                    newChunks.Add(newChunk);
-                }
-            }
-            else
-            {
-                var chunks = (float)Math.Ceiling((decimal)(page.Length / dimensions));
-                
-                for (int i = 0; i < chunks; i++)
-                {
-                    int substringEnd = i == 0 ? dimensions : i * dimensions * 2;
-                    
-                    if (substringEnd > page.Length)
-                        substringEnd = page.Length;
-
-                    var text = page.Text.Substring(i * dimensions, substringEnd);
-
-                    var newChunk = await GetEmbeddedChunk(text, dimensions, model);
-
-                    newChunk.Metadata.Add("pages", $"{page.PageNumber}");
-                    newChunk.Metadata.Add("page_part", i);
-
-                    newChunks.Add(newChunk);
-                }
-            }
-
-            return newChunks;
+                    currentToken = $" {token}";
+                    currentChunkSize += currentToken.Length;
+                    chunkBuilder.Append(currentToken);
+                    if (currentChunkSize >= chunkLength)
+                    {
+                        chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString().Trim(), Metadata = metadata });
+                        currentChunkSize = 0;
+                        chunkBuilder = new StringBuilder();
+                    }
+                });
+                chunkBuilder.Append(".");
+            });
+            if(currentChunkSize > 0)
+                chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString().Trim(), Metadata = metadata });
+            return chunks;
         }
     }
 }

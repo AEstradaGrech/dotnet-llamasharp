@@ -26,7 +26,7 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<ChromaCollectionModel> RequestNewCollection(string name);
         Task RequestCollectionDelete(string name);
         Task<ChromaEmbeddingsModel> RequestEmbeddings(string collectionId, List<string> ids, List<string> metadatas = null);
-        Task RequestUpsert(string collectionId, List<string> ids, List<ReadOnlyMemory<float>> embeddings, List<object[]> metadatas = null);
+        Task RequestUpsert(string collectionId, List<string> ids, List<ReadOnlyMemory<float>> embeddings, List<Dictionary<string, object>> metadatas = null);
         Task RequestDelete(string collectionId, List<string> ids);
     }
 }
