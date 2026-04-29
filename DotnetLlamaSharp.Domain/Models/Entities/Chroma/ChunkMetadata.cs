@@ -8,10 +8,10 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     public class ChunkMetadata : ChromaMetadata
     {
         [JsonPropertyName("document")]
-        public string Document { get; set; }
+        public string DOCUMENT { get; set; }
 
         [JsonPropertyName("pages")]
-        public List<int> Pages { get; set; }
+        public List<int> PAGES { get; set; }
 
 
     }

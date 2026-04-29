@@ -8,10 +8,10 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     public class ChromaMetadata
     {
         [JsonPropertyName("text")]
-        public string Text { get; set; }
+        public string TEXT { get; set; }
         [JsonPropertyName("model")]
-        public string Model { get; set; }
+        public string MODEL { get; set; }
         [JsonPropertyName("dimensions")]
-        public int Dimensions { get; set; }
+        public int DIMENSIONS { get; set; }
     }
 }

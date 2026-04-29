@@ -66,8 +66,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             var metadata = new Dictionary<string, object>
             {
-                { nameof(CollectionMetadata.Text).ToLower(), description },
-                { nameof(CollectionMetadata.Chunks).ToLower(), 0 }
+                { nameof(CollectionMetadata.TEXT).ToLower(), description },
+                { nameof(CollectionMetadata.CHUNKS).ToLower(), 0 }
             };
 
             return await CreateCollection(name, new ChromaChunk("0", null, metadata));
@@ -85,10 +85,10 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (collection == null)
                 throw new ArgumentNullException($"An error has occured while creating the chroma collection: {name}");
 
-            data.AddMetadata(nameof(CollectionMetadata.Chunks).ToLower(), 0);
+            data.AddMetadata(nameof(CollectionMetadata.CHUNKS).ToLower(), 0);
             
-            if (!data.HasMetadata(nameof(CollectionMetadata.Text).ToLower()) && !string.IsNullOrEmpty(data.Text))
-                data.AddMetadata(nameof(CollectionMetadata.Text).ToLower(), data.Text);
+            if (!data.HasMetadata(nameof(CollectionMetadata.TEXT).ToLower()) && !string.IsNullOrEmpty(data.Text))
+                data.AddMetadata(nameof(CollectionMetadata.TEXT).ToLower(), data.Text);
 
             data.Id = "0";
             data.Embedding = null;
@@ -121,7 +121,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 if (string.IsNullOrEmpty(chunk.Text))
                     throw new InvalidOperationException("Chroma chunk has no associated text");
 
-                chunk.AddMetadata(nameof(ChunkMetadata.Text).ToLower(), chunk.Text);
+                chunk.AddMetadata(nameof(ChunkMetadata.TEXT).ToLower(), chunk.Text);
             }
 
             if (extraTags != null && extraTags.Count() > 0)
@@ -154,7 +154,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 throw new InvalidOperationException($"Invalid batch insert for collection: {collectionName} >> No embeddings to insert");
 
             //Unable to cast object of type 'System.Text.Json.JsonElement' to type 'System.IConvertible'
-            var totalChunks = collection.DefaultMetadata.Chunks;
+            var totalChunks = collection.DefaultMetadata.CHUNKS;
             
             for (int i = 0; i<selectedChunks.Count(); i++)
             {    
@@ -167,7 +167,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                     if (string.IsNullOrEmpty(chunk.Text))
                         throw new InvalidOperationException("Chroma chunk has no associated text");
 
-                    chunk.AddMetadata(nameof(ChunkMetadata.Text).ToLower(), chunk.Text);
+                    chunk.AddMetadata(nameof(ChunkMetadata.TEXT).ToLower(), chunk.Text);
                  }
 
                 if (extraTags != null && extraTags.Count() > 0)
@@ -204,7 +204,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             {
                 await RequestCollectionDelete(collection);
 
-                return await CollectionExists(collection);
+                return !await CollectionExists(collection);
             }
 
             return false;
@@ -357,7 +357,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (amount == 0)
                 amount = 1;
 
-            int chunks = collection.DefaultMetadata.Chunks + (bIncrease ? Math.Abs(amount) : -Math.Abs(amount));
+            int chunks = collection.DefaultMetadata.CHUNKS + (bIncrease ? Math.Abs(amount) : -Math.Abs(amount));
 
             collection.Metadata["chunks"] = chunks;
 
@@ -365,7 +365,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var update = await GetCollection(name);
 
-            return update.DefaultMetadata.Chunks;
+            return update.DefaultMetadata.CHUNKS;
         }
     }
 }

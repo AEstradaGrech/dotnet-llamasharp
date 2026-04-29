@@ -8,15 +8,15 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     public class CollectionMetadata : ChromaMetadata
     {
         [JsonPropertyName("files")]
-        public List<string> Files { get; set; }
+        public List<string> FILES { get; set; }
 
         [JsonPropertyName("chunks")]
-        public int Chunks { get; set; }
+        public int CHUNKS { get; set; }
 
         [JsonPropertyName("chunk_size")]
-        public int ChunkSize { get; set; }
+        public int CHUNK_SIZE { get; set; }
         [JsonPropertyName("chunk_overlap")]
-        public int ChunkOverlap { get; set; }
+        public int CHUNK_OVERLAP { get; set; }
 
     }
 }

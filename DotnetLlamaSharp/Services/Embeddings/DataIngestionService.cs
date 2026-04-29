@@ -34,7 +34,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             _settings = settings.Value;
         }
 
-        public async Task<ChromaCollection> CreateCollectionFromFile(CreateCollectionRequest request)
+        public async Task<ChromaCollection> CreateCollectionFromFile(EmbedCollectionRequest request)
         {
             try
             {
@@ -125,8 +125,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                 _logger.LogInformation($"Generated {newChunks.Count} new chunks from selected document pages");
 
-                request.Metadata.Add(nameof(ChromaMetadata.Model).ToLower(), _settings.DefaultEmbedder);
-                request.Metadata.Add(nameof(ChromaMetadata.Dimensions).ToLower(), request.ChunkSize);
+                request.Metadata.Add(nameof(ChromaMetadata.MODEL).ToLower(), _settings.DefaultEmbedder);
+                request.Metadata.Add(nameof(ChromaMetadata.DIMENSIONS).ToLower(), request.ChunkSize);
                 //BatchInsert
                
                 
@@ -147,9 +147,9 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     _logger.LogInformation($"Inserted {inserted} elements of {newChunks.Count()}");
                 }
 
-                request.Metadata.Add(nameof(CollectionMetadata.Files).ToLower(), new List<string> { request.FileName });
-                request.Metadata.Add(nameof(CollectionMetadata.ChunkSize).ToLower(), request.ChunkSize);
-                request.Metadata.Add(nameof(CollectionMetadata.ChunkOverlap).ToLower(), request.ChunkOverlap);
+                request.Metadata.Add(nameof(CollectionMetadata.FILES).ToLower(), new string[1] { request.FileName });
+                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_SIZE).ToLower(), request.ChunkSize);
+                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_OVERLAP).ToLower(), request.ChunkOverlap);
 
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
                 
@@ -166,7 +166,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             }
         }
 
-        private async Task<int> embeddAndStoreChunks(List<ChromaChunk> chunks, CreateCollectionRequest request)
+        private async Task<int> embeddAndStoreChunks(List<ChromaChunk> chunks, EmbedCollectionRequest request)
         {
             _logger.LogInformation($"Embedding batch >> EMBEDDING MODEL: {_settings.DefaultEmbedder} >> DIMENSIONS: {request.Dimensions}");
             ChromaChunk currentChunk = null;
@@ -262,7 +262,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             var chunks = new List<ChromaChunk>();
             var pagesIdx = new List<int>();
             var metadata = new Dictionary<string, object>();
-            metadata.Add(nameof(ChunkMetadata.Document).ToLower(), docName);
+            metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
             var totalLength = chunks.Sum(c => c.Text.Length);
             if (totalLength > chunkSize)
             {
@@ -271,6 +271,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 float chunkLength = totalLength / totalNewChunks;
                 int currentChunkSize = 0;
                 var chunkBuilder = new StringBuilder();
+                //CHUNK BY TOKEN COUNT
                 pages.ForEach(page =>
                 {
                     pagesIdx.Add(page.PageNumber);
@@ -281,7 +282,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                         .Append(".");
                         if (currentChunkSize >= chunkLength)
                         {
-                            metadata.Add(nameof(ChunkMetadata.Pages).ToLower(), pagesIdx);
+                            metadata.Add(nameof(ChunkMetadata.PAGES).ToLower(), pagesIdx);
                             chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString(), Metadata = metadata });
                             currentChunkSize = 0;
                             pagesIdx = new List<int>();
@@ -301,7 +302,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     if (!pagesIdx.Contains(page.PageNumber))
                         pagesIdx.Add(page.PageNumber);
                 });
-                metadata.Add(nameof(ChunkMetadata.Pages).ToLower(), pagesIdx);
+                metadata.Add(nameof(ChunkMetadata.PAGES).ToLower(), pagesIdx);
                 chunks.Add(new ChromaChunk { Text = sb.ToString(), Metadata = metadata });
             }
 
@@ -312,8 +313,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
         {
             var chunks = new List<ChromaChunk>();
             var metadata = new Dictionary<string, object>();
-            metadata.Add(nameof(ChunkMetadata.Document).ToLower(), docName);
-            metadata.Add(nameof(ChunkMetadata.Pages).ToLower(), new List<int>(page.PageNumber));
+            metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
+            metadata.Add(nameof(ChunkMetadata.PAGES).ToLower(), new List<int>(page.PageNumber));
             int totalNewChunks = (int)Math.Ceiling((decimal)((float)page.Text.Length / (float)chunkSize));
             float chunkLength = page.Text.Length / totalNewChunks;
             int currentChunkSize = 0;
