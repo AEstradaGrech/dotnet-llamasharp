@@ -9,6 +9,8 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         [JsonPropertyName("text")]
         public string TEXT { get; set; }
+        [JsonPropertyName("pages")]
+        public string PAGES { get; set; }
         [JsonPropertyName("model")]
         public string MODEL { get; set; }
         [JsonPropertyName("dimensions")]

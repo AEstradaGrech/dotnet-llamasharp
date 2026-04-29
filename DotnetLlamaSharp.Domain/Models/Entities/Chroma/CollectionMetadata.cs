@@ -8,7 +8,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     public class CollectionMetadata : ChromaMetadata
     {
         [JsonPropertyName("files")]
-        public List<string> FILES { get; set; }
+        public string FILES { get; set; }
 
         [JsonPropertyName("chunks")]
         public int CHUNKS { get; set; }
@@ -17,6 +17,9 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         public int CHUNK_SIZE { get; set; }
         [JsonPropertyName("chunk_overlap")]
         public int CHUNK_OVERLAP { get; set; }
+
+        [JsonPropertyName("skipped_pages")]
+        public int SKIPPED_PAGES { get; set; }
 
     }
 }

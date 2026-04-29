@@ -9,10 +9,5 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         [JsonPropertyName("document")]
         public string DOCUMENT { get; set; }
-
-        [JsonPropertyName("pages")]
-        public List<int> PAGES { get; set; }
-
-
     }
 }
