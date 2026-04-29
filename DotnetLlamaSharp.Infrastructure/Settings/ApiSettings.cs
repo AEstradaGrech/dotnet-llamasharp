@@ -12,6 +12,6 @@ namespace DotnetLlamaSharp.Infrastructure.Settings
 
         public Dictionary<string, string> ServerUrls { get; set; }
 
-        public string ServerByKey(string key) => ServerUrls.ContainsKey(key) ? ServerUrls[key] : "";
+        public string EndpointByKey(string key) => ServerUrls.ContainsKey(key) ? ServerUrls[key] : "";
     }
 }

@@ -6,8 +6,9 @@
         public string Name { get; set; }
         public string Description { get; set; }
         public string EmbeddingModel { get; set; }
-        public int ChunkDimensions { get; set; }
+        public int EmbeddingDimensions { get; set; }
         public int TotalChunks { get; set; }
+        public List<string> Files { get; set; } = new List<string>();
 
     }
 }

@@ -32,7 +32,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             _logger = logger;
             _settings = dbSettings.Value ?? throw new ArgumentNullException(nameof(ApiSettings));
-            _dbClient = client ?? new ChromaClient(_settings.ServerByKey("chroma"));
+            _dbClient = client ?? new ChromaClient(_settings.EndpointByKey("chroma"));
         }
         public async Task<IAsyncEnumerable<string>> GetDbCollections()
             => _dbClient.ListCollectionsAsync();
@@ -43,14 +43,13 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             if(collection != null)
             {
-                var data = await getCollectionData(name);
+                var data = await GetChunkById(name, "0");
 
                 if (data == null)
-                    throw new ArgumentNullException($"{nameof(GetCollection)} >> no collection data found ");
+                    throw new ArgumentNullException($"No data has been found for collection: {name}");
 
-                return new ChromaCollection { Id = collection.Id, Name = collection.Name, Metadata = data.Metadata };
+                return new ChromaCollection(collection.Id, collection.Name, data.Metadata);
             }
-
             return null;
         }
 
@@ -67,21 +66,15 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             var metadata = new Dictionary<string, object>
             {
-                { "name", name },
-                { "description", description },
-                { "chunks", 0 }
+                { nameof(CollectionMetadata.Text).ToLower(), description },
+                { nameof(CollectionMetadata.Chunks).ToLower(), 0 }
             };
 
-            return await CreateCollection(name, new ChromaChunk { Id = "0", Text = description, Metadata = metadata });
+            return await CreateCollection(name, new ChromaChunk("0", null, metadata));
         }
 
         public async Task<ChromaCollection> CreateCollection(string name, ChromaChunk data)
         {
-            //if (await CollectionExists("RAGS TEST"))
-            //    await DeleteCollection("RAGS TEST");
-
-            //await RequestNewCollection("RAGS TEST");
-            
             if (await CollectionExists(name))
                 throw new InvalidDataException($"An error has occured while creating the chroma collection: a collection with name {name} already exists");
 
@@ -92,27 +85,22 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (collection == null)
                 throw new ArgumentNullException($"An error has occured while creating the chroma collection: {name}");
 
-            if (!data.Metadata.ContainsKey("name"))
-                data.Metadata.Add("name", name);
-
-            if (!data.Metadata.ContainsKey("chunks"))
-                data.Metadata.Add("chunks", 0);
+            data.AddMetadata(nameof(CollectionMetadata.Chunks).ToLower(), 0);
             
-            if (!data.Metadata.ContainsKey("description") && !string.IsNullOrEmpty(data.Text))
-                data.Metadata.Add("description", data.Text);
+            if (!data.HasMetadata(nameof(CollectionMetadata.Text).ToLower()) && !string.IsNullOrEmpty(data.Text))
+                data.AddMetadata(nameof(CollectionMetadata.Text).ToLower(), data.Text);
 
             data.Id = "0";
             data.Embedding = null;
 
-            // necesita COLLECTION_ID !NAME
-            await RequestUpsert(collection.Id, [data.Id], new List<ReadOnlyMemory<float>>(), [data.Metadata]);
+            await RequestUpsert(collection.Id, [data.Id], [], [data.Metadata]);
 
-            var dataInsert = await getCollectionData(name);
+            var dataInsert = await GetCollection(name);
 
             if (dataInsert == null)
                 throw new InvalidDataException($"An error has occured while creating the collection {name}: Collection data insert is null");
 
-            return new ChromaCollection { Id = collection.Id, Name = name, Metadata = data.Metadata };
+            return new ChromaCollection(collection.Id, name, data.Metadata);
         }
 
         public async Task<ChromaChunk> UpsertChunk(string collectionName, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null)
@@ -133,7 +121,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 if (string.IsNullOrEmpty(chunk.Text))
                     throw new InvalidOperationException("Chroma chunk has no associated text");
 
-                chunk.Metadata.Add("text", chunk.Text);
+                chunk.AddMetadata(nameof(ChunkMetadata.Text).ToLower(), chunk.Text);
             }
 
             if (extraTags != null && extraTags.Count() > 0)
@@ -166,24 +154,24 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 throw new InvalidOperationException($"Invalid batch insert for collection: {collectionName} >> No embeddings to insert");
 
             //Unable to cast object of type 'System.Text.Json.JsonElement' to type 'System.IConvertible'
-            var totalChunks = Convert.ToInt32(collection.Metadata["chunks"]);
+            var totalChunks = collection.DefaultMetadata.Chunks;
             
             for (int i = 0; i<selectedChunks.Count(); i++)
             {    
                 var chunk = chunks[i];
 
-                chunk.Id = $"{totalChunks + i}";
+                chunk.Id = $"{totalChunks + (i + 1)}";
                
                 if (bAddTextAsMeta)
                 {
                     if (string.IsNullOrEmpty(chunk.Text))
                         throw new InvalidOperationException("Chroma chunk has no associated text");
 
-                    chunk.Metadata.Add("text", chunk.Text);
-                }
+                    chunk.AddMetadata(nameof(ChunkMetadata.Text).ToLower(), chunk.Text);
+                 }
 
                 if (extraTags != null && extraTags.Count() > 0)
-                    extraTags.Keys.ToList().ForEach(key => chunk.Metadata.Add(key, extraTags[key]));
+                    extraTags.Keys.ToList().ForEach(key => chunk.AddMetadata(key, extraTags[key]));
             }
 
             await RequestUpsert(collection.Id, selectedChunks.Select(x => $"{x.Id}").ToList(), selectedChunks.Select(x => x.Embedding).ToList(), selectedChunks.Select(x => x.Metadata).ToList());
@@ -206,13 +194,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var metas = chunk.Metadatas.Any() ? chunk.Metadatas.First() : [];
             var embedding = chunk.Embeddings.Any() ? chunk.Embeddings.First() : [];
-            var chunkText = "";
-            if(metas.ContainsKey("text"))
-            {
-                chunkText = (string)metas["text"];
-                metas.Remove("text");
-            }
-            return new ChromaChunk { Id = chunk.Ids.First(), Text = chunkText, Embedding = embedding, Metadata = metas };
+
+            return new ChromaChunk(chunk.Ids.First(), embedding, metas);
         }
 
         public async Task<bool> DeleteCollection(string collection)
@@ -251,11 +234,11 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (!await CollectionExists(name))
                 throw new ArgumentNullException($"No collection found with name: {name}");
 
-            var data = await getCollectionData(name);
+            var data = await GetCollection(name);
 
-            metadata.Keys.ToList().ForEach(key => data.Metadata.Add(key, metadata[key]));
+            metadata.Keys.ToList().ForEach(key => data.AddMetadata(key, metadata[key]));
 
-            await UpsertChunk(name, data, bAddTextAsMeta: false);
+            await RequestUpsert(data.Id, ["0"], [], [data.Metadata]);
 
             return await GetCollection(name);
         }
@@ -359,9 +342,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 throw new ChromaClientException(error.Code, $"{nameof(RequestDelete)} >> {error.Error}");
             }
         }
-        private async Task<ChromaChunk> getCollectionData(string collection)
-           => await GetChunkById(collection, "0");
-        
+             
+       
         private ChromaError handleChromaClientError(HttpOperationException ex)
             => !string.IsNullOrEmpty(ex.ResponseContent) ? JsonSerializer.Deserialize<ChromaError>(ex.ResponseContent) : new ChromaError { Error = ex.Message, Code = HttpStatusCode.InternalServerError };
 
@@ -372,20 +354,18 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (collection == null)
                 throw new ArgumentNullException($"An error has occured while updating the collection chunks count >> no collection found with name: {name}");
 
-            var collectionChunk = await getCollectionData(name);
-
             if (amount == 0)
                 amount = 1;
 
-            int chunks = Convert.ToInt32(collectionChunk.Metadata["chunks"]) + (bIncrease ? Math.Abs(amount) : -Math.Abs(amount));
+            int chunks = collection.DefaultMetadata.Chunks + (bIncrease ? Math.Abs(amount) : -Math.Abs(amount));
 
-            collectionChunk.Metadata["chunks"] = chunks;
+            collection.Metadata["chunks"] = chunks;
 
-            await RequestUpsert(collection.Id, ["0"], [], [collectionChunk.Metadata]);
+            await RequestUpsert(collection.Id, ["0"], [], [collection.Metadata]);
 
-            var update = await getCollectionData(name);
+            var update = await GetCollection(name);
 
-            return Convert.ToInt32(update.Metadata["chunks"]);
+            return update.DefaultMetadata.Chunks;
         }
     }
 }

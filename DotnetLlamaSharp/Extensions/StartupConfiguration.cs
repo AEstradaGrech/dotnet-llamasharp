@@ -79,11 +79,11 @@ namespace DotnetLlamaSharp.Extensions
             => lifetime switch {
                 ServiceLifetime.Transient => services.AddTransient<IChromaClient, ChromaClient>(sp => {
                     var settings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
-                    return new ChromaClient(settings.ServerByKey("chroma"));
+                    return new ChromaClient(settings.EndpointByKey("chroma"));
                 }),
                 ServiceLifetime.Scoped => services.AddScoped<IChromaClient, ChromaClient>(sp => {
                     var settings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
-                    return new ChromaClient(settings.ServerByKey("chroma"));
+                    return new ChromaClient(settings.EndpointByKey("chroma"));
                 }),
                 _ => services
             };
@@ -118,7 +118,7 @@ namespace DotnetLlamaSharp.Extensions
                 var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
                 var settings = new Configuration
                 {
-                    Uri = new Uri(config.ServerByKey("ollama")),
+                    Uri = new Uri(config.EndpointByKey("ollama")),
                     Model = config.DefaultModel
                 };
                 return new OllamaApiClient(settings);
@@ -129,7 +129,7 @@ namespace DotnetLlamaSharp.Extensions
                     var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
                     var settings = new Configuration
                     {
-                        Uri = new Uri(config.ServerByKey("ollama")),
+                        Uri = new Uri(config.EndpointByKey("ollama")),
                         Model = config.DefaultEmbedder
                     };
                     return new OllamaApiClient(settings);
@@ -142,7 +142,7 @@ namespace DotnetLlamaSharp.Extensions
                 var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
                 var settings = new Configuration
                 {
-                    Uri = new Uri(config.ServerByKey("ollama")),
+                    Uri = new Uri(config.EndpointByKey("ollama")),
                     Model = config.DefaultModel
                 };
                 return new OllamaApiClient(settings);

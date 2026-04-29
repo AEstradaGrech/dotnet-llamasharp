@@ -1,12 +1,22 @@
-﻿namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
+﻿using System.Reflection.Metadata.Ecma335;
+using System.Text.Json;
+
+namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
-    public class ChromaChunk
+    public class ChromaChunk : ChromaModel
     {
-        public string Id { get; set; }
+        public ChromaChunk() { }
+        public ChromaChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata)
+        {
+            Id = id;
+            Metadata = metadata;
+            DefaultMetadata = JsonSerializer.Deserialize<ChunkMetadata>(JsonSerializer.Serialize(Metadata));
+            Text = DefaultMetadata.Text; //TODO remove text from meta | main model
+        }
         public string Text { get; set; }
         public ReadOnlyMemory<float> Embedding { get; set; }
-        public Dictionary<string,object> Metadata { get; set; }
+        // 'mandatory' metadatas
+        public ChunkMetadata DefaultMetadata { get; set; }
 
-        public object[] MetadataArray => Metadata.Count() > 0 ? Metadata.Select(x => new { x.Key, x.Value }).ToArray() : [];
     }
 }
