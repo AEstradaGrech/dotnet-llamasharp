@@ -5,6 +5,7 @@ using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
+using DotnetLlamaSharp.Infrastructure.Extensions.Chroma;
 using DotnetLlamaSharp.Infrastructure.Models;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
@@ -201,6 +202,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 metadatas.Add("embeddings");
 
             var chunks = await RequestEmbeddings(collection.Id, chunkIds, metadatas);
+
+            var debugJson = JsonSerializer.Serialize(chunks);
 
             var results = new List<ChromaChunk>();
 
@@ -410,11 +413,13 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return update.DefaultMetadata.CHUNKS;
         }
 
-        public async Task<List<ChromaQueryChunk>> QueryCollection(string name, ReadOnlyMemory<float> queryEmbedding, int resultsNumber)
+        public async Task<List<ChromaQueryChunk>> QueryCollection(string name, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, Dictionary<string, object> filters = null)
         {
             var collection = await GetCollection(name);
 
-            var queryResult = await RequestQuery(collection.Id, [queryEmbedding], resultsNumber);
+            var queryResult = filters == null ? 
+                await RequestQuery(collection.Id, [queryEmbedding], resultsNumber) : 
+                await RequestFilterQuery(collection.Id, queryEmbedding, resultsNumber, filters);
 
             var results = new List<ChromaQueryChunk>();
 
@@ -432,6 +437,20 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             }
 
             return results;
+        }
+
+        public async Task<ChromaQueryResultModel> RequestFilterQuery(string collectionId, ReadOnlyMemory<float> queryEmbeddings, int nResults, Dictionary<string, object> filters)
+        {
+            try
+            {
+                return await _dbClient.FilterQuery(_settings.EndpointByKey("chroma"), collectionId, nResults, [queryEmbeddings], filters);
+            }
+            catch (HttpOperationException ex)
+            {
+                var error = handleChromaClientError(ex);
+
+                throw new ChromaClientException(error.Code, $"{nameof(RequestDelete)} >> {error.Error}");
+            }
         }
     }
 }

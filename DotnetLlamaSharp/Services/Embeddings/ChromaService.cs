@@ -74,7 +74,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             if (!queryEmbedding.GeneratedEmbeddings.Any())
                 throw new InvalidDataException($"An error has occured while embedding the query. No generated embeddings found");
 
-            var queryResult = await _repo.QueryCollection(name, queryEmbedding.GeneratedEmbeddings.First().Vector, resultsNumber);
+            var queryResult = await _repo.QueryCollection(name, queryEmbedding.GeneratedEmbeddings.First().Vector, resultsNumber, metadataFilters);
 
             return new ChromaQuery
             {
