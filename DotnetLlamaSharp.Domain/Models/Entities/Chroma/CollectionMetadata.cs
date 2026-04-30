@@ -20,6 +20,8 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 
         [JsonPropertyName("skipped_pages")]
         public int SKIPPED_PAGES { get; set; }
+        [JsonPropertyName("page_cutoff")]
+        public int PAGE_CUTOFF { get; set; }
 
     }
 }

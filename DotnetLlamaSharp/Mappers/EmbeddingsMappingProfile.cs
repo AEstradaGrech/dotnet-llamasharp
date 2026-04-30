@@ -24,6 +24,7 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.ChunkSize, opt => opt.MapFrom(src => src.DefaultMetadata.CHUNK_SIZE))
                 .ForMember(dest => dest.ChunkOverlap, opt => opt.MapFrom(src => src.DefaultMetadata.CHUNK_OVERLAP))
                 .ForMember(dest => dest.SkippedPages, opt => opt.MapFrom(src => src.DefaultMetadata.SKIPPED_PAGES))
+                .ForMember(dest => dest.PageCutoff, opt => opt.MapFrom(src => src.DefaultMetadata.PAGE_CUTOFF))
                 .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.DefaultMetadata.MODEL))
                 .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.DefaultMetadata.DIMENSIONS));
 

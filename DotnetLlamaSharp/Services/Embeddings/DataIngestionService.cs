@@ -69,8 +69,17 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     throw new ArgumentNullException($"An error has occured while creating the collection {request.Name}");
 
                 _logger.LogInformation($"Created collection: {request.Name} for document: {request.FileName}");
-                
-                var selectedPages = document.Pages.Skip(request.InitialSkip).ToList();
+
+                if (request.PageCutoff >= document.Pages.Count())
+                    throw new InvalidOperationException($"The selected cutoff ({request.PageCutoff}) is greater or equal to the total document pages ({document.Pages.Count()})");
+
+                if (request.InitialSkip >= document.Pages.Count())
+                    throw new InvalidOperationException($"The selected initial skip ({request.InitialSkip}) is greater or equal to the total document pages ({document.Pages.Count()})");
+
+                if (request.InitialSkip + request.PageCutoff >= document.Pages.Count())
+                    throw new InvalidOperationException($"Invalid document pages span. Initial Skip ({request.InitialSkip}) and Page Cutoff ({request.PageCutoff}) exceeds the number of available pages ({document.Pages.Count()})");
+
+                var selectedPages = document.Pages.Skip(request.InitialSkip).Take(document.Pages.Count() - (request.InitialSkip + request.PageCutoff)).ToList();
 
                 _logger.LogInformation($"Pages to embed: {selectedPages.Count()} >> SKIPPED INITIAL {request.InitialSkip} PAGES");
                 
@@ -154,6 +163,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 request.Metadata.Add(nameof(CollectionMetadata.CHUNK_OVERLAP).ToLower(), request.ChunkOverlap);
                 request.Metadata.Add(nameof(CollectionMetadata.PAGES).ToLower(), $"{document.Pages.Count}");
                 request.Metadata.Add(nameof(CollectionMetadata.SKIPPED_PAGES).ToLower(), request.InitialSkip);
+                request.Metadata.Add(nameof(CollectionMetadata.PAGE_CUTOFF).ToLower(), request.PageCutoff);
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
                 
                 return await _chromaRepo.UpdateCollectionData(request.Name, request.Metadata);
