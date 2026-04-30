@@ -215,7 +215,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         private string getPreviousChunkOverlap(ChromaChunk prevChunk, int overlappedTokens)
         {
-            var text = prevChunk.Text.Replace("\n", "");
+            var text = prevChunk.Text.Replace("\n", "").Replace("\\", "");
             var sentences = text.Split(".").Where(sentence => !string.IsNullOrEmpty(sentence)).ToList();
             if (text.EndsWith("."))
                 sentences[sentences.Count - 1] += ".";
@@ -249,7 +249,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         private string getNextChunkOverlap(ChromaChunk nextChunk, int overlappedTokens)
         {
-            var text = nextChunk.Text.Replace("\n", "");
+            var text = nextChunk.Text.Replace("\n", "").Replace("\\", "");
             var sentences = nextChunk.Text.Split(".").Where(sentence => !string.IsNullOrEmpty(sentence)).ToList();
             var tokens = new List<string>();
             for(int i = 0; i < sentences.Count; i++)
@@ -283,8 +283,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
         {
             var chunks = new List<ChromaChunk>();
             var pagesIdx = new List<int>();
-            var metadata = new Dictionary<string, object>();
-            metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
+            
             var totalLength = pages.Sum(c => c.Text.Length);
             if (totalLength > chunkSize)
             {
@@ -300,7 +299,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     var sentences = page.Text.Split(".").ToList();
                     for (int i = 0; i < sentences.Count; i++) 
                     {
-                        var sentence = sentences[i].Trim().Replace("\n", "");
+                        var sentence = sentences[i].Trim().Replace("\n", "").Replace("\\", "");
                         
                         if (string.IsNullOrEmpty(sentence)) continue;
 
@@ -312,6 +311,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                             if (currentChunkSize >= chunkLength)
                             {
+                                var metadata = new Dictionary<string, object>();
+                                metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
                                 var chunkedPagesIds = "";
                                 pagesIdx.ForEach(idx => {
                                     chunkedPagesIds += $"{idx},";
@@ -338,6 +339,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
             }
             else
             {
+                var metadata = new Dictionary<string, object>();
+                metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
                 var sb = new StringBuilder();
                 pages.ForEach(page =>
                 {
@@ -362,33 +365,47 @@ namespace DotnetLlamaSharp.Services.Embeddings
         private List<ChromaChunk> SplitAndChunk(DocumentPage page, string docName,  int chunkSize)
         {
             var chunks = new List<ChromaChunk>();
-            var metadata = new Dictionary<string, object>();
-            metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
-            metadata.Add(nameof(ChunkMetadata.PAGES).ToLower(), $"{page.PageNumber}");
-            metadata.Add($"page_{page.PageNumber}", true);
 
             int totalNewChunks = (int)Math.Ceiling((decimal)((float)page.Text.Length / (float)chunkSize));
             float chunkLength = page.Text.Length / totalNewChunks;
             int currentChunkSize = 0;
             var chunkBuilder = new StringBuilder();
             var currentToken = "";
-            page.Text.Split(".").ToList().ForEach(sentence => {
-                sentence.Split(" ").ToList().ForEach(token =>
+            page.Text.Split(".").ToList().ForEach(sentence => 
+            {
+                if(!string.IsNullOrEmpty(sentence.Trim()))
                 {
-                    currentToken = $" {token}";
-                    currentChunkSize += currentToken.Length;
-                    chunkBuilder.Append(currentToken);
-                    if (currentChunkSize >= chunkLength)
-                    {
-                        chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString().Trim(), Metadata = metadata });
-                        currentChunkSize = 0;
-                        chunkBuilder = new StringBuilder();
-                    }
-                });
-                chunkBuilder.Append(".");
+                    sentence.Trim()
+                    .Replace("\n", "")
+                    .Replace("\\", "")
+                    .Split(" ")
+                    .ToList().ForEach(token => {
+                        currentToken = $" {token}";
+                        currentChunkSize += currentToken.Length;
+                        chunkBuilder.Append(currentToken);
+                        if (currentChunkSize >= chunkLength)
+                        {
+                            var metadata = new Dictionary<string, object>();
+                            metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
+                            metadata.Add(nameof(ChunkMetadata.PAGES).ToLower(), $"{page.PageNumber}");
+                            metadata.Add($"page_{page.PageNumber}", true);
+                            chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString().Trim(), Metadata = metadata });
+                            currentChunkSize = 0;
+                            chunkBuilder = new StringBuilder();
+                        }
+                    });
+                    if (currentChunkSize < chunkLength)
+                        chunkBuilder.Append(".");
+                }
             });
-            if(currentChunkSize > 0)
+            if (currentChunkSize > 0)
+            {
+                var metadata = new Dictionary<string, object>();
+                metadata.Add(nameof(ChunkMetadata.DOCUMENT).ToLower(), docName);
+                metadata.Add(nameof(ChunkMetadata.PAGES).ToLower(), $"{page.PageNumber}");
+                metadata.Add($"page_{page.PageNumber}", true);
                 chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString().Trim(), Metadata = metadata });
+            }
             return chunks;
         }
     }

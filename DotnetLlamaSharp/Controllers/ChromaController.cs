@@ -45,6 +45,10 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> EmbedCollection([FromBody]EmbedCollectionRequestDto request)
             => Ok(_mapper.Map<ChromaCollection, ChromaCollectionDto>(await _service.CreateCollectionFromFile(_mapper.Map<EmbedCollectionRequestDto, EmbedCollectionRequest>(request))));
 
+        [HttpPost("/collection/inspect")]
+        public async Task<IActionResult> InspectCollection([FromBody] InspectCollectionRequestDto request)
+            => Ok(_mapper.Map<ChunksCollection, ChunksCollectionDto>(await _service.InspectCollection(request.Name, request.StartIndex, request.SamplesNumber, request.IncludeEmbeddings)));
+
         [HttpGet("/documents/load/{docName}")]
         public async Task<IActionResult> LoadDocument(string docName)
             => Ok(_mapper.Map<Document, DocumentDto>(await _loader.LoadDocument(docName)));

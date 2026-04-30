@@ -10,6 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         {
             Id = id;
             Metadata = metadata;
+            Embedding = embedding;
             DefaultMetadata = JsonSerializer.Deserialize<ChunkMetadata>(JsonSerializer.Serialize(Metadata));
             Text = DefaultMetadata.TEXT; //TODO remove text from meta | main model
         }

@@ -27,6 +27,9 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.PageCutoff, opt => opt.MapFrom(src => src.DefaultMetadata.PAGE_CUTOFF))
                 .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.DefaultMetadata.MODEL))
                 .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.DefaultMetadata.DIMENSIONS));
+            
+            CreateMap<ChunksCollection, ChunksCollectionDto>()
+                .IncludeBase<ChromaCollection, ChromaCollectionDto>();
 
             CreateMap<ChromaChunk, ChromaChunkDto>()
                 .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.Text))
@@ -34,6 +37,7 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.DocumentPageIds, opt => opt.MapFrom(src => src.DefaultMetadata.PAGES.Split(",").ToList()));
 
             CreateMap<CreateCollectionRequestDto, CreateCollectionRequest>();
+            
             CreateMap<EmbedCollectionRequestDto, EmbedCollectionRequest>()
                 .IncludeBase<CreateCollectionRequestDto, CreateCollectionRequest>();
         }

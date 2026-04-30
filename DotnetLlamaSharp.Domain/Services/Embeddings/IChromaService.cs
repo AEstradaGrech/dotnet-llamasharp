@@ -13,6 +13,8 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<bool> DeleteCollection(string name);
         Task<ChromaCollection> GetCollection(string name);
         Task<ChromaCollection> CreateCollectionFromFile(EmbedCollectionRequest request);
+        Task<ChunksCollection> InspectCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false); // Default: all chunks from idx 0
+
 
     }
 }

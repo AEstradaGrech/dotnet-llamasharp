@@ -36,5 +36,27 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         public Task<IAsyncEnumerable<string>> GetDbCollections()
             => _repo.GetDbCollections();
+
+        public async Task<ChunksCollection> InspectCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false)
+        {
+            var collection = await GetCollection(name);
+
+            var ids = new List<string>();
+
+            if (startIndex > collection.DefaultMetadata.CHUNKS)
+                throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.DefaultMetadata.CHUNKS})");
+
+            if (startIndex < 0)
+                startIndex = 0;
+
+            if (samples == 0 || samples > collection.DefaultMetadata.CHUNKS)
+                samples = collection.DefaultMetadata.CHUNKS;
+
+            for (int i = startIndex; i < startIndex + samples; i++)
+                if(i <= collection.DefaultMetadata.CHUNKS)
+                    ids.Add($"{i}");
+            
+            return await _repo.InspectCollection(name, ids, includeEmbeddings);
+        }
     }
 }

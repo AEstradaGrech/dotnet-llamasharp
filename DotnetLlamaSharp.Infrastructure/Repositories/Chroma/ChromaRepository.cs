@@ -367,5 +367,34 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             return update.DefaultMetadata.CHUNKS;
         }
+
+        public async Task<ChunksCollection> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false)
+        {
+            var collection = await GetCollection(name);
+
+            var chunks = await GetChunks(name, chunkIds, includeEmbeddings);
+
+            return new ChunksCollection(collection.Id, collection.Name, collection.Metadata, chunks);
+        }
+
+        public async Task<List<ChromaChunk>> GetChunks(string collectionName, List<string> chunkIds, bool withEmbeddings = true)
+        {
+            var collection = await GetCollection(collectionName);
+
+            List<string> metadatas = ["documents", "metadatas"];
+
+            if (withEmbeddings)
+                metadatas.Add("embeddings");
+
+            var chunks = await RequestEmbeddings(collection.Id, chunkIds, metadatas);
+
+            var results = new List<ChromaChunk>();
+
+            for (int i = 0; i < chunks.Ids.Count; i++)
+                results.Add(new ChromaChunk(chunks.Ids[i], withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
+            
+            return results;
+        }
     }
 }
+ 
