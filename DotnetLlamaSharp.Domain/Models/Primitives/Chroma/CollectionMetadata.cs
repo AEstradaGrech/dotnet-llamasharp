@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
+namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
     public class CollectionMetadata : ChromaMetadata
     {

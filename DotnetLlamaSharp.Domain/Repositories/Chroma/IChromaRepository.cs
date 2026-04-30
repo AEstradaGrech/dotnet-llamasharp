@@ -21,7 +21,7 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<ChromaChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null);
         Task<int> InsertChunks(string collection, List<ChromaChunk> chunks, bool bAddTextAsMeta = true, Dictionary<string, object> extraMetas = null);
         Task<bool> DeleteChunk(string collection, string id);
-
+        Task<List<ChromaQueryChunk>> QueryCollection(string collection, ReadOnlyMemory<float> queryEmbedding, int resultsNumber);
         //_client methods:
         IAsyncEnumerable<string> RequestCollectionList();
         Task<ChromaCollectionModel> RequestCollection(string name);
@@ -30,5 +30,6 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<ChromaEmbeddingsModel> RequestEmbeddings(string collectionId, List<string> ids, List<string> metadatas = null);
         Task RequestUpsert(string collectionId, List<string> ids, List<ReadOnlyMemory<float>> embeddings, List<Dictionary<string, object>> metadatas = null);
         Task RequestDelete(string collectionId, List<string> ids);
+        Task<ChromaQueryResultModel> RequestQuery(string collectionId, ReadOnlyMemory<float>[] queryEmbeddings, int nResults);
     }
 }

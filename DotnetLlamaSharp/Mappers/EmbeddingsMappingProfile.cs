@@ -1,6 +1,7 @@
 ﻿
 using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Embeddings;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Models.Request;
@@ -40,6 +41,13 @@ namespace DotnetLlamaSharp.Mappers
             
             CreateMap<EmbedCollectionRequestDto, EmbedCollectionRequest>()
                 .IncludeBase<CreateCollectionRequestDto, CreateCollectionRequest>();
+
+            CreateMap<ChromaQueryChunk, ChromaQueryChunkDto>()
+                .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.DefaultMetadata.TEXT))
+                .ForMember(dest => dest.Pages, opt => opt.MapFrom(src => src.DefaultMetadata.PAGES.Split(",").ToList()))
+                .ForMember(dest => dest.Document, opt => opt.MapFrom(src => src.DefaultMetadata.DOCUMENT));
+
+            CreateMap<ChromaQuery, ChromaQueryResponseDto>();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
@@ -48,6 +49,10 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/collection/inspect")]
         public async Task<IActionResult> InspectCollection([FromBody] InspectCollectionRequestDto request)
             => Ok(_mapper.Map<ChunksCollection, ChunksCollectionDto>(await _service.InspectCollection(request.Name, request.StartIndex, request.SamplesNumber, request.IncludeEmbeddings)));
+
+        [HttpPost("/collection/query")]
+        public async Task<IActionResult> QueryCollection([FromBody] SimilaritySearchRequestDto request)
+            => Ok(_mapper.Map<ChromaQuery, ChromaQueryResponseDto>(await _service.QueryCollection(request.Collection, request.Query.Trim(), request.ResultsNumber, request.MetadataFilters)));
 
         [HttpGet("/documents/load/{docName}")]
         public async Task<IActionResult> LoadDocument(string docName)

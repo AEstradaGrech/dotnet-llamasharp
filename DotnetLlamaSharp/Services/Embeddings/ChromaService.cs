@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
@@ -10,13 +11,15 @@ namespace DotnetLlamaSharp.Services.Embeddings
     {
         private readonly ILogger<ChromaService> _logger;
         private readonly IDataIngestionService _ingestionService;
+        private readonly IEmbeddingsService _embeddingsService;
         private readonly IChromaRepository _repo;
 
 
-        public ChromaService(ILogger<ChromaService> logger, IDataIngestionService ingestionService, IChromaRepository repo)
+        public ChromaService(ILogger<ChromaService> logger, IDataIngestionService ingestionService, IEmbeddingsService embeddingsService, IChromaRepository repo)
         {
             _logger = logger;
             _ingestionService = ingestionService;
+            _embeddingsService = embeddingsService;
             _repo = repo;
         }
 
@@ -57,6 +60,30 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     ids.Add($"{i}");
             
             return await _repo.InspectCollection(name, ids, includeEmbeddings);
+        }
+
+        public async Task<ChromaQuery> QueryCollection(string name, string query, int resultsNumber, Dictionary<string, object> metadataFilters)
+        {
+            if (string.IsNullOrEmpty(query))
+                throw new ArgumentNullException("No query text has been passed");
+
+            var collection = await _repo.GetCollection(name);
+
+            var queryEmbedding = await _embeddingsService.GenerateEmbeddings(query, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+
+            if (!queryEmbedding.GeneratedEmbeddings.Any())
+                throw new InvalidDataException($"An error has occured while embedding the query. No generated embeddings found");
+
+            var queryResult = await _repo.QueryCollection(name, queryEmbedding.GeneratedEmbeddings.First().Vector, resultsNumber);
+
+            return new ChromaQuery
+            {
+                Query = query,
+                Collection = collection.Name,
+                EmbeddingModel = collection.DefaultMetadata.MODEL,
+                Dimensions = collection.DefaultMetadata.DIMENSIONS,
+                Chunks = queryResult
+            };
         }
     }
 }

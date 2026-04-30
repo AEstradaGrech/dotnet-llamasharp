@@ -2,6 +2,7 @@
 using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
 using DotnetLlamaSharp.Infrastructure.Models;
@@ -181,6 +182,34 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return selectedChunks.Count();
         }
 
+        public async Task<ChunksCollection> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false)
+        {
+            var collection = await GetCollection(name);
+
+            var chunks = await GetChunks(name, chunkIds, includeEmbeddings);
+
+            return new ChunksCollection(collection.Id, collection.Name, collection.Metadata, chunks);
+        }
+
+        public async Task<List<ChromaChunk>> GetChunks(string collectionName, List<string> chunkIds, bool withEmbeddings = true)
+        {
+            var collection = await GetCollection(collectionName);
+
+            List<string> metadatas = ["documents", "metadatas"];
+
+            if (withEmbeddings)
+                metadatas.Add("embeddings");
+
+            var chunks = await RequestEmbeddings(collection.Id, chunkIds, metadatas);
+
+            var results = new List<ChromaChunk>();
+
+            for (int i = 0; i < chunks.Ids.Count; i++)
+                results.Add(new ChromaChunk(chunks.Ids[i], withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
+
+            return results;
+        }
+
         public async Task<ChromaChunk> GetChunkById(string collectionName, string id)
         {
             if (!await CollectionExists(collectionName))
@@ -342,8 +371,21 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 throw new ChromaClientException(error.Code, $"{nameof(RequestDelete)} >> {error.Error}");
             }
         }
-             
-       
+
+        public async Task<ChromaQueryResultModel> RequestQuery(string collectionId, ReadOnlyMemory<float>[] queryEmbeddings, int nResults)
+        {
+            try
+            {
+                return await _dbClient.QueryEmbeddingsAsync(collectionId, queryEmbeddings, nResults, ["documents", "metadatas", "distances"]);
+            }
+            catch (HttpOperationException ex)
+            {
+                var error = handleChromaClientError(ex);
+
+                throw new ChromaClientException(error.Code, $"{nameof(RequestDelete)} >> {error.Error}");
+            }
+        }
+
         private ChromaError handleChromaClientError(HttpOperationException ex)
             => !string.IsNullOrEmpty(ex.ResponseContent) ? JsonSerializer.Deserialize<ChromaError>(ex.ResponseContent) : new ChromaError { Error = ex.Message, Code = HttpStatusCode.InternalServerError };
 
@@ -368,31 +410,27 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return update.DefaultMetadata.CHUNKS;
         }
 
-        public async Task<ChunksCollection> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false)
+        public async Task<List<ChromaQueryChunk>> QueryCollection(string name, ReadOnlyMemory<float> queryEmbedding, int resultsNumber)
         {
             var collection = await GetCollection(name);
 
-            var chunks = await GetChunks(name, chunkIds, includeEmbeddings);
+            var queryResult = await RequestQuery(collection.Id, [queryEmbedding], resultsNumber);
 
-            return new ChunksCollection(collection.Id, collection.Name, collection.Metadata, chunks);
-        }
+            var results = new List<ChromaQueryChunk>();
 
-        public async Task<List<ChromaChunk>> GetChunks(string collectionName, List<string> chunkIds, bool withEmbeddings = true)
-        {
-            var collection = await GetCollection(collectionName);
+            if(queryResult.Ids.Any() && queryResult.Distances.Any() && queryResult.Metadatas.Any())
+            {
+                var resultIds = queryResult.Ids.FirstOrDefault();
+                var resultDistances = queryResult.Distances.FirstOrDefault();
+                var resultMetas = queryResult.Metadatas.First();
 
-            List<string> metadatas = ["documents", "metadatas"];
+                if (resultIds.Count != resultsNumber || resultIds.Count != resultsNumber || resultMetas.Count != resultsNumber)
+                    throw new InvalidDataException($"Invalid number of results");
 
-            if (withEmbeddings)
-                metadatas.Add("embeddings");
+                for (int i = 0; i < resultIds.Count; i++)
+                    results.Add(new ChromaQueryChunk(resultIds[i], resultDistances[i], resultMetas[i]));
+            }
 
-            var chunks = await RequestEmbeddings(collection.Id, chunkIds, metadatas);
-
-            var results = new List<ChromaChunk>();
-
-            for (int i = 0; i < chunks.Ids.Count; i++)
-                results.Add(new ChromaChunk(chunks.Ids[i], withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
-            
             return results;
         }
     }

@@ -2,8 +2,14 @@
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
-    public class ChromaModel
+    public abstract class ChromaModel
     {
+        public ChromaModel() { }
+        public ChromaModel(string id)
+        {
+            Id = id;
+        }
+
         public string Id { get; set; }
 
         // all metadata for write, extra-metas for read

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
