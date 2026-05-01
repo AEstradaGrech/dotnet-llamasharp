@@ -140,5 +140,24 @@ namespace DotnetLlamaSharp.Controllers
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
+
+        // tiene persistencia en chroma y recupera info sobre chat con embeddings
+        // ademas, si se pasan collections para checkear, funciona como RAG
+        // si no existe collection: crea collection para AgentName-UserName (chunk-0) y crea session-chunk (chat_init) y lo asigna como current en col-chunk
+        // y le asigna meta 'current' = true. CURRENT NUNCA TIENE EMBEDDING
+        // cada prompt lee text de current chunk y lo actualiza on response
+        // Cuando Text.Len >= _settings.X --> GENERA EMBEDDINNG, lo guarda, actualiza meta 'current' = false y crea un nuevo current chunk
+        // CADA PROMPT HACE VECTOR QUERY CON CURRENT.TEXT SI TOTAL_CHUNKS > 1 (o meta 'current' = false)
+        // v2 --> MEMORIES (summarizations) cada X chunks genero sumary y lo guardo -> se hace vector query con current_chunk y chunks where meta 'memo' = true [PARA QUE??!]
+        [HttpPost("/rag/chat/prompt")]
+        public async Task<IActionResult> RagChatPrompt([FromBody] RagPromptRequestDto request)
+        {
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleRagQuery(_mapper.Map<RagPromptRequestDto, RagPromptRequest>(request)));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
     }
 }

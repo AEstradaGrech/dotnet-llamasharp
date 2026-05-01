@@ -20,17 +20,17 @@ using System.Text;
 #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 namespace DotnetLlamaSharp.Services.Embeddings
 {
-    public class DataIngestionService : IDataIngestionService
+    public class ChromaFilesService : IChromaFilesService
     {
-        private readonly ILogger<DataIngestionService> _logger;
-        private readonly IChromaRepository _chromaRepo;
+        private readonly ILogger<ChromaFilesService> _logger;
+        private readonly IChromaFilesRepository _repo;
         private readonly IDocumentLoader<PdfLoaderService> _pdfLoader;
         private readonly IEmbeddingsService _embeddingsService;
         private readonly ApiSettings _settings;
-        public DataIngestionService(ILogger<DataIngestionService> logger, IChromaRepository chromaRepo, IDocumentLoader<PdfLoaderService> pdfLoader, IEmbeddingsService embeddingsService, IOptions<ApiSettings> settings)
+        public ChromaFilesService(ILogger<ChromaFilesService> logger, IChromaFilesRepository chromaRepo, IDocumentLoader<PdfLoaderService> pdfLoader, IEmbeddingsService embeddingsService, IOptions<ApiSettings> settings)
         {
             _logger = logger;
-            _chromaRepo = chromaRepo;
+            _repo = chromaRepo;
             _pdfLoader = pdfLoader;
             _embeddingsService = embeddingsService;
             _settings = settings.Value;
@@ -65,14 +65,14 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 
                 var document = await _pdfLoader.LoadDocument(request.FileName);
 
-                bool isUpdate = await _chromaRepo.CollectionExists(request.Name);
+                bool isUpdate = await _repo.CollectionExists(request.Name);
 
                 if(string.IsNullOrEmpty(request.EmbeddingModel))
                     request.EmbeddingModel = _settings.DefaultEmbedder;
 
                 ChromaFilesCollection collection = isUpdate ?
-                    await _chromaRepo.GetCollection(request.Name) :
-                    await _chromaRepo.CreateCollection(request.Name, request.Description ?? request.FileName, request.EmbeddingModel, request.Dimensions);
+                    await _repo.GetCollection(request.Name) :
+                    await _repo.CreateCollection(request.Name, request.Description ?? request.FileName, request.EmbeddingModel, request.Dimensions);
                 
                 if (collection == null)
                     throw new ArgumentNullException($"An error has occured while creating the collection {request.Name}");
@@ -116,7 +116,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                         if(currentChunkSize + page.Length >= request.ChunkSize)
                         {
                             chunkPages.Add(page);
-                            newChunks.AddRange(ChunkPages(chunkPages, request.FileName, request.ChunkSize));
+                            newChunks.AddRange(phunkPages(chunkPages, request.FileName, request.ChunkSize));
                             chunkPages.Clear();
                             currentChunkSize = 0;
                         }
@@ -129,17 +129,17 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     else
                     {
                         // ProcessCurrent with accumulated
-                        var chromaChunks = SplitAndChunk(page, request.FileName, request.ChunkSize);
+                        var chromaChunks = splitAndChunk(page, request.FileName, request.ChunkSize);
 
                         if (chunkPages.Count > 0)
                         {
                             if(currentChunkSize > request.MinTextToChunk)
                             {
-                                newChunks.AddRange(ChunkPages(chunkPages, request.FileName, request.ChunkSize));
+                                newChunks.AddRange(phunkPages(chunkPages, request.FileName, request.ChunkSize));
                             }
                             else
                             {
-                                var residualChunk = ChunkPages(chunkPages, request.FileName, request.ChunkSize).First();
+                                var residualChunk = phunkPages(chunkPages, request.FileName, request.ChunkSize).First();
 
                                 newChunks.First().Text = $"{residualChunk.Text}\n\n{newChunks.First().Text}";
                             }
@@ -188,11 +188,11 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
                 
                 
-                return await _chromaRepo.UpdateCollectionData(request.Name, request.Metadata, isOverride: true);
+                return await _repo.UpdateCollectionData(request.Name, request.Metadata, isOverride: true);
             }
             catch(Exception ex)
             {
-                await _chromaRepo.DeleteCollection(request.Name);
+                await _repo.DeleteCollection(request.Name);
 
                 throw ex;
                 //throw new HttpException($"An error has occured while creating the collection {request.Name} >> {ex.GetType().Name}: {ex.Message}");
@@ -200,7 +200,33 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             }
         }
+        public async Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request)
+        {
+            await _repo.CreateCollection(request.Name, request.Description ?? request.Name, request.EmbeddingModel, request.Dimensions);
 
+            return await _repo.GetCollection(request.Name);
+        }
+        public async Task<ChromaFilesCollection> InspectCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false)
+        {
+            var collection = await _repo.GetCollection(name);
+
+            var ids = new List<string>();
+
+            if (startIndex > collection.DefaultMetadata.CHUNKS)
+                throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.DefaultMetadata.CHUNKS})");
+
+            if (startIndex < 1)
+                startIndex = 1;
+
+            if (samples == 0 || samples > collection.DefaultMetadata.CHUNKS)
+                samples = collection.DefaultMetadata.CHUNKS;
+
+            for (int i = startIndex; i < startIndex + samples; i++)
+                if (i <= collection.DefaultMetadata.CHUNKS)
+                    ids.Add($"{i}");
+
+            return await _repo.InspectCollection(name, ids, includeEmbeddings);
+        }
         private void setCollectionMetadata(string key, string newValue, string currentValue, EmbedCollectionRequest request)
         {
             if (string.IsNullOrEmpty(newValue)) return;
@@ -245,7 +271,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 request.Metadata.Keys.ToList().ForEach(key => currentChunk.AddMetadata(key.ToLower(), request.Metadata[key]));
             }
 
-            return await _chromaRepo.InsertChunks(request.Name, chunks, bAddTextAsMeta: true, extraMetas: request.Metadata);
+            return await _repo.InsertChunks(request.Name, chunks, bAddTextAsMeta: true, extraMetas: request.Metadata);
         }
 
         private string getPreviousChunkOverlap(ChromaChunk prevChunk, int overlappedTokens)
@@ -314,7 +340,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             tokens.ForEach(token => sb.Append(" ").Append(token));
             return sb.ToString().Trim();
         }
-        private List<ChromaChunk> ChunkPages(List<DocumentPage> pages, string docName, int chunkSize)
+        private List<ChromaChunk> phunkPages(List<DocumentPage> pages, string docName, int chunkSize)
         {
             var chunks = new List<ChromaChunk>();
             var pagesIdx = new List<int>();
@@ -397,7 +423,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             return chunks;
         }
        
-        private List<ChromaChunk> SplitAndChunk(DocumentPage page, string docName,  int chunkSize)
+        private List<ChromaChunk> splitAndChunk(DocumentPage page, string docName,  int chunkSize)
         {
             var chunks = new List<ChromaChunk>();
 

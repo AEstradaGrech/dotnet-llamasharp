@@ -10,59 +10,36 @@ namespace DotnetLlamaSharp.Services.Embeddings
     public class ChromaService : IChromaService
     {
         private readonly ILogger<ChromaService> _logger;
-        private readonly IDataIngestionService _ingestionService;
+        private readonly IChromaFilesService _fileMgmtService;
         private readonly IEmbeddingsService _embeddingsService;
-        private readonly IChromaRepository _repo;
+        private readonly IChromaChunksRepository _repo;
 
 
-        public ChromaService(ILogger<ChromaService> logger, IDataIngestionService ingestionService, IEmbeddingsService embeddingsService, IChromaRepository repo)
+        public ChromaService(ILogger<ChromaService> logger, IChromaFilesService ingestionService, IEmbeddingsService embeddingsService, IChromaChunksRepository repo)
         {
             _logger = logger;
-            _ingestionService = ingestionService;
+            _fileMgmtService = ingestionService;
             _embeddingsService = embeddingsService;
             _repo = repo;
         }
 
-        public async Task<ChromaFilesCollection> CreateCollection(CreateCollectionRequest request)
-        {
-            await _repo.CreateCollection(request.Name, request.Description ?? request.Name, request.EmbeddingModel, request.Dimensions);
-
-            return await _repo.GetCollection(request.Name);
-        }
+        public async Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request)
+            => await _fileMgmtService.CreateEmptyFileCollection(request);
 
         public async Task<ChromaFilesCollection> CreateCollectionFromFile(EmbedCollectionRequest request)
-            => await _ingestionService.CreateCollectionFromFile(request);
+            => await _fileMgmtService.CreateCollectionFromFile(request);
 
         public async Task<bool> DeleteCollection(string name)
             => await _repo.DeleteCollection(name);
 
-        public async Task<ChromaFilesCollection> GetCollection(string name)
+        public async Task<ChromaChunksCollection<ChromaChunk>> GetCollection(string name)
             => await _repo.GetCollection(name);
 
         public Task<IAsyncEnumerable<string>> GetDbCollections()
             => _repo.GetDbCollections();
 
-        //public async Task<FileChunksCollection> InspectCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false)
-        //{
-        //    var collection = await GetCollection(name);
-
-        //    var ids = new List<string>();
-
-        //    if (startIndex > collection.DefaultMetadata.CHUNKS)
-        //        throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.DefaultMetadata.CHUNKS})");
-
-        //    if (startIndex < 1)
-        //        startIndex = 1;
-
-        //    if (samples == 0 || samples > collection.DefaultMetadata.CHUNKS)
-        //        samples = collection.DefaultMetadata.CHUNKS;
-
-        //    for (int i = startIndex; i < startIndex + samples; i++)
-        //        if(i <= collection.DefaultMetadata.CHUNKS)
-        //            ids.Add($"{i}");
-            
-        //    return await _repo.InspectCollection(name, ids, includeEmbeddings);
-        //}
+        public async Task<ChromaFilesCollection> InspectFilesCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false)
+            => await _fileMgmtService.InspectCollection(name, startIndex, samples, includeEmbeddings);
 
         public async Task<ChromaQuery> QueryCollection(string name, string query, int resultsNumber, Dictionary<string, object> metadataFilters)
         {

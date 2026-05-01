@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
-    public class ChromaChatCollection : ChromaChunksCollection<ChromaChatChunk>
+    public class ChromaChatCollection : ChromaChunksCollection<ChromaChatChunk> //Chunks son N last chunks de CurrentSessionId
     {
         public ChromaChatCollection(string id, string name, Dictionary<string, object> metadata): base(id, name, metadata) 
         {
@@ -15,7 +15,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
             //UserName = Name.Split("-")[1]
 
             //Metadata = ChatCollectionMetadata
-            // CurrentSessionId = Metadata.SessionChunkIds.Split(",").Last();
+            // CurrentSessionId = Metadata.SessionChunkIds.Split(",").Last(); <- Esto se puede ir actualizando para recuperar sesiones previas
             // Summarization = Metadata.GlobalSumary ??
             /*
                 1  Col x N ChatSessions; 1 ChatSession x N ChatChunks

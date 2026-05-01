@@ -10,9 +10,15 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         public ChromaChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, metadata)
         {
             Embedding = embedding;
-            Text = DefaultMetadata.TEXT; //TODO remove text from meta | main model
         }
         public string Text { get; set; }
         public ReadOnlyMemory<float> Embedding { get; set; }
+
+        protected override void setDefaultMetadata()
+        {
+            base.setDefaultMetadata();
+
+            Text = DefaultMetadata.TEXT; //TODO remove text from meta | main model
+        }
     }
 }

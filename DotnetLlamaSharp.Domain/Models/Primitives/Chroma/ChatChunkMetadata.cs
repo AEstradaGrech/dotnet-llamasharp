@@ -5,11 +5,15 @@ using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
-    public class ChatChunkMetadata
+    //METADATA.DOCUMENT = SESSION_CHUNK_ID
+    public class ChatChunkMetadata : ChromaMetadata
     {
-        [JsonPropertyName("role")]
-        public string ROLE { get; set; }
-        [JsonPropertyName("actor_name")]
-        public string ACTOR_NAME { get; set; }
+        [JsonPropertyName("total_messages")]
+        public int TotalMessages { get; set; }
+        [JsonPropertyName("current")]
+        public bool IsCurrent { get; set; }
+        [JsonPropertyName("llm_model")]
+        public string InferenceModel { get; set; } //This is just informative
+
     }
 }

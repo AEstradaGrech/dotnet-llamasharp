@@ -11,7 +11,6 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         {
             Distance = distance;
         }
-        public double Distance { get; set;  }
-
+        public double Distance { get; set; }
     }
 }
