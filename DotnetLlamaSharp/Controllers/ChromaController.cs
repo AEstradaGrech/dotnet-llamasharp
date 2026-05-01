@@ -38,9 +38,7 @@ namespace DotnetLlamaSharp.Controllers
 
         [HttpPost("/collection/create")]
         public async Task<IActionResult> CreateCollection([FromBody] CreateCollectionRequestDto request)
-        {
-            return StatusCode((int)HttpStatusCode.InternalServerError);
-        }
+            => Ok(_mapper.Map<ChromaCollection, ChromaCollectionDto>(await _service.CreateCollection(_mapper.Map<CreateCollectionRequestDto, CreateCollectionRequest>(request))));
 
         [HttpPost("/collection/embed")]
         public async Task<IActionResult> EmbedCollection([FromBody]EmbedCollectionRequestDto request)

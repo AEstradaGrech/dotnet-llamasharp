@@ -64,11 +64,16 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return false;
         }
 
-        public async Task<ChromaCollection> CreateCollection(string name, string description)
+        public async Task<ChromaCollection> CreateCollection(string name, string description, string model, int dimensions)
         {
+            if (string.IsNullOrEmpty(model))
+                model = _settings.DefaultEmbedder;
+
             var metadata = new Dictionary<string, object>
             {
                 { nameof(CollectionMetadata.TEXT).ToLower(), description },
+                { nameof(CollectionMetadata.MODEL).ToLower(), model ?? _settings.DefaultEmbedder },
+                { nameof(CollectionMetadata.DIMENSIONS).ToLower(), dimensions },
                 { nameof(CollectionMetadata.CHUNKS).ToLower(), 0 }
             };
 
@@ -155,7 +160,6 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (selectedChunks.Count() == 0)
                 throw new InvalidOperationException($"Invalid batch insert for collection: {collectionName} >> No embeddings to insert");
 
-            //Unable to cast object of type 'System.Text.Json.JsonElement' to type 'System.IConvertible'
             var totalChunks = collection.DefaultMetadata.CHUNKS;
             
             for (int i = 0; i<selectedChunks.Count(); i++)
@@ -261,14 +265,14 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return bSucceeded;
         }
 
-        public async Task<ChromaCollection> UpdateCollectionData(string name, Dictionary<string, object> metadata)
+        public async Task<ChromaCollection> UpdateCollectionData(string name, Dictionary<string, object> metadata, bool isOverride = true)
         {
             if (!await CollectionExists(name))
                 throw new ArgumentNullException($"No collection found with name: {name}");
 
             var data = await GetCollection(name);
 
-            metadata.Keys.ToList().ForEach(key => data.AddMetadata(key, metadata[key]));
+            metadata.Keys.ToList().ForEach(key => data.AddMetadata(key, metadata[key], isOverride));
 
             await RequestUpsert(data.Id, ["0"], [], [data.Metadata]);
 

@@ -15,9 +15,9 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         // all metadata for write, extra-metas for read
         public Dictionary<string, object> Metadata { get; set; }
 
-        public void AddMetadata(string key, object value)
+        public void AddMetadata(string key, object value, bool isOverride = true)
         {
-            if (Metadata.ContainsKey(key))
+            if (Metadata.ContainsKey(key) && isOverride)
                 Metadata[key] = value;
 
             else Metadata.Add(key, value);

@@ -25,7 +25,9 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         public async Task<ChromaCollection> CreateCollection(CreateCollectionRequest request)
         {
-            throw new NotImplementedException();
+            await _repo.CreateCollection(request.Name, request.Description ?? request.Name, request.EmbeddingModel, request.Dimensions);
+
+            return await _repo.GetCollection(request.Name);
         }
 
         public async Task<ChromaCollection> CreateCollectionFromFile(EmbedCollectionRequest request)
@@ -49,8 +51,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
             if (startIndex > collection.DefaultMetadata.CHUNKS)
                 throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.DefaultMetadata.CHUNKS})");
 
-            if (startIndex < 0)
-                startIndex = 0;
+            if (startIndex < 1)
+                startIndex = 1;
 
             if (samples == 0 || samples > collection.DefaultMetadata.CHUNKS)
                 samples = collection.DefaultMetadata.CHUNKS;

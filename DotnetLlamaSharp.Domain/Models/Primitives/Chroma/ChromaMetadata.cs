@@ -10,10 +10,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         [JsonPropertyName("text")]
         public string TEXT { get; set; }
         [JsonPropertyName("pages")]
-        public string PAGES { get; set; }
+        public string PAGES { get; set; } = "";
         [JsonPropertyName("model")]
         public string MODEL { get; set; }
         [JsonPropertyName("dimensions")]
         public int DIMENSIONS { get; set; }
+        [JsonPropertyName("file_extension")]
+        public string FILE_EXTENSION { get; set; }
+
     }
 }

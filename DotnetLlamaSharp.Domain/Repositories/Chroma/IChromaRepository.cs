@@ -12,9 +12,9 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<bool> CollectionExists(string name);
         Task<ChunksCollection> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false);
         Task<ChromaCollection> GetCollection(string collection);
-        Task<ChromaCollection> CreateCollection(string collection, string description);
+        Task<ChromaCollection> CreateCollection(string collection, string description, string model, int dimensions);
         Task<ChromaCollection> CreateCollection(string name, ChromaChunk data);
-        Task<ChromaCollection> UpdateCollectionData(string name, Dictionary<string, object> metadata);
+        Task<ChromaCollection> UpdateCollectionData(string name, Dictionary<string, object> metadata, bool isOverride = true);
         Task<bool> DeleteCollection(string collection);
         Task<ChromaChunk> GetChunkById(string collection, string id);
         Task<List<ChromaChunk>> GetChunks(string collection, List<string> chunkIds, bool withEmbeddings = true);

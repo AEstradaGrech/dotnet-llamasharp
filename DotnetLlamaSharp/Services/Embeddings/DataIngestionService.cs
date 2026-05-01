@@ -63,13 +63,29 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 _logger.LogInformation($"Loading document: {request.FileName}");
                 
                 var document = await _pdfLoader.LoadDocument(request.FileName);
-                
-                var collection = await _chromaRepo.CreateCollection(request.Name, request.FileName);
+
+                bool isUpdate = await _chromaRepo.CollectionExists(request.Name);
+
+                if(string.IsNullOrEmpty(request.EmbeddingModel))
+                    request.EmbeddingModel = _settings.DefaultEmbedder;
+
+                ChromaCollection collection = isUpdate ?
+                    await _chromaRepo.GetCollection(request.Name) :
+                    await _chromaRepo.CreateCollection(request.Name, request.Description ?? request.FileName, request.EmbeddingModel, request.Dimensions);
                 
                 if (collection == null)
                     throw new ArgumentNullException($"An error has occured while creating the collection {request.Name}");
 
-                _logger.LogInformation($"Created collection: {request.Name} for document: {request.FileName}");
+                if(isUpdate)
+                {
+                    if (collection.DefaultMetadata.FILES.Contains(request.FileName))
+                        throw new HttpException(HttpStatusCode.BadRequest, $"Collection {request.Name} already contains file {request.FileName}");
+
+                    request.EmbeddingModel = collection.DefaultMetadata.MODEL;
+                    request.Dimensions = collection.DefaultMetadata.DIMENSIONS;
+                }
+
+                _logger.LogInformation($"Beginning data ingestion process for collection: {request.Name} for document: {request.FileName}");
 
                 if (request.PageCutoff >= document.Pages.Count())
                     throw new InvalidOperationException($"The selected cutoff ({request.PageCutoff}) is greater or equal to the total document pages ({document.Pages.Count()})");
@@ -139,9 +155,10 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                 request.Metadata.Add(nameof(ChromaMetadata.MODEL).ToLower(), request.EmbeddingModel ?? _settings.DefaultEmbedder);
                 request.Metadata.Add(nameof(ChromaMetadata.DIMENSIONS).ToLower(), request.Dimensions);
+                request.Metadata.Add(nameof(ChromaMetadata.FILE_EXTENSION).ToLower(), request.FileExtension);
                 //BatchInsert
-               
-                
+
+
                 int batchSize = 50;
                 var chunkBatches = (int)Math.Ceiling((decimal)(newChunks.Count() / batchSize));
 
@@ -159,15 +176,18 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     _logger.LogInformation($"Inserted {inserted} elements of {newChunks.Count()}");
                 }
 
-                request.Metadata.Add(nameof(CollectionMetadata.FILES).ToLower(), request.FileName);
-                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_SIZE).ToLower(), request.ChunkSize);
-                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_OVERLAP).ToLower(), request.ChunkOverlap);
+
+                request.Metadata.Add(nameof(CollectionMetadata.FILES).ToLower(), isUpdate ? $"{collection.DefaultMetadata.FILES},{request.FileName}.{request.FileExtension}" : $"{request.FileName}.{request.FileExtension}");
+                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_SIZES).ToLower(), isUpdate ? $"{collection.DefaultMetadata.CHUNK_SIZES},{request.ChunkSize}" : $"{request.ChunkSize}");
+                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_OVERLAPS).ToLower(), isUpdate ? $"{collection.DefaultMetadata.CHUNK_OVERLAPS},{request.ChunkOverlap}" : $"{request.ChunkOverlap}");
                 request.Metadata.Add(nameof(CollectionMetadata.PAGES).ToLower(), $"{document.Pages.Count}");
-                request.Metadata.Add(nameof(CollectionMetadata.SKIPPED_PAGES).ToLower(), request.InitialSkip);
-                request.Metadata.Add(nameof(CollectionMetadata.PAGE_CUTOFF).ToLower(), request.PageCutoff);
+                request.Metadata.Add(nameof(CollectionMetadata.SKIPPED_PAGES).ToLower(), isUpdate ? $"{collection.DefaultMetadata.SKIPPED_PAGES},{request.InitialSkip}" : $"{request.InitialSkip}");
+                request.Metadata.Add(nameof(CollectionMetadata.PAGE_CUTOFFS).ToLower(), isUpdate ? $"{collection.DefaultMetadata.PAGE_CUTOFFS},{request.PageCutoff}" : $"{request.PageCutoff}");
+                
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
                 
-                return await _chromaRepo.UpdateCollectionData(request.Name, request.Metadata);
+                
+                return await _chromaRepo.UpdateCollectionData(request.Name, request.Metadata, isOverride: true);
             }
             catch(Exception ex)
             {
