@@ -177,13 +177,13 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 }
 
 
-                request.Metadata.Add(nameof(CollectionMetadata.FILES).ToLower(), isUpdate ? $"{collection.DefaultMetadata.FILES},{request.FileName}.{request.FileExtension}" : $"{request.FileName}.{request.FileExtension}");
-                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_SIZES).ToLower(), isUpdate ? $"{collection.DefaultMetadata.CHUNK_SIZES},{request.ChunkSize}" : $"{request.ChunkSize}");
-                request.Metadata.Add(nameof(CollectionMetadata.CHUNK_OVERLAPS).ToLower(), isUpdate ? $"{collection.DefaultMetadata.CHUNK_OVERLAPS},{request.ChunkOverlap}" : $"{request.ChunkOverlap}");
+                setCollectionMetadata(nameof(CollectionMetadata.FILES).ToLower(), $"{request.FileName}.{request.FileExtension}", $"{collection.DefaultMetadata.FILES}", request);
+                setCollectionMetadata(nameof(CollectionMetadata.CHUNK_SIZES).ToLower(), $"{request.ChunkSize}", $"{collection.DefaultMetadata.CHUNK_SIZES}", request);
+                setCollectionMetadata(nameof(CollectionMetadata.CHUNK_OVERLAPS).ToLower(), $"{request.ChunkOverlap}", $"{collection.DefaultMetadata.CHUNK_OVERLAPS}", request);
+                setCollectionMetadata(nameof(CollectionMetadata.SKIPPED_PAGES).ToLower(), $"{request.InitialSkip}", $"{collection.DefaultMetadata.SKIPPED_PAGES}", request);
+                setCollectionMetadata(nameof(CollectionMetadata.PAGE_CUTOFFS).ToLower(), $"{request.PageCutoff}", $"{collection.DefaultMetadata.PAGE_CUTOFFS}", request);
                 request.Metadata.Add(nameof(CollectionMetadata.PAGES).ToLower(), $"{document.Pages.Count}");
-                request.Metadata.Add(nameof(CollectionMetadata.SKIPPED_PAGES).ToLower(), isUpdate ? $"{collection.DefaultMetadata.SKIPPED_PAGES},{request.InitialSkip}" : $"{request.InitialSkip}");
-                request.Metadata.Add(nameof(CollectionMetadata.PAGE_CUTOFFS).ToLower(), isUpdate ? $"{collection.DefaultMetadata.PAGE_CUTOFFS},{request.PageCutoff}" : $"{request.PageCutoff}");
-                
+
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
                 
                 
@@ -199,6 +199,19 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             }
         }
+
+        private void setCollectionMetadata(string key, string newValue, string currentValue, EmbedCollectionRequest request)
+        {
+            if (string.IsNullOrEmpty(newValue)) return;
+
+            string value = string.IsNullOrEmpty(currentValue.Trim()) ? newValue : $"{currentValue},{newValue}";
+
+            if (request.Metadata.ContainsKey(key))
+                request.Metadata[key] = value;
+
+            else request.Metadata.Add(key, value);
+
+         }
 
         private async Task<int> embeddAndStoreChunks(List<ChromaChunk> chunks, EmbedCollectionRequest request)
         {
