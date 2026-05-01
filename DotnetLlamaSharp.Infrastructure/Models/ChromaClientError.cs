@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Infrastructure.Models
 {
-    public class ChromaError
+    public class ChromaClientError
     {
         [JsonPropertyName("error")]
         public string? Error { get; set; }

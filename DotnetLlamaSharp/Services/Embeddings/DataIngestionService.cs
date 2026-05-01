@@ -42,13 +42,14 @@ namespace DotnetLlamaSharp.Services.Embeddings
             {
                 /*
                  {
-  "name": "RAGS",
-  "embeddingModel": "TBD",
+  "name": "rags",
   "dimensions": 512,
   "fileName": "BUILDING_AI_AGENTS_WITH_LLMS_RAG_AND_KNOWLEDGE_GRAPHS",
-  "chunkSize": 700,
-  "chunkOverlap": 20,
-  "initialSkip": 3,
+  "fileExtension" : "pdf",
+  "chunkSize": 800,
+  "chunkOverlap": 40,
+  "initialSkip": 20,
+  "pageCutoff" : 10,
   "metadata": {
    
   }

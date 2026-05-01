@@ -12,7 +12,7 @@ namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma
         public static async Task<ChromaQueryResultModel> FilterQuery(this IChromaClient chromaClient, string baseUrl, string collectionId, int resultsNumber, List<ReadOnlyMemory<float>> queryEmbeddings, Dictionary<string, object> filters)
         {
             
-            var request = new ChromaQueryRequest
+            var request = new ChromaClientQueryRequest
             {
                 Embeddings = queryEmbeddings,
                 Results = resultsNumber,

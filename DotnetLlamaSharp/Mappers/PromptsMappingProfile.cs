@@ -25,8 +25,19 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<ChatMessage, ChatMessageDto>()
                 .ReverseMap();
             CreateMap<ChatPrompt, ChatPromptResponseDto>();
+            CreateMap<RagPrompt, RagPromptResponseDto>()
+                .IncludeBase<ChatPrompt, ChatPromptResponseDto>();
+
             //DTO to Domain Object
             CreateMap<ChatPromptRequestDto, ChatPromptRequest>();
+            CreateMap<RagPromptRequestDto, RagPromptRequest>();
+
+            // Domain to Domain models
+            CreateMap<RagPromptRequest, ChatPromptRequest>();
+            CreateMap<ChatPromptRequest, RagPromptRequest>()
+                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
+                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
+                .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore());
         }
     }
 }

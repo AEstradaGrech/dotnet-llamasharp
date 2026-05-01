@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Infrastructure.Models
 {
-    public class ChromaQueryRequest
+    public class ChromaClientQueryRequest
     {
         [JsonPropertyName("query_embeddings")]
         public List<ReadOnlyMemory<float>> Embeddings { get; set; }

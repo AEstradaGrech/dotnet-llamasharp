@@ -71,12 +71,14 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             var collection = await _repo.GetCollection(name);
 
-            var queryEmbedding = await _embeddingsService.GenerateEmbeddings(query, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+            var embeddingsResult = await _embeddingsService.GenerateEmbeddings(query, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
 
-            if (!queryEmbedding.GeneratedEmbeddings.Any())
+            if (!embeddingsResult.GeneratedEmbeddings.Any())
                 throw new InvalidDataException($"An error has occured while embedding the query. No generated embeddings found");
 
-            var queryResult = await _repo.QueryCollection(name, queryEmbedding.GeneratedEmbeddings.First().Vector, resultsNumber, metadataFilters);
+            var queryEmbedding = embeddingsResult.GeneratedEmbeddings.First();
+
+            var queryResult = await _repo.QueryCollection(name, queryEmbedding.Vector, resultsNumber, metadataFilters);
 
             return new ChromaQuery
             {
@@ -84,7 +86,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 Collection = collection.Name,
                 EmbeddingModel = collection.DefaultMetadata.MODEL,
                 Dimensions = collection.DefaultMetadata.DIMENSIONS,
-                Chunks = queryResult
+                Chunks = queryResult,
+                QueryEmbedding = queryEmbedding.Vector
             };
         }
     }

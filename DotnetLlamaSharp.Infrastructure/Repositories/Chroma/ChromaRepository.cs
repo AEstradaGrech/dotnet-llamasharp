@@ -110,6 +110,33 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return new ChromaCollection(collection.Id, name, data.Metadata);
         }
 
+        public async Task<List<ChromaQueryChunk>> QueryCollection(string name, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, Dictionary<string, object> filters = null)
+        {
+            var collection = await GetCollection(name);
+
+            var queryResult = filters == null ?
+                await RequestQuery(collection.Id, [queryEmbedding], resultsNumber) :
+                await RequestFilterQuery(collection.Id, queryEmbedding, resultsNumber, filters);
+
+            var results = new List<ChromaQueryChunk>();
+
+            if (queryResult.Ids.Any() && queryResult.Distances.Any() && queryResult.Metadatas.Any())
+            {
+                var resultIds = queryResult.Ids.FirstOrDefault();
+                var resultDistances = queryResult.Distances.FirstOrDefault();
+                var resultMetas = queryResult.Metadatas.First();
+
+                if (resultIds.Count != resultsNumber || resultIds.Count != resultsNumber || resultMetas.Count != resultsNumber)
+                    throw new InvalidDataException($"Invalid number of results");
+
+                for (int i = 0; i < resultIds.Count; i++)
+                    results.Add(new ChromaQueryChunk(resultIds[i], resultDistances[i], resultMetas[i]));
+            }
+
+            return results;
+        }
+
+
         public async Task<ChromaChunk> UpsertChunk(string collectionName, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null)
         {
             if (!await CollectionExists(collectionName))
@@ -393,8 +420,22 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             }
         }
 
-        private ChromaError handleChromaClientError(HttpOperationException ex)
-            => !string.IsNullOrEmpty(ex.ResponseContent) ? JsonSerializer.Deserialize<ChromaError>(ex.ResponseContent) : new ChromaError { Error = ex.Message, Code = HttpStatusCode.InternalServerError };
+        public async Task<ChromaQueryResultModel> RequestFilterQuery(string collectionId, ReadOnlyMemory<float> queryEmbeddings, int nResults, Dictionary<string, object> filters)
+        {
+            try
+            {
+                return await _dbClient.FilterQuery(_settings.EndpointByKey("chroma"), collectionId, nResults, [queryEmbeddings], filters);
+            }
+            catch (HttpOperationException ex)
+            {
+                var error = handleChromaClientError(ex);
+
+                throw new ChromaClientException(error.Code, $"{nameof(RequestDelete)} >> {error.Error}");
+            }
+        }
+
+        private ChromaClientError handleChromaClientError(HttpOperationException ex)
+            => !string.IsNullOrEmpty(ex.ResponseContent) ? JsonSerializer.Deserialize<ChromaClientError>(ex.ResponseContent) : new ChromaClientError { Error = ex.Message, Code = HttpStatusCode.InternalServerError };
 
         private async Task<int> updateCollectionChunksCount(string name, bool bIncrease, int amount = 1)
         {
@@ -417,45 +458,6 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return update.DefaultMetadata.CHUNKS;
         }
 
-        public async Task<List<ChromaQueryChunk>> QueryCollection(string name, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, Dictionary<string, object> filters = null)
-        {
-            var collection = await GetCollection(name);
-
-            var queryResult = filters == null ? 
-                await RequestQuery(collection.Id, [queryEmbedding], resultsNumber) : 
-                await RequestFilterQuery(collection.Id, queryEmbedding, resultsNumber, filters);
-
-            var results = new List<ChromaQueryChunk>();
-
-            if(queryResult.Ids.Any() && queryResult.Distances.Any() && queryResult.Metadatas.Any())
-            {
-                var resultIds = queryResult.Ids.FirstOrDefault();
-                var resultDistances = queryResult.Distances.FirstOrDefault();
-                var resultMetas = queryResult.Metadatas.First();
-
-                if (resultIds.Count != resultsNumber || resultIds.Count != resultsNumber || resultMetas.Count != resultsNumber)
-                    throw new InvalidDataException($"Invalid number of results");
-
-                for (int i = 0; i < resultIds.Count; i++)
-                    results.Add(new ChromaQueryChunk(resultIds[i], resultDistances[i], resultMetas[i]));
-            }
-
-            return results;
-        }
-
-        public async Task<ChromaQueryResultModel> RequestFilterQuery(string collectionId, ReadOnlyMemory<float> queryEmbeddings, int nResults, Dictionary<string, object> filters)
-        {
-            try
-            {
-                return await _dbClient.FilterQuery(_settings.EndpointByKey("chroma"), collectionId, nResults, [queryEmbeddings], filters);
-            }
-            catch (HttpOperationException ex)
-            {
-                var error = handleChromaClientError(ex);
-
-                throw new ChromaClientException(error.Code, $"{nameof(RequestDelete)} >> {error.Error}");
-            }
-        }
     }
 }
  

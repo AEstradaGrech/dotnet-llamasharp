@@ -9,5 +9,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public string EmbeddingModel { get; set; }
         public int Dimensions { get; set; }
         public List<ChromaQueryChunk> Chunks { get; set; }
+        public ReadOnlyMemory<float> QueryEmbedding { get; set; }
     }
 }
