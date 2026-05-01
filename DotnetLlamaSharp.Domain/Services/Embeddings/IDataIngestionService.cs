@@ -6,7 +6,7 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
     public interface IDataIngestionService
     {
 
-        Task<ChromaCollection> CreateCollectionFromFile(EmbedCollectionRequest request);
+        Task<ChromaFilesCollection> CreateCollectionFromFile(EmbedCollectionRequest request);
 
 
     }

@@ -12,9 +12,15 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         public ChromaBaseChunk(string id, Dictionary<string, object> metadata) : base(id)
         {
             Metadata = metadata;
-            DefaultMetadata = JsonSerializer.Deserialize<ChunkMetadata>(JsonSerializer.Serialize(Metadata));
+
+            setDefaultMetadata();
         }
 
-        public ChunkMetadata DefaultMetadata { get; set; }
+        public ChromaMetadata DefaultMetadata { get; set; }
+
+        protected override void setDefaultMetadata()
+        {
+            DefaultMetadata = JsonSerializer.Deserialize<ChromaMetadata>(JsonSerializer.Serialize(Metadata));
+        }
     }
 }

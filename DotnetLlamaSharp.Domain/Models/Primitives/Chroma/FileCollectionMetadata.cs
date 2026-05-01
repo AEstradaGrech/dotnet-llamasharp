@@ -5,13 +5,10 @@ using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
-    public class CollectionMetadata : ChromaMetadata
+    public class FileCollectionMetadata : ChromaCollectionMetadata
     {
         [JsonPropertyName("files")]
         public string FILES { get; set; } = "";
-
-        [JsonPropertyName("chunks")]
-        public int CHUNKS { get; set; }
 
         [JsonPropertyName("chunk_sizes")]
         public string CHUNK_SIZES { get; set; } = "";
@@ -22,6 +19,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public string SKIPPED_PAGES { get; set; } = "";
         [JsonPropertyName("page_cutoffs")]
         public string PAGE_CUTOFFS { get; set; } = "";
+        [JsonPropertyName("pages")]
+        public string PAGES { get; set; } = "";
 
     }
 }

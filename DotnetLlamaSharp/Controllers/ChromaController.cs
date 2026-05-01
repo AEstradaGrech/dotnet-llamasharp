@@ -30,7 +30,7 @@ namespace DotnetLlamaSharp.Controllers
 
         [HttpGet("/collection/{name}")]
         public async Task<IActionResult> GetCollection(string name)
-            => Ok(_mapper.Map<ChromaCollection, ChromaCollectionDto>(await _service.GetCollection(name)));
+            => Ok(_mapper.Map<ChromaFilesCollection, ChromaCollectionDto>(await _service.GetCollection(name)));
 
         [HttpDelete("/collection/{name}")]
         public async Task<IActionResult> DeleteCollection(string name)
@@ -38,15 +38,15 @@ namespace DotnetLlamaSharp.Controllers
 
         [HttpPost("/collection/create")]
         public async Task<IActionResult> CreateCollection([FromBody] CreateCollectionRequestDto request)
-            => Ok(_mapper.Map<ChromaCollection, ChromaCollectionDto>(await _service.CreateCollection(_mapper.Map<CreateCollectionRequestDto, CreateCollectionRequest>(request))));
+            => Ok(_mapper.Map<ChromaFilesCollection, ChromaCollectionDto>(await _service.CreateCollection(_mapper.Map<CreateCollectionRequestDto, CreateCollectionRequest>(request))));
 
         [HttpPost("/collection/embed")]
         public async Task<IActionResult> EmbedCollection([FromBody]EmbedCollectionRequestDto request)
-            => Ok(_mapper.Map<ChromaCollection, ChromaCollectionDto>(await _service.CreateCollectionFromFile(_mapper.Map<EmbedCollectionRequestDto, EmbedCollectionRequest>(request))));
+            => Ok(_mapper.Map<ChromaFilesCollection, ChromaCollectionDto>(await _service.CreateCollectionFromFile(_mapper.Map<EmbedCollectionRequestDto, EmbedCollectionRequest>(request))));
 
-        [HttpPost("/collection/inspect")]
-        public async Task<IActionResult> InspectCollection([FromBody] InspectCollectionRequestDto request)
-            => Ok(_mapper.Map<ChunksCollection, ChunksCollectionDto>(await _service.InspectCollection(request.Name, request.StartIndex, request.SamplesNumber, request.IncludeEmbeddings)));
+        //[HttpPost("/collection/inspect")]
+        //public async Task<IActionResult> InspectCollection([FromBody] InspectCollectionRequestDto request)
+        //    => Ok(_mapper.Map<FileChunksCollection, ChunksCollectionDto>(await _service.InspectCollection(request.Name, request.StartIndex, request.SamplesNumber, request.IncludeEmbeddings)));
 
         [HttpPost("/collection/query")]
         public async Task<IActionResult> QueryCollection([FromBody] SimilaritySearchRequestDto request)

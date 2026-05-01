@@ -23,46 +23,46 @@ namespace DotnetLlamaSharp.Services.Embeddings
             _repo = repo;
         }
 
-        public async Task<ChromaCollection> CreateCollection(CreateCollectionRequest request)
+        public async Task<ChromaFilesCollection> CreateCollection(CreateCollectionRequest request)
         {
             await _repo.CreateCollection(request.Name, request.Description ?? request.Name, request.EmbeddingModel, request.Dimensions);
 
             return await _repo.GetCollection(request.Name);
         }
 
-        public async Task<ChromaCollection> CreateCollectionFromFile(EmbedCollectionRequest request)
+        public async Task<ChromaFilesCollection> CreateCollectionFromFile(EmbedCollectionRequest request)
             => await _ingestionService.CreateCollectionFromFile(request);
 
         public async Task<bool> DeleteCollection(string name)
             => await _repo.DeleteCollection(name);
 
-        public async Task<ChromaCollection> GetCollection(string name)
+        public async Task<ChromaFilesCollection> GetCollection(string name)
             => await _repo.GetCollection(name);
 
         public Task<IAsyncEnumerable<string>> GetDbCollections()
             => _repo.GetDbCollections();
 
-        public async Task<ChunksCollection> InspectCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false)
-        {
-            var collection = await GetCollection(name);
+        //public async Task<FileChunksCollection> InspectCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false)
+        //{
+        //    var collection = await GetCollection(name);
 
-            var ids = new List<string>();
+        //    var ids = new List<string>();
 
-            if (startIndex > collection.DefaultMetadata.CHUNKS)
-                throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.DefaultMetadata.CHUNKS})");
+        //    if (startIndex > collection.DefaultMetadata.CHUNKS)
+        //        throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.DefaultMetadata.CHUNKS})");
 
-            if (startIndex < 1)
-                startIndex = 1;
+        //    if (startIndex < 1)
+        //        startIndex = 1;
 
-            if (samples == 0 || samples > collection.DefaultMetadata.CHUNKS)
-                samples = collection.DefaultMetadata.CHUNKS;
+        //    if (samples == 0 || samples > collection.DefaultMetadata.CHUNKS)
+        //        samples = collection.DefaultMetadata.CHUNKS;
 
-            for (int i = startIndex; i < startIndex + samples; i++)
-                if(i <= collection.DefaultMetadata.CHUNKS)
-                    ids.Add($"{i}");
+        //    for (int i = startIndex; i < startIndex + samples; i++)
+        //        if(i <= collection.DefaultMetadata.CHUNKS)
+        //            ids.Add($"{i}");
             
-            return await _repo.InspectCollection(name, ids, includeEmbeddings);
-        }
+        //    return await _repo.InspectCollection(name, ids, includeEmbeddings);
+        //}
 
         public async Task<ChromaQuery> QueryCollection(string name, string query, int resultsNumber, Dictionary<string, object> metadataFilters)
         {

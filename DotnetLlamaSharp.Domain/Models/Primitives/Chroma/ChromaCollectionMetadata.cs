@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
-    public class ChunkMetadata : ChromaMetadata
+    public class ChromaCollectionMetadata : ChromaMetadata
     {
-        [JsonPropertyName("document")]
-        public string DOCUMENT { get; set; }
+        [JsonPropertyName("chunks")]
+        public int CHUNKS { get; set; }
     }
 }

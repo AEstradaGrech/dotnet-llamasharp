@@ -1,24 +1,25 @@
-﻿using System;
+﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using Microsoft.SemanticKernel.Connectors.Chroma;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
-using Microsoft.SemanticKernel.Connectors.Chroma;
-#pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
 namespace DotnetLlamaSharp.Domain.Repositories.Chroma
 {
-    public interface IChromaRepository
+#pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    public interface IChromaGenericRepository<TCol, TChunk> where TCol : ChromaChunksCollection<TChunk> where TChunk : ChromaChunk
     {
         Task<IAsyncEnumerable<string>> GetDbCollections();
         Task<bool> CollectionExists(string name);
-        Task<ChromaChunksCollection<ChromaChunk>> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false);
-        Task<ChromaFilesCollection> GetCollection(string collection);
-        Task<ChromaFilesCollection> CreateCollection(string collection, string description, string model, int dimensions);
-        Task<ChromaFilesCollection> CreateCollection(string name, ChromaChunk data);
-        Task<ChromaFilesCollection> UpdateCollectionData(string name, Dictionary<string, object> metadata, bool isOverride = true);
+        Task<TCol> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false);
+        Task<TCol> GetCollection(string collection);
+        Task<TCol> CreateCollection(string collection, string description, string model, int dimensions);
+        Task<TCol> CreateCollection(string name, ChromaChunk data);
+        Task<TCol> UpdateCollectionData(string name, Dictionary<string, object> metadata, bool isOverride = true);
         Task<bool> DeleteCollection(string collection);
-        Task<ChromaChunk> GetChunkById(string collection, string id);
-        Task<List<ChromaChunk>> GetChunks(string collection, List<string> chunkIds, bool withEmbeddings = true);
-        Task<ChromaChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null);
+        Task<TChunk> GetChunkById(string collection, string id);
+        Task<List<TChunk>> GetChunks(string collection, List<string> chunkIds, bool withEmbeddings = true);
+        Task<TChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null);
         Task<int> InsertChunks(string collection, List<ChromaChunk> chunks, bool bAddTextAsMeta = true, Dictionary<string, object> extraMetas = null);
         Task<bool> DeleteChunk(string collection, string id);
         Task<List<ChromaQueryChunk>> QueryCollection(string collection, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, Dictionary<string, object> filters = null);

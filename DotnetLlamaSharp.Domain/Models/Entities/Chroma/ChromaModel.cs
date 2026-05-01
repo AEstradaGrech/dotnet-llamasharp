@@ -1,5 +1,7 @@
 ﻿
 
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
+
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public abstract class ChromaModel
@@ -24,5 +26,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         }
 
         public bool HasMetadata(string key) => Metadata != null && Metadata.ContainsKey(key);
+
+        protected abstract void setDefaultMetadata();
     }
 }
