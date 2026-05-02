@@ -152,7 +152,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/rag/chat/prompt")]
         public async Task<IActionResult> RagChatPrompt([FromBody] RagChatRequestDto request)
         {
-            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleRagQuery(_mapper.Map<RagChatRequestDto, RagPromptRequest>(request)));
+            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.RagChatPrompt(_mapper.Map<RagChatRequestDto, RagChatRequest>(request)));
 
             if (response != null)
                 return Ok(response);

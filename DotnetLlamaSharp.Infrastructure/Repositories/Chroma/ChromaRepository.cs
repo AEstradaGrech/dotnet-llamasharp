@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Chroma;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -22,8 +23,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
     public abstract class  ChromaRepository<TCol, TChunk> where TCol : ChromaChunksCollection<TChunk> where TChunk : ChromaChunk
     {
         private readonly IChromaClient _dbClient;
-        private readonly ApiSettings _settings;
-        private readonly ILogger<ChromaRepository<TCol, TChunk>> _logger;
+        protected readonly ApiSettings _settings;
+        protected readonly ILogger<ChromaRepository<TCol, TChunk>> _logger;
         public ChromaRepository(ILogger<ChromaRepository<TCol, TChunk>> logger, IOptions<ApiSettings> dbSettings, IChromaClient client)
         {
             _logger = logger;
@@ -58,18 +59,12 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return false;
         }
 
-        public async Task<TCol> CreateCollection(string name, string description, string model, int dimensions)
+        public async Task<TCol> CreateCollection(string name, string description, string? model = null, int? dimensions = null)
         {
             if (string.IsNullOrEmpty(model))
                 model = _settings.DefaultEmbedder;
 
-            var metadata = new Dictionary<string, object>
-            {
-                { nameof(ChromaCollectionMetadata.TEXT).ToLower(), description },
-                { nameof(ChromaCollectionMetadata.MODEL).ToLower(), model ?? _settings.DefaultEmbedder },
-                { nameof(ChromaCollectionMetadata.DIMENSIONS).ToLower(), dimensions },
-                { nameof(ChromaCollectionMetadata.CHUNKS).ToLower(), 0 }
-            };
+            var metadata = getDefaultCollectionMetadata(description, model, dimensions);
 
             return await CreateCollection(name, new ChromaChunk("0", "", metadata));
         }
@@ -86,9 +81,14 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (collection == null)
                 throw new ArgumentNullException($"An error has occured while creating the chroma collection: {name}");
 
-            data.AddMetadata(nameof(ChromaCollectionMetadata.CHUNKS).ToLower(), 0);
+            // Default with name = description = TEXT & chunkOptions | apiDefaults
+            var defaultMetadata = getDefaultCollectionMetadata(name, data.DefaultMetadata.MODEL ?? null, data.DefaultMetadata.DIMENSIONS);
 
-            if (!data.HasMetadata(nameof(ChromaCollectionMetadata.TEXT).ToLower()) && !string.IsNullOrEmpty(data.Text))
+            //if chunk has already some of the default values, preserve them. Do not reserialize the DefaultMeta to validate next step (TEXT)
+            defaultMetadata.Keys.ToList().ForEach(key => data.AddMetadata(key, defaultMetadata[key], resetDefault: false, isOverride: false));
+
+            //if chunk has some TEXT, then it is the desired CollectionDescription, so default TEXT meta is overrided
+            if (!string.IsNullOrEmpty(data.Text))
                 data.AddMetadata(nameof(ChromaCollectionMetadata.TEXT).ToLower(), data.Text);
 
             data.Id = "0";
@@ -130,7 +130,6 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return results;
         }
 
-
         public async Task<TChunk> UpsertChunk(string collectionName, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null)
         {
             if (!await CollectionExists(collectionName))
@@ -138,37 +137,54 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var collection = await GetCollection(collectionName);
 
-            if (string.IsNullOrEmpty(chunk.Id))
-                throw new InvalidOperationException("Chroma chunk has no ID");
+            if (!string.IsNullOrEmpty(chunk.Id))
+            {
+                if (bAddTextAsMeta)
+                {
+                    if (string.IsNullOrEmpty(chunk.Text))
+                        throw new InvalidOperationException("Chroma chunk has no associated text");
 
-            if (chunk.Embedding.IsEmpty)
-                throw new InvalidOperationException("Chroma chunk has no embedding");
+                    chunk.AddMetadata(nameof(FileChunkMetadata.TEXT).ToLower(), chunk.Text);
+                }
+
+                if (extraTags != null && extraTags.Count() > 0)
+                    extraTags.Keys.ToList().ForEach(key => chunk.AddMetadata(key, extraTags[key], resetDefault: true));
+
+                await RequestUpsert(collectionName, [chunk.Id], [chunk.Embedding], [chunk.Metadata]);
+
+                return await GetChunkById(collectionName, chunk.Id);
+            }
+
+            else return await InsertChunk(collectionName, chunk);
+        }
+
+        public async Task<TChunk> InsertChunk(string collectionName, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraMetas = null)
+        {
+            if (!await CollectionExists(collectionName))
+                throw new InvalidOperationException($"No Chroma Collection has been found with name: {collectionName}");
+
+            var collection = await GetCollection(collectionName);
 
             if (bAddTextAsMeta)
             {
                 if (string.IsNullOrEmpty(chunk.Text))
                     throw new InvalidOperationException("Chroma chunk has no associated text");
 
-                chunk.AddMetadata(nameof(FileChunkMetadata.TEXT).ToLower(), chunk.Text);
+                chunk.AddMetadata(nameof(ChromaMetadata.TEXT).ToLower(), chunk.Text);
             }
 
-            if (extraTags != null && extraTags.Count() > 0)
-                extraTags.Keys.ToList().ForEach(key => chunk.Metadata.Add(key, extraTags[key]));
+            if (extraMetas != null && extraMetas.Count() > 0)
+                extraMetas.Keys.ToList().ForEach(key => chunk.AddMetadata(key, extraMetas[key]));
 
-            var current = await GetChunkById(collection.Id, chunk.Id);
+            chunk.Id = $"{collection.GetMeta<ChromaCollectionMetadata>().CHUNKS + 1}";
 
-            bool isInsert = chunk == null;
+            await RequestUpsert(collection.Id, [chunk.Id], [chunk.Embedding], [chunk.Metadata]);
 
-            await RequestUpsert(collectionName, [chunk.Id], [chunk.Embedding], [chunk.Metadata]);
+            await updateCollectionChunksCount(collectionName, bIncrease: true);
 
-            var upsert = await RequestEmbeddings(collection.Id, [chunk.Id]);
-
-            if (isInsert)
-                await updateCollectionChunksCount(collectionName, bIncrease: true);
-
-            return await GetChunkById(collectionName, chunk.Id);
+            return await GetChunkById(collection.Name, chunk.Id);
         }
-
+        
         public async Task<int> InsertChunks(string collectionName, List<ChromaChunk> chunks, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null)
         {
             if (!await CollectionExists(collectionName))
@@ -181,7 +197,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (selectedChunks.Count() == 0)
                 throw new InvalidOperationException($"Invalid batch insert for collection: {collectionName} >> No embeddings to insert");
 
-            var totalChunks = collection.DefaultMetadata.CHUNKS;
+            var totalChunks = collection.GetMeta<ChromaCollectionMetadata>().CHUNKS;
 
             for (int i = 0; i < selectedChunks.Count(); i++)
             {
@@ -238,7 +254,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return results;
         }
 
-        public async Task<TChunk> DefaultChunk(string collection, Dictionary<string, object> metadata)
+        public async Task<TChunk> DefaultChunk(Dictionary<string, object>? metadata = null)
         {
             var chunk = Activator.CreateInstance(typeof(TChunk)) as TChunk;
 
@@ -450,15 +466,22 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (amount == 0)
                 amount = 1;
 
-            int chunks = collection.DefaultMetadata.CHUNKS + (bIncrease ? Math.Abs(amount) : -Math.Abs(amount));
-
-            collection.Metadata["chunks"] = chunks;
+            collection.AddMetadata(nameof(ChromaCollectionMetadata.CHUNKS).ToLower(), collection.GetMeta<ChromaCollectionMetadata>().CHUNKS + (bIncrease ? Math.Abs(amount) : -Math.Abs(amount)));
 
             await RequestUpsert(collection.Id, ["0"], [], [collection.Metadata]);
 
             var update = await GetCollection(name);
 
-            return update.DefaultMetadata.CHUNKS;
+            return update.GetMeta<ChromaCollectionMetadata>().CHUNKS;
         }
+
+        private Dictionary<string, object> getDefaultCollectionMetadata(string description, string? embeddingModel = null, int? dimensions = null)
+            => new Dictionary<string, object>
+            {
+                { nameof(ChromaCollectionMetadata.TEXT).ToLower(), description },
+                { nameof(ChromaCollectionMetadata.MODEL).ToLower(), embeddingModel ?? _settings.DefaultEmbedder },
+                { nameof(ChromaCollectionMetadata.DIMENSIONS).ToLower(), dimensions <= 0 ? _settings.DefaultDimensions : dimensions },
+                { nameof(ChromaCollectionMetadata.CHUNKS).ToLower(), 0 }
+            };
     }
 }

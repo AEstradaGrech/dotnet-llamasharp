@@ -38,6 +38,7 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore());
+            CreateMap<RagChatRequestDto, RagChatRequest>();
         }
     }
 }

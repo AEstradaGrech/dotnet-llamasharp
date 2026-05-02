@@ -15,6 +15,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public string CURRENT_SESSION_ID { get; set; }
         [JsonPropertyName("current_session_chunks")]
         public int CURRENT_SESSION_CHUNKS { get; set; }
+        [JsonPropertyName("agent_name")]
+        public string AGENT_NAME { get; set; }
+        [JsonPropertyName("user_name")]
+        public string USER_NAME { get; set; }
 
     }
 }

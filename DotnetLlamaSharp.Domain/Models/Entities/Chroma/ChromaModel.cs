@@ -6,8 +6,8 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public abstract class ChromaModel
     {
-        public ChromaModel() { }
-        public ChromaModel(string id)
+        public ChromaModel() { Metadata = new Dictionary<string, object>(); }
+        public ChromaModel(string id) : base()
         {
             Id = id;
         }

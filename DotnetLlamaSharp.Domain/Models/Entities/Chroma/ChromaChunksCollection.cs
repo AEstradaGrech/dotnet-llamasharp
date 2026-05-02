@@ -9,6 +9,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public class ChromaChunksCollection<T> : ChromaBaseChunk where T : ChromaChunk
     {
+        public ChromaChunksCollection() : base() {}
         public ChromaChunksCollection(string id, string name, Dictionary<string, object> metadata) : base(id, metadata)
         {
             Name = name;
@@ -18,7 +19,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         {
             Chunks = chunks.OrderBy(x => int.Parse(x.Id)).ToList();
         }
-        public new ChromaCollectionMetadata DefaultMetadata { get; set; }
+        
         public string Name { get; set; }
         public string Description { get; set; }
         public List<T> Chunks { get; set; }

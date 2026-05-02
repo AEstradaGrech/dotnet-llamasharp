@@ -38,63 +38,36 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<RagPrompt> SimpleRagQuery(RagPromptRequest request)
         {
             ChromaQuery chromaQuery = null;
-            var chunksCollection = new Dictionary<string, string>();
-            var includedChunks = new List<ChromaQueryChunk>();
-            if(request.QueryCollections.Count > 0)
-            {
-                foreach(var name in request.QueryCollections)
-                {
-                    chromaQuery = await _chromaService.QueryCollection(name, request.Prompt, request.CollectionRetrievals, request.EmbeddingFilters);
-
-                    foreach(var chunk in chromaQuery.Chunks)
-                    {
-                        if (request.MinDistance != null && chunk.Distance > request.MinDistance) break;
-                        
-                        includedChunks.Add(chunk);
-                        chunksCollection.Add(chunk.Id, name);
-                    };
-                }
-            }
-
-            var sb = new StringBuilder();
-
-            includedChunks
-                .OrderBy(chunk => chunk.Distance)
-                .ToList()
-                .ForEach(chunk =>
-                    sb.Append($"\n- Topic: ")
-                      .Append(chunksCollection[chunk.Id])
-                      .Append("\n- Source document: ")
-                      .Append(chunk.DefaultMetadata.DOCUMENT)
-                      .Append("\n- Data:\n\n")
-                      .Append(chunk.DefaultMetadata.TEXT)
-                      .Append("\n"));
+            var collectionQueries = new Dictionary<string, List<ChromaQueryChunk>>();
+            
+            if (request.QueryCollections.Count > 0)
+                collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
 
             var baseIntruction = request.SystemMessage.Trim();
 
-            var systemMessage = @$"{(string.IsNullOrEmpty(baseIntruction) ? "You are a helpful assistant." : baseIntruction)}
-            Your task is to answer any user query using the RETRIEVED_DATA as a grounded source of truth.
+            var systemMessage = @$"
+{(string.IsNullOrEmpty(baseIntruction) ? "You are a helpful assistant." : baseIntruction)}
+Your task is to answer any user query using the RETRIEVED_DATA as a grounded source of truth.
             
-            Each item in the retrieve data section has three sections that will help you to understand the source and topic
-            of the data along with the relevant document data that you must use to generate your response.
+Each item in the retrieve data section has three sections that will help you to understand the source and topic
+of the data along with the relevant document data that you must use to generate your response.
 
-            Use the retrieved information to answer the user questions only if the question is related to
-            the retrieved data topic.
+Use the retrieved information to answer the user questions only if the question is related to
+the retrieved data topic.
 
-            ### IMPORTANT: follow this STEPS in order to generate your response:
+### IMPORTANT: follow this STEPS in order to generate your response:
 
-            # STEP 1: Analyze the content of the user query to get an idea of the topic he is querying about.
-            # STEP 2: Review the RETRIEVED DATA section and try to find relevant data to use as source to generate your response (the 'Topic' and 'Source' values of 
-                      each data item will help you to do that).
-            # STEP 3: Use your reasonaments from STEP 1 and STEP 2 to decide if the RETRIEVED DATA is meaningful in order to generate your response according to
-                      the queried topic.
-            # STEP 4: Based on your analysis from STEP 3 generate a coherent response using the RETRIEVED DATA to support your answer if you have decided that it
-                      is aligned with the general topic of the user question. In case you have decided that the user query is unrelated to the retrived data, 
-                      ignore the RETRIEVED DATA and try to answer the anyways but always informing the user that you have not found any relevant data in your Knowledge Base about the queried topic.
+# STEP 1: Analyze the content of the user query to get an idea of the topic he is querying about.
+# STEP 2: Review the RETRIEVED DATA section and try to find relevant data to use as source to generate your response (the 'Topic' and 'Source' values of 
+            each data item will help you to do that).
+# STEP 3: Use your reasonaments from STEP 1 and STEP 2 to decide if the RETRIEVED DATA is meaningful in order to generate your response according to
+            the queried topic.
+# STEP 4: Based on your analysis from STEP 3 generate a coherent response using the RETRIEVED DATA to support your answer if you have decided that it
+            is aligned with the general topic of the user question. In case you have decided that the user query is unrelated to the retrived data, 
+            ignore the RETRIEVED DATA and try to answer the anyways but always informing the user that you have not found any relevant data in your Knowledge Base about the queried topic.
 
-            ### RETRIEVED DATA:
-
-            {sb.ToString().Trim()}";
+### RETRIEVED DATA:
+{getFileRagStringResult(collectionQueries)}";
         
             var chatRequest = _mapper.Map<RagPromptRequest, ChatPromptRequest>(request);
             chatRequest.SystemMessage = systemMessage;
@@ -107,7 +80,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                 EmbeddingModel = chromaQuery != null ? chromaQuery.EmbeddingModel : null,
                 Input = request.Prompt,
                 Output = response.Output,
-                IncludedChunks = includedChunks,
+                IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value).ToList(),
                 ChatHistory = response.ChatHistory,
                 InputEmbedding = chromaQuery != null ? chromaQuery.QueryEmbedding : null
             };
@@ -136,52 +109,128 @@ namespace DotnetLlamaSharp.Services.Prompting
             if (string.IsNullOrEmpty(request.SystemMessage))
                 request.SystemMessage = $"You are a helpful assistant named: {request.AgentName}. Your task is to chat with the user, {request.UserName}";
 
-            else request.SystemMessage += $"\n\nYour name is {request.AgentName}. The user is named: {request.UserName}";
+            else request.SystemMessage += $"\n\nYour name is {request.AgentName}. You are starting a conversation with the user, {request.UserName}";
             
-            var collectionName = $"{request.AgentName}-{request.UserName}";
+            var collectionName = $"{request.AgentName.Trim().Replace(" ", "")}-{request.UserName.Trim().Replace(" ", "")}";
             
-            var isFirstSession = await _chatsRepo.CollectionExists(collectionName);
+            var isFirstSession = !await _chatsRepo.CollectionExists(collectionName);
 
             ChromaChatCollection collection = isFirstSession ? 
-                await _chatsRepo.CreateCollection(collectionName, description: $"Ollama Rag Chat >> {request.AgentName} - {request.UserName} >> {DateTime.Now}", _settings.DefaultEmbedder, 512) :
+                await _chatsRepo.InitCollection(request.AgentName, request.UserName, null) :
                 await _chatsRepo.GetCollection(collectionName);
 
-            var sessionChunk = isFirstSession ? await _chatsRepo.DefaultChunk(collection.Name) : await _chatsRepo.GetChunkById(collection.Name, "1");
+            var sessionChunk = isFirstSession ? await _chatsRepo.DefaultChunk() : await _chatsRepo.GetChunkById(collection.Name, "1");
 
             ChromaChatChunk currentChunk = null;
             if (isFirstSession || request.IsNewSession)
             {
+                string ragChatTemplage = $@"
+{request.SystemMessage}
+
+Your task is to chat with the user according to the stated instructions if any.
+
+#IMPORTANT: follow this steps in order to generate your response:
+    > STEP 1: Analyze any privided information about your character in terms of personality, psychology and/or attitude and 
+              figure out a character that aligns with the provided information to adapt your response according to that character profile.
+    > STEP 2: Review the CHAT MEMORIES section containing past fragments of conversation to get a better idea of your relationship with the user,
+              the context of the conversation and part of the conversation that might be related to the current topic.
+    > STEP 3: Review the RETRIEVED DATA section containing pieces of information that might br related to the current user prompt (or not). Use the
+              'topic' and 'source' labels of each fragment to determine if the information is within the scope of the current user query and, in case
+               you find it is useful, use it to generate a more rich and accurate response.
+    > STEP 4: Think up a response for the user that aligns with any provided character profile and is consistent with the overall converation and
+              provided sources of data.
+    > STEP 5: Review carefully the RULES section and ENSURE your response is compliant with them and adapt to response
+              as necesary before outputting your final response.
+
+#RULES: take into account this rules before outputting your final response:
+    - If you have been assigned a name, you MUST respond to that name.
+    - If you have you have been informe of the user name, address the user using that name
+    - If you have been passed any kind of character profile, role or psychological traits, always ENSURE
+      that you act and respond according to it. Align your behaviour and mood with the provided profile. Never break the character.
+    - USE the provided CHAT MEMORIES (if any) to have a better understanding of the context of the conversation.
+    - USE the provided RETRIEVED DATA (if any) to support your anwers ONLY if their topic is within the scope of the user prompt. Otherwise, ignore that secion.
+
+#CHAT MEMORIES: This is what you recall from previous part of the conversation. This memory fragments will give you a grounded source of truth regarding the conversation:
+
+<<CHAT_MEMORIES>>
+
+#RETRIEVED DATA: Use this pieces of information as a grounded source of truth to support your responses regarding specific topics. Ignore them if you
+                 find them irrelevant for the current chat turn.
+
+<<RETRIEVED_DATA>>
+";
                 var sessionMetas = new Dictionary<string, object>();
                 
                 sessionMetas.Add(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 2);
                 sessionMetas.Add(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), true);
                 sessionMetas.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
                 sessionMetas.Add(nameof(ChatChunkMetadata.LLM_MODEL).ToLower(), request.Model);
-                
-                
-                
-                sessionChunk.AppendMessage(ChatRole.System, request.SystemMessage);
+                sessionMetas.Add(nameof(ChatChunkMetadata.DOCUMENT).ToLower(), collection.Name);
+
+                sessionChunk.AppendMessage(ChatRole.System, request.SystemMessage); // UserSysMessage + RagChatTemplate
                 sessionChunk.AppendMessage(ChatRole.User, request.Prompt);
 
                 currentChunk = await _chatsRepo.UpsertChunk(collectionName, sessionChunk, bAddTextAsMeta: true, sessionMetas);
+                
+                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), currentChunk.Id);
+                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), 1);
 
-                collection.AddMetadata(nameof(ChatCollectionMetadata.SESSION_IDS).ToLower(), isFirstSession ? currentChunk.Id : $"{collection.DefaultMetadata.SESSION_IDS},{currentChunk.Id}");
+                collection.AddMetadata(nameof(ChatCollectionMetadata.SESSION_IDS).ToLower(), isFirstSession ? currentChunk.Id : $"{collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS},{currentChunk.Id}");
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_ID).ToLower(), currentChunk.Id);
-                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_SESSIONS).ToLower(), isFirstSession ? 0 : collection.DefaultMetadata.TOTAL_SESSIONS + 1);
-                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), 0);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_SESSIONS).ToLower(), isFirstSession ? 1 : collection.GetMeta<ChatCollectionMetadata>().TOTAL_SESSIONS + 1);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), 1);
 
-                await _chatsRepo.UpdateCollectionData(collectionName, collection.Metadata);
+                collection = await _chatsRepo.UpdateCollectionData(collectionName, collection.Metadata);
             }
             else 
             {
-                currentChunk = await _chatsRepo.GetChunkById(collectionName, collection.DefaultMetadata.CURRENT_SESSION_ID);
+                currentChunk = await _chatsRepo.GetChunkById(collectionName, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
                 currentChunk.AppendMessage(ChatRole.User.ToString(), request.Prompt);
             }
             var messages = currentChunk.TextAsMessages();
 
+            var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault(); //Se guarda RagChatTemplate sin formatear. Se hace replace en cada request y se pasa como sysmesage
             // SYSTEM MESSAGE / RAG stuff
-            
-            request.ChatHistory = messages;
+
+            if(currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1)
+            {
+                var chatMemos = new List<ChromaQueryChunk>();
+
+                var currentEmbedding = await _embeddingsService.GenerateEmbeddings(currentChunk.Text, currentChunk.DefaultMetadata.DIMENSIONS, currentChunk.DefaultMetadata.MODEL);
+
+                var memoFilters = new Dictionary<string, object>();
+                memoFilters.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), sessionChunk.Id);
+                memoFilters.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), false);
+
+                var sessionEmbeddings = await _chatsRepo.QueryCollection(collection.Name, currentEmbedding.GeneratedEmbeddings.FirstOrDefault().Vector, _settings.RagChatMemoryRetrievals, memoFilters);
+
+                chatMemos = _settings.RagChatMemoMinDistance <= 0 ? sessionEmbeddings : sessionEmbeddings.Where(x => x.Distance <= _settings.RagChatMemoMinDistance).ToList();
+
+                var sb = new StringBuilder();
+
+                for (int i = 0; i < chatMemos.Count; i++)
+                {
+                    sb.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n\n")
+                    .   Append(chatMemos[i].DefaultMetadata.TEXT);
+                }
+
+                systemMessage.Content = systemMessage.Content.Replace("<<CHAT_MEMORIES>>", sb.ToString().Trim());
+            }
+
+            string? ragData = null;
+            if(request.QueryCollections.Any())
+                ragData = await QueryCollections(request.Prompt, request.QueryCollections, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
+
+            systemMessage.Content = systemMessage.Content.Replace("<<RETRIEVED_DATA>>", ragData);
+
+            // getSessionSysMsg -> GetChunkById(1).TextAsMessages().First();
+            // if currentChunk.Id > 1 <-- se puede hacer vector search
+            // si collection.TotalSession > 1 <-- se puede hace vector search por sessions
+            // si request.QueryCollections <-- se puede hacer vector search por files
+
+            request.ChatHistory = [systemMessage]; //PerfilBot + TemplateMsg
+
+            request.ChatHistory.AddRange(messages); // currentChunk stuff
 
             var response = await _chatService.ChatPrompt(request);
 
@@ -201,26 +250,73 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 await _chatsRepo.UpsertChunk(collection.Name, currentChunk);
 
-                var nextChunk = await _chatsRepo.DefaultChunk(collection.Name, currentChunk.Metadata);
+                var nextChunk = await _chatsRepo.DefaultChunk(currentChunk.Metadata);
                 
                 nextChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
                 nextChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 0, resetDefault: true);
+                
+                //Both the last chunk and the first one (sessionChunk) track the total session chunks
+                nextChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1); 
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
 
                 nextChunk.AppendMessage(ChatRole.User, response.Input);
                 nextChunk.AppendMessage(ChatRole.Assistant, response.Output);
 
                 await _chatsRepo.UpsertChunk(collection.Name, nextChunk);
 
-                collection.AddMetadata(nameof(ChatCollectionMetadata.CHUNKS).ToLower(), collection.DefaultMetadata.CHUNKS + 1);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CHUNKS + 1);
 
                 await _chatsRepo.UpdateCollectionData(collection.Name, collection.Metadata);
             }
 
-            sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES), sessionChunk.DefaultMetadata.TOTAL_MESSAGES + 2);
+            sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 2);
 
             await _chatsRepo.UpsertChunk(collection.Name, sessionChunk); 
             
             return response;
+        }
+
+        public async Task<Dictionary<string, List<ChromaQueryChunk>>> QueryCollections(List<string> names, string text, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
+        {
+            var results = new Dictionary<string, List<ChromaQueryChunk>>();
+            ChromaQuery queryResult = null;
+            foreach (var name in names)
+            {
+                results.Add(name, new List<ChromaQueryChunk>());
+                queryResult = await _chromaService.QueryCollection(name, text, resultsNumber, filters);
+
+                foreach (var chunk in queryResult.Chunks)
+                {
+                    if (minDistance != null && chunk.Distance > minDistance) break;
+
+                    results[name].Add(chunk);
+                }
+            }
+
+            return results;
+        }
+
+        public async Task<string> QueryCollections(string text, List<string> names, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
+            => getFileRagStringResult(await QueryCollections(names, text, resultsNumber, minDistance, filters));
+
+        private string getFileRagStringResult(Dictionary<string, List<ChromaQueryChunk>> collectionQueries)
+        {
+            var sb = new StringBuilder();
+
+            collectionQueries.Keys.ToList()
+                .ForEach(key => collectionQueries[key]
+                    .OrderBy(chunk => chunk.Distance)
+                    .ToList()
+                    .ForEach(chunk =>
+                        sb.Append($"\n- Topic: ")
+                            .Append(key)
+                            .Append("\n- Source document: ")
+                            .Append(chunk.DefaultMetadata.DOCUMENT)
+                            .Append("\n- Data:\n\n")
+                            .Append(chunk.DefaultMetadata.TEXT)
+                            .Append("\n")));
+
+            return sb.ToString().Trim();
         }
     }
 }

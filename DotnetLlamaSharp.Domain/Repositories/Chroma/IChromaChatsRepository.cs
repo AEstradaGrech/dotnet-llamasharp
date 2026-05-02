@@ -7,6 +7,7 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
 {
     public interface IChromaChatsRepository : IChromaRepository<ChromaChatCollection, ChromaChatChunk>
     {
-        Task<ChromaChatChunk> GetSessionChunk(string collection);
+        Task<ChromaChatCollection> InitCollection(string agentName, string userName, string? description);
+        Task<ChromaChatChunk> GetCurrentSessionChunk(string collection);
     }
 }

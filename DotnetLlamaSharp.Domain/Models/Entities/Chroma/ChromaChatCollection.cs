@@ -3,11 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public class ChromaChatCollection : ChromaChunksCollection<ChromaChatChunk> //Chunks son N last chunks de CurrentSessionId
     {
+        public ChromaChatCollection() : base() { }
         public ChromaChatCollection(string id, string name, Dictionary<string, object> metadata): base(id, name, metadata) 
         {
             //Name = Agent-User
@@ -27,23 +29,22 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
                                                 B --> smart rag --> x cada prompt 1 chroma query + 1 RelevanceEvaluationAnalysis.cs <- si no es relevante para el turn, ignorar
                                                 C --> smart-flow --> B + get chroma LONGMEMO + get chroma SHORTMEMO (systema B) + evaluation (C.2 --> rag-collection-selector + relevanceEval
              */
-            var split = name.Split("-");
+            
 
-            if (split.Length != 2)
-                throw new InvalidDataException($"Invalid Chroma Chat Collection construction for collection: {name}. Chat Collection names should have this format: <agentname>-<username>");
-
-            AgentName = split[0];
-            UserName = split[1];
         }
 
+        //Original display names. With whitespaces
         public string AgentName { get; set; }
         public string UserName { get; set; }
-        public new ChatCollectionMetadata DefaultMetadata { get; set; }
-
+        public string CollectionName { get; set; }
+        
         protected override void setDefaultMetadata()
         {
             DefaultMetadata = JsonSerializer.Deserialize<ChatCollectionMetadata>(JsonSerializer.Serialize(Metadata));
             Description = DefaultMetadata.TEXT;
+            AgentName = GetMeta<ChatCollectionMetadata>().AGENT_NAME;
+            UserName = GetMeta<ChatCollectionMetadata>().USER_NAME;
+            CollectionName = DefaultMetadata.DOCUMENT;
         }
     }
 }

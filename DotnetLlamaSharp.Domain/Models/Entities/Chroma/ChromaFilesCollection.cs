@@ -9,13 +9,12 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public class ChromaFilesCollection : ChromaChunksCollection<ChromaFileChunk>
     {
+        public ChromaFilesCollection() : base() { }
         public ChromaFilesCollection(string id, string name, Dictionary<string, object> metadata) : base(id, name, metadata) {}
 
         public ChromaFilesCollection(string id, string name, Dictionary<string, object> metadata, List<ChromaFileChunk> chunks) : base(id, name, metadata, chunks)
         {
         }
-
-        public new FileCollectionMetadata DefaultMetadata { get; set; }
 
         protected override void setDefaultMetadata()
         {

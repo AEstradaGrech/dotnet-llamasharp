@@ -12,23 +12,23 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public class ChromaChatChunk : ChromaChunk
     {
+        public ChromaChatChunk() { }
         public ChromaChatChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, embedding, metadata) { }
         public ChromaChatChunk(string id, string text, Dictionary<string, object> metadata) : base(id, text, metadata) { }
-        public new ChatChunkMetadata DefaultMetadata { get; set; }
-
+       
         protected override void setDefaultMetadata()
         {
+            base.setDefaultMetadata();
+
             DefaultMetadata = JsonSerializer.Deserialize<ChatChunkMetadata>(JsonSerializer.Serialize(Metadata));
         }
 
         public void AppendMessage(ChatRole role, string message)
         {
-            Text += $"\n#MSG#\n- ROLE: {role.ToString()} >> {message}";
-            Text = Text.Trim();
-            
-            var currentMessages = JsonSerializer.Deserialize<int>((JsonValue)Metadata[nameof(ChatChunkMetadata.TOTAL_MESSAGES)]);
+            var meta = GetMeta<ChatChunkMetadata>();
 
-            AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES), currentMessages);
+            AddMetadata(nameof(ChatChunkMetadata.TEXT).ToLower(), (meta.TEXT + $"\n\n- ROLE: {role.ToString()} >> {message}").Trim());
+            AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES), meta.TOTAL_MESSAGES + 1, resetDefault:true);
         }
 
         public List<ChatMessage> TextAsMessages()
@@ -37,11 +37,11 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 
             var messages = new List<ChatMessage>();
 
-            Text.Split("#MSG#").ToList().ForEach(line =>
+            Text.Split("- ROLE:").ToList().ForEach(message =>
             {
-                var split = line.Split(">>");
+                var split = message.Split(">>");
 
-                var role = split[0].Split("- ROLE:")[1].Trim().ToLower();
+                var role = split[0].Trim().ToLower();
 
                 messages.Add(new ChatMessage(role, split[1].Trim()));
             });

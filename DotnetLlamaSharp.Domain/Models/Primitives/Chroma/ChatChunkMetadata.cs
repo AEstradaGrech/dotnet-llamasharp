@@ -16,6 +16,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public bool CURRENT { get; set; }
         [JsonPropertyName("llm_model")]
         public string LLM_MODEL { get; set; } //This is just informative
+        [JsonPropertyName("session_id")]
+        public string SESSION_ID { get; set; }
+        [JsonPropertyName("session_chunks")]
+        public int SESSION_CHUNKS { get; set; }
 
     }
 }

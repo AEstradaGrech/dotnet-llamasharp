@@ -79,11 +79,11 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                 if(isUpdate)
                 {
-                    if (collection.DefaultMetadata.FILES.Contains(request.FileName))
+                    if (collection.GetMeta<FileCollectionMetadata>().FILES.Contains(request.FileName))
                         throw new HttpException(HttpStatusCode.BadRequest, $"Collection {request.Name} already contains file {request.FileName}");
 
-                    request.EmbeddingModel = collection.DefaultMetadata.MODEL;
-                    request.Dimensions = collection.DefaultMetadata.DIMENSIONS;
+                    request.EmbeddingModel = collection.GetMeta<FileCollectionMetadata>().MODEL;
+                    request.Dimensions = collection.GetMeta<FileCollectionMetadata>().DIMENSIONS;
                 }
 
                 _logger.LogInformation($"Beginning data ingestion process for collection: {request.Name} for document: {request.FileName}");
@@ -178,11 +178,11 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 }
 
 
-                setCollectionMetadata(nameof(FileCollectionMetadata.FILES).ToLower(), $"{request.FileName}.{request.FileExtension}", $"{collection.DefaultMetadata.FILES}", request);
-                setCollectionMetadata(nameof(FileCollectionMetadata.CHUNK_SIZES).ToLower(), $"{request.ChunkSize}", $"{collection.DefaultMetadata.CHUNK_SIZES}", request);
-                setCollectionMetadata(nameof(FileCollectionMetadata.CHUNK_OVERLAPS).ToLower(), $"{request.ChunkOverlap}", $"{collection.DefaultMetadata.CHUNK_OVERLAPS}", request);
-                setCollectionMetadata(nameof(FileCollectionMetadata.SKIPPED_PAGES).ToLower(), $"{request.InitialSkip}", $"{collection.DefaultMetadata.SKIPPED_PAGES}", request);
-                setCollectionMetadata(nameof(FileCollectionMetadata.PAGE_CUTOFFS).ToLower(), $"{request.PageCutoff}", $"{collection.DefaultMetadata.PAGE_CUTOFFS}", request);
+                setCollectionMetadata(nameof(FileCollectionMetadata.FILES).ToLower(), $"{request.FileName}.{request.FileExtension}", $"{collection.GetMeta<FileCollectionMetadata>().FILES}", request);
+                setCollectionMetadata(nameof(FileCollectionMetadata.CHUNK_SIZES).ToLower(), $"{request.ChunkSize}", $"{collection.GetMeta<FileCollectionMetadata>().CHUNK_SIZES}", request);
+                setCollectionMetadata(nameof(FileCollectionMetadata.CHUNK_OVERLAPS).ToLower(), $"{request.ChunkOverlap}", $"{collection.GetMeta<FileCollectionMetadata>().CHUNK_OVERLAPS}", request);
+                setCollectionMetadata(nameof(FileCollectionMetadata.SKIPPED_PAGES).ToLower(), $"{request.InitialSkip}", $"{collection.GetMeta<FileCollectionMetadata>().SKIPPED_PAGES}", request);
+                setCollectionMetadata(nameof(FileCollectionMetadata.PAGE_CUTOFFS).ToLower(), $"{request.PageCutoff}", $"{collection.GetMeta<FileCollectionMetadata>().PAGE_CUTOFFS}", request);
                 request.Metadata.Add(nameof(FileCollectionMetadata.PAGES).ToLower(), $"{document.Pages.Count}");
 
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
@@ -212,17 +212,17 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             var ids = new List<string>();
 
-            if (startIndex > collection.DefaultMetadata.CHUNKS)
-                throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.DefaultMetadata.CHUNKS})");
+            if (startIndex > collection.GetMeta<FileCollectionMetadata>().CHUNKS)
+                throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.GetMeta<FileCollectionMetadata>().CHUNKS})");
 
             if (startIndex < 1)
                 startIndex = 1;
 
-            if (samples == 0 || samples > collection.DefaultMetadata.CHUNKS)
-                samples = collection.DefaultMetadata.CHUNKS;
+            if (samples == 0 || samples > collection.GetMeta<FileCollectionMetadata>().CHUNKS)
+                samples = collection.GetMeta<FileCollectionMetadata>().CHUNKS;
 
             for (int i = startIndex; i < startIndex + samples; i++)
-                if (i <= collection.DefaultMetadata.CHUNKS)
+                if (i <= collection.GetMeta<FileCollectionMetadata>().CHUNKS)
                     ids.Add($"{i}");
 
             return await _repo.InspectCollection(name, ids, includeEmbeddings);

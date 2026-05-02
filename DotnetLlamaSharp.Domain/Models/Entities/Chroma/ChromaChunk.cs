@@ -6,7 +6,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public class ChromaChunk : ChromaBaseChunk
     {
-        public ChromaChunk() { }
+        public ChromaChunk() : base() { Embedding = new ReadOnlyMemory<float>([]); }
         public ChromaChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, metadata)
         {
             Embedding = embedding;
@@ -15,7 +15,6 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         public ChromaChunk(string id, string text, Dictionary<string, object> metadata) : base(id, metadata)
         {
             Text = text;
-            Embedding = new ReadOnlyMemory<float>([]);
         }
 
         public string Text { get; set; }
