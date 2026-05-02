@@ -9,11 +9,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
     public class ChatChunkMetadata : ChromaMetadata
     {
         [JsonPropertyName("total_messages")]
-        public int TotalMessages { get; set; }
+        public int TOTAL_MESSAGES { get; set; }
+        [JsonPropertyName("chat_init")]
+        public bool CHAT_INIT { get; set; }
         [JsonPropertyName("current")]
-        public bool IsCurrent { get; set; }
+        public bool CURRENT { get; set; }
         [JsonPropertyName("llm_model")]
-        public string InferenceModel { get; set; } //This is just informative
+        public string LLM_MODEL { get; set; } //This is just informative
 
     }
 }

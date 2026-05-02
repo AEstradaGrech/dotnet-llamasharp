@@ -8,6 +8,6 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         // Q&A
         Task<RagPrompt> SimpleRagQuery(RagPromptRequest request);
         // Chat Turns with rag
-        Task<RagPrompt> RagChatPropt(RagPromptRequest request);
+        Task<ChatPrompt> RagChatPrompt(RagChatRequest request);
     }
 }

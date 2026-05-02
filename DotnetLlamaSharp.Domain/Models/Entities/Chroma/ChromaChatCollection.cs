@@ -27,6 +27,13 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
                                                 B --> smart rag --> x cada prompt 1 chroma query + 1 RelevanceEvaluationAnalysis.cs <- si no es relevante para el turn, ignorar
                                                 C --> smart-flow --> B + get chroma LONGMEMO + get chroma SHORTMEMO (systema B) + evaluation (C.2 --> rag-collection-selector + relevanceEval
              */
+            var split = name.Split("-");
+
+            if (split.Length != 2)
+                throw new InvalidDataException($"Invalid Chroma Chat Collection construction for collection: {name}. Chat Collection names should have this format: <agentname>-<username>");
+
+            AgentName = split[0];
+            UserName = split[1];
         }
 
         public string AgentName { get; set; }

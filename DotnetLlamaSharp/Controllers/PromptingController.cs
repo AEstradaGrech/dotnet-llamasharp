@@ -150,9 +150,9 @@ namespace DotnetLlamaSharp.Controllers
         // CADA PROMPT HACE VECTOR QUERY CON CURRENT.TEXT SI TOTAL_CHUNKS > 1 (o meta 'current' = false)
         // v2 --> MEMORIES (summarizations) cada X chunks genero sumary y lo guardo -> se hace vector query con current_chunk y chunks where meta 'memo' = true [PARA QUE??!]
         [HttpPost("/rag/chat/prompt")]
-        public async Task<IActionResult> RagChatPrompt([FromBody] RagPromptRequestDto request)
+        public async Task<IActionResult> RagChatPrompt([FromBody] RagChatRequestDto request)
         {
-            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleRagQuery(_mapper.Map<RagPromptRequestDto, RagPromptRequest>(request)));
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleRagQuery(_mapper.Map<RagChatRequestDto, RagPromptRequest>(request)));
 
             if (response != null)
                 return Ok(response);

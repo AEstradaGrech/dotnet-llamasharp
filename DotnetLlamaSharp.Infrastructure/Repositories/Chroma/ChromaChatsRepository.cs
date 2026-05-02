@@ -16,5 +16,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         public ChromaChatsRepository(ILogger<ChromaChatsRepository> logger, IOptions<ApiSettings> dbSettings, IChromaClient client) : base(logger, dbSettings, client)
         {
         }
+
+        public async Task<ChromaChatChunk> GetSessionChunk(string collection)
+            => await GetChunkById(collection, "1");
     }
 }

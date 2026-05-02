@@ -71,7 +71,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 { nameof(ChromaCollectionMetadata.CHUNKS).ToLower(), 0 }
             };
 
-            return await CreateCollection(name, new ChromaChunk("0", null, metadata));
+            return await CreateCollection(name, new ChromaChunk("0", "", metadata));
         }
 
         public async Task<TCol> CreateCollection(string name, ChromaChunk data)
@@ -238,6 +238,15 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return results;
         }
 
+        public async Task<TChunk> DefaultChunk(string collection, Dictionary<string, object> metadata)
+        {
+            var chunk = Activator.CreateInstance(typeof(TChunk)) as TChunk;
+
+            if (metadata != null)
+                chunk.CloneMetadata(metadata);
+
+            return chunk;
+        }
         public async Task<TChunk> GetChunkById(string collectionName, string id)
         {
             if (!await CollectionExists(collectionName))
