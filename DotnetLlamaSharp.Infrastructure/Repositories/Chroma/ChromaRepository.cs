@@ -150,7 +150,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 if (extraTags != null && extraTags.Count() > 0)
                     extraTags.Keys.ToList().ForEach(key => chunk.AddMetadata(key, extraTags[key], resetDefault: true));
 
-                await RequestUpsert(collectionName, [chunk.Id], [chunk.Embedding], [chunk.Metadata]);
+                await RequestUpsert(collection.Id, [chunk.Id], [chunk.Embedding], [chunk.Metadata]);
 
                 return await GetChunkById(collectionName, chunk.Id);
             }

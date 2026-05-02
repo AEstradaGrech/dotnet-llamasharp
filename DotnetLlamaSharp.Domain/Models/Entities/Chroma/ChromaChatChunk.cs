@@ -3,6 +3,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using OllamaSharp.Models.Chat;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -28,7 +29,16 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
             var meta = GetMeta<ChatChunkMetadata>();
 
             AddMetadata(nameof(ChatChunkMetadata.TEXT).ToLower(), (meta.TEXT + $"\n\n- ROLE: {role.ToString()} >> {message}").Trim());
-            AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES), meta.TOTAL_MESSAGES + 1, resetDefault:true);
+            AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), meta.TOTAL_MESSAGES + 1, resetDefault:true);
+        }
+
+        public void SetEmpty(bool isCurrent = false)
+        {
+            AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), isCurrent);
+            AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 0);
+            AddMetadata(nameof(ChatChunkMetadata.TEXT).ToLower(), string.Empty, resetDefault:true);
+
+            Embedding = new ReadOnlyMemory<float>([]);
         }
 
         public List<ChatMessage> TextAsMessages()
@@ -39,11 +49,19 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 
             Text.Split("- ROLE:").ToList().ForEach(message =>
             {
-                var split = message.Split(">>");
+                message = message.Trim();
 
-                var role = split[0].Trim().ToLower();
+                if(!string.IsNullOrEmpty(message))
+                {
+                    var split = message.Split(">>");
 
-                messages.Add(new ChatMessage(role, split[1].Trim()));
+                    if(split.Length >= 2)
+                    {
+                        var role = split[0].Trim().ToLower();
+
+                        messages.Add(new ChatMessage(role, split[1].Trim()));
+                    }
+                }
             });
 
             return messages;

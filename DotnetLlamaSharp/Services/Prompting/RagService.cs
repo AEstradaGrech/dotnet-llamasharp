@@ -107,9 +107,9 @@ the retrieved data topic.
                 throw new BadHttpRequestException("No user name has been found in the request and appsetings");
 
             if (string.IsNullOrEmpty(request.SystemMessage))
-                request.SystemMessage = $"You are a helpful assistant named: {request.AgentName}. Your task is to chat with the user, {request.UserName}";
+                request.SystemMessage = $"You are a helpful assistant named: {request.AgentName}. Your task is to chat with the user, {request.UserName}.";
 
-            else request.SystemMessage += $"\n\nYour name is {request.AgentName}. You are starting a conversation with the user, {request.UserName}";
+            else request.SystemMessage += $"\n\nYour name is {request.AgentName}. You are starting a conversation with the user, {request.UserName}.";
             
             var collectionName = $"{request.AgentName.Trim().Replace(" ", "")}-{request.UserName.Trim().Replace(" ", "")}";
             
@@ -124,7 +124,7 @@ the retrieved data topic.
             ChromaChatChunk currentChunk = null;
             if (isFirstSession || request.IsNewSession)
             {
-                string ragChatTemplage = $@"
+                string ragChatTemplate = $@"
 {request.SystemMessage}
 
 Your task is to chat with the user according to the stated instructions if any.
@@ -152,12 +152,11 @@ Your task is to chat with the user according to the stated instructions if any.
 
 #CHAT MEMORIES: This is what you recall from previous part of the conversation. This memory fragments will give you a grounded source of truth regarding the conversation:
 
-<<CHAT_MEMORIES>>
+[[-CHAT_MEMORIES-]]
 
-#RETRIEVED DATA: Use this pieces of information as a grounded source of truth to support your responses regarding specific topics. Ignore them if you
-                 find them irrelevant for the current chat turn.
+#RETRIEVED DATA: Use this pieces of information as a grounded source of truth to support your responses regarding specific topics. Ignore them if you find them irrelevant for the current chat turn.
 
-<<RETRIEVED_DATA>>
+[[-RETRIEVED_DATA-]]
 ";
                 var sessionMetas = new Dictionary<string, object>();
                 
@@ -167,11 +166,11 @@ Your task is to chat with the user according to the stated instructions if any.
                 sessionMetas.Add(nameof(ChatChunkMetadata.LLM_MODEL).ToLower(), request.Model);
                 sessionMetas.Add(nameof(ChatChunkMetadata.DOCUMENT).ToLower(), collection.Name);
 
-                sessionChunk.AppendMessage(ChatRole.System, request.SystemMessage); // UserSysMessage + RagChatTemplate
+                sessionChunk.AppendMessage(ChatRole.System, ragChatTemplate); // UserSysMessage + RagChatTemplate
                 sessionChunk.AppendMessage(ChatRole.User, request.Prompt);
 
-                currentChunk = await _chatsRepo.UpsertChunk(collectionName, sessionChunk, bAddTextAsMeta: true, sessionMetas);
-                
+                sessionChunk = await _chatsRepo.UpsertChunk(collectionName, sessionChunk, bAddTextAsMeta: true, sessionMetas);
+                currentChunk = sessionChunk;
                 currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), currentChunk.Id);
                 currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), 1);
 
@@ -179,20 +178,22 @@ Your task is to chat with the user according to the stated instructions if any.
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_ID).ToLower(), currentChunk.Id);
                 collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_SESSIONS).ToLower(), isFirstSession ? 1 : collection.GetMeta<ChatCollectionMetadata>().TOTAL_SESSIONS + 1);
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), 1);
-
+                collection.AddMetadata(nameof(ChatCollectionMetadata.CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CHUNKS + 1);
                 collection = await _chatsRepo.UpdateCollectionData(collectionName, collection.Metadata);
             }
             else 
             {
                 currentChunk = await _chatsRepo.GetChunkById(collectionName, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
                 currentChunk.AppendMessage(ChatRole.User.ToString(), request.Prompt);
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
+
             }
             var messages = currentChunk.TextAsMessages();
 
             var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault(); //Se guarda RagChatTemplate sin formatear. Se hace replace en cada request y se pasa como sysmesage
             // SYSTEM MESSAGE / RAG stuff
-
-            if(currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1)
+            var memoBuilder = new StringBuilder();
+            if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1)
             {
                 var chatMemos = new List<ChromaQueryChunk>();
 
@@ -206,22 +207,17 @@ Your task is to chat with the user according to the stated instructions if any.
 
                 chatMemos = _settings.RagChatMemoMinDistance <= 0 ? sessionEmbeddings : sessionEmbeddings.Where(x => x.Distance <= _settings.RagChatMemoMinDistance).ToList();
 
-                var sb = new StringBuilder();
-
                 for (int i = 0; i < chatMemos.Count; i++)
-                {
-                    sb.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n\n")
-                    .   Append(chatMemos[i].DefaultMetadata.TEXT);
-                }
-
-                systemMessage.Content = systemMessage.Content.Replace("<<CHAT_MEMORIES>>", sb.ToString().Trim());
+                    memoBuilder.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n\n").Append(chatMemos[i].DefaultMetadata.TEXT);
             }
+
+            systemMessage.Content = systemMessage.Content.Replace("[[-CHAT_MEMORIES-]]", currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1 ? memoBuilder.ToString().Trim() : "(No memories yet for this conversation)");
 
             string? ragData = null;
             if(request.QueryCollections.Any())
                 ragData = await QueryCollections(request.Prompt, request.QueryCollections, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
 
-            systemMessage.Content = systemMessage.Content.Replace("<<RETRIEVED_DATA>>", ragData);
+            systemMessage.Content = systemMessage.Content.Replace("[[-RETRIEVED_DATA-]]", string.IsNullOrEmpty(ragData) ? "(Nothing relevant...)" : ragData);
 
             // getSessionSysMsg -> GetChunkById(1).TextAsMessages().First();
             // if currentChunk.Id > 1 <-- se puede hacer vector search
@@ -230,11 +226,20 @@ Your task is to chat with the user according to the stated instructions if any.
 
             request.ChatHistory = [systemMessage]; //PerfilBot + TemplateMsg
 
-            request.ChatHistory.AddRange(messages); // currentChunk stuff
+            if(currentChunk.Id == sessionChunk.Id)
+                request.ChatHistory.AddRange(messages.Skip(1).Take(messages.Count -1).ToList());
+            
+            else request.ChatHistory.AddRange(messages); // currentChunk stuff
+
+            if (request.ChatHistory.Last().Role == ChatRole.User.ToString())
+                request.ChatHistory = request.ChatHistory.SkipLast(1).ToList();
 
             var response = await _chatService.ChatPrompt(request);
 
             currentChunk.AppendMessage(ChatRole.Assistant.ToString(), response.Output);
+            
+            if(currentChunk != sessionChunk)
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
 
             await _chatsRepo.UpsertChunk(collectionName, currentChunk);
 
@@ -251,13 +256,10 @@ Your task is to chat with the user according to the stated instructions if any.
                 await _chatsRepo.UpsertChunk(collection.Name, currentChunk);
 
                 var nextChunk = await _chatsRepo.DefaultChunk(currentChunk.Metadata);
-                
-                nextChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
-                nextChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 0, resetDefault: true);
-                
+                nextChunk.SetEmpty(isCurrent: true);
                 //Both the last chunk and the first one (sessionChunk) track the total session chunks
                 nextChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1); 
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1, resetDefault:true);
 
                 nextChunk.AppendMessage(ChatRole.User, response.Input);
                 nextChunk.AppendMessage(ChatRole.Assistant, response.Output);
@@ -265,11 +267,10 @@ Your task is to chat with the user according to the stated instructions if any.
                 await _chatsRepo.UpsertChunk(collection.Name, nextChunk);
 
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CHUNKS + 1);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS);
 
                 await _chatsRepo.UpdateCollectionData(collection.Name, collection.Metadata);
             }
-
-            sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 2);
 
             await _chatsRepo.UpsertChunk(collection.Name, sessionChunk); 
             
