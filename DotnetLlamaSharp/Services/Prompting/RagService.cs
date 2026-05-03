@@ -48,7 +48,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var systemMessage = @$"
 {(string.IsNullOrEmpty(baseIntruction) ? "You are a helpful assistant." : baseIntruction)}
-Your task is to answer any user query using the RETRIEVED_DATA as a grounded source of truth.
+Your task is to chat with the user and answer any question using the RETRIEVED_DATA (if any) as a grounded source of truth.
             
 Each item in the retrieve data section has three sections that will help you to understand the source and topic
 of the data along with the relevant document data that you must use to generate your response.
@@ -66,8 +66,8 @@ the retrieved data topic.
 # STEP 4: Based on your analysis from STEP 3 generate a coherent response using the RETRIEVED DATA to support your answer if you have decided that it
             is aligned with the general topic of the user question. In case you have decided that the user query is unrelated to the retrived data, 
             ignore the RETRIEVED DATA and try to answer the anyways but always informing the user that you have not found any relevant data in your Knowledge Base about the queried topic.
+# STEP 5: Use the result of your analisys from the previous steps to generate answer the user in a natural / conversational way and accordingly to any provided role or character profile.
 
-### RETRIEVED DATA:
 {getFileRagStringResult(collectionQueries)}";
         
             var chatRequest = _mapper.Map<RagPromptRequest, ChatPromptRequest>(request);
@@ -289,6 +289,9 @@ Your task is to chat with the user according to the stated instructions if any.
 
         public async Task<Dictionary<string, List<ChromaQueryChunk>>> QueryCollections(List<string> names, string text, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
         {
+            if (minDistance == 0)
+                minDistance = null;
+
             var results = new Dictionary<string, List<ChromaQueryChunk>>();
             ChromaQuery queryResult = null;
             foreach (var name in names)
@@ -312,7 +315,7 @@ Your task is to chat with the user according to the stated instructions if any.
 
         private string getFileRagStringResult(Dictionary<string, List<ChromaQueryChunk>> collectionQueries)
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder().Append("### RETRIEVED DATA:\n");
 
             collectionQueries.Keys.ToList()
                 .ForEach(key => collectionQueries[key]

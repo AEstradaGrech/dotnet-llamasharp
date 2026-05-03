@@ -24,9 +24,9 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.DocumentPageIds, opt => opt.MapFrom(src => src.GetMeta<FileChunkMetadata>().PAGES.Split(",").ToList()));
 
             CreateMap<ChromaChunksCollection<ChromaChunk>, ChromaChunksCollectionDto<ChromaChunkDto>>()
-                .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<FileCollectionMetadata>().MODEL))
-                .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.GetMeta<FileCollectionMetadata>().DIMENSIONS))
-                .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.GetMeta<FileCollectionMetadata>().TOTAL_CHUNKS));
+                .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().MODEL))
+                .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().DIMENSIONS))
+                .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().TOTAL_CHUNKS));
 
             CreateMap<ChromaChunksCollection<ChromaFileChunk>, ChromaChunksCollectionDto<ChromaFileChunkDto>>()
                 .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<FileCollectionMetadata>().MODEL))
