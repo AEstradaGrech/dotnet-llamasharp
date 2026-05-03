@@ -7,7 +7,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
     public class ChromaCollectionMetadata : ChromaMetadata
     {
-        [JsonPropertyName("chunks")]
-        public int CHUNKS { get; set; }
+        [JsonPropertyName("total_chunks")]
+        public int TOTAL_CHUNKS { get; set; }
     }
 }

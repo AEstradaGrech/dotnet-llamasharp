@@ -19,9 +19,11 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 
         public void AddMetadata(string key, object value, bool resetDefault = false, bool isOverride = true)
         {
-            if (Metadata.ContainsKey(key) && isOverride)
-                Metadata[key] = value;
-
+            if (Metadata.ContainsKey(key))
+            {
+                if (isOverride)
+                    Metadata[key] = value;
+            }
             else Metadata.Add(key, value);
 
             if (resetDefault)

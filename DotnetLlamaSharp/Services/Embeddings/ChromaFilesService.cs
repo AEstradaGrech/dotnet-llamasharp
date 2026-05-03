@@ -212,17 +212,17 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             var ids = new List<string>();
 
-            if (startIndex > collection.GetMeta<FileCollectionMetadata>().CHUNKS)
-                throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.GetMeta<FileCollectionMetadata>().CHUNKS})");
+            if (startIndex > collection.GetMeta<FileCollectionMetadata>().TOTAL_CHUNKS)
+                throw new InvalidOperationException($"The requested chunk samples start index is grater or equal to the number of available chunks ({collection.GetMeta<FileCollectionMetadata>().TOTAL_CHUNKS})");
 
             if (startIndex < 1)
                 startIndex = 1;
 
-            if (samples == 0 || samples > collection.GetMeta<FileCollectionMetadata>().CHUNKS)
-                samples = collection.GetMeta<FileCollectionMetadata>().CHUNKS;
+            if (samples == 0 || samples > collection.GetMeta<FileCollectionMetadata>().TOTAL_CHUNKS)
+                samples = collection.GetMeta<FileCollectionMetadata>().TOTAL_CHUNKS;
 
             for (int i = startIndex; i < startIndex + samples; i++)
-                if (i <= collection.GetMeta<FileCollectionMetadata>().CHUNKS)
+                if (i <= collection.GetMeta<FileCollectionMetadata>().TOTAL_CHUNKS)
                     ids.Add($"{i}");
 
             return await _repo.InspectCollection(name, ids, includeEmbeddings);

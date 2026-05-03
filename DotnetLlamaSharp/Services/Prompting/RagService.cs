@@ -10,6 +10,7 @@ using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models.Chat;
 using System.Text;
+using System.Text.Json;
 
 namespace DotnetLlamaSharp.Services.Prompting
 {
@@ -178,12 +179,20 @@ Your task is to chat with the user according to the stated instructions if any.
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_ID).ToLower(), currentChunk.Id);
                 collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_SESSIONS).ToLower(), isFirstSession ? 1 : collection.GetMeta<ChatCollectionMetadata>().TOTAL_SESSIONS + 1);
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), 1);
-                collection.AddMetadata(nameof(ChatCollectionMetadata.CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CHUNKS + 1);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_CHUNKS + 1);
                 collection = await _chatsRepo.UpdateCollectionData(collectionName, collection.Metadata);
             }
             else 
             {
-                currentChunk = await _chatsRepo.GetChunkById(collectionName, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
+                var filterMetas = new Dictionary<string, object>();
+                filterMetas.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
+                //filterMetas.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
+                //var dummyEmbedding = await _embeddingsService.GenerateEmbeddings(sessionChunk.Text, currentChunk.DefaultMetadata.DIMENSIONS, currentChunk.DefaultMetadata.MODEL)
+                var s = JsonSerializer.Serialize(sessionChunk.Embedding);
+                var chunks = await _chatsRepo.QueryCollection(collectionName, sessionChunk.Embedding, 1, filterMetas);
+                if (!chunks.Any())
+                    throw new InvalidDataException($"No CURRENT chunk has been found for collection: {collectionName} | session chunk: {sessionChunk.Id}");
+                currentChunk = _mapper.Map<ChromaQueryChunk, ChromaChatChunk>(chunks.First());
                 currentChunk.AppendMessage(ChatRole.User.ToString(), request.Prompt);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
 
@@ -250,6 +259,7 @@ Your task is to chat with the user according to the stated instructions if any.
                 if (!embeddings.GeneratedEmbeddings.Any())
                     throw new ArgumentNullException($"An error has occured while generating the embeddings for chat collection: {collection.Name} >> CHUNK: {currentChunk.Id} >> No generated embeddings");
 
+                var s = JsonSerializer.Serialize(embeddings.GeneratedEmbeddings.First().Vector);
                 currentChunk.Embedding = embeddings.GeneratedEmbeddings.First().Vector;
                 currentChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), false);
 
@@ -266,7 +276,7 @@ Your task is to chat with the user according to the stated instructions if any.
 
                 await _chatsRepo.UpsertChunk(collection.Name, nextChunk);
 
-                collection.AddMetadata(nameof(ChatCollectionMetadata.CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CHUNKS + 1);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_CHUNKS + 1);
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS);
 
                 await _chatsRepo.UpdateCollectionData(collection.Name, collection.Metadata);
