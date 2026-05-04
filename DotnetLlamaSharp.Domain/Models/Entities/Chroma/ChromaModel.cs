@@ -7,11 +7,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     public abstract class ChromaModel
     {
         public ChromaModel() { Metadata = new Dictionary<string, object>(); }
-        public ChromaModel(string id) : base()
-        {
-            Id = id;
-        }
-
+        public ChromaModel(string id) : this() { Id = id; }
         public string Id { get; set; }
 
         // all metadata for write, extra-metas for read

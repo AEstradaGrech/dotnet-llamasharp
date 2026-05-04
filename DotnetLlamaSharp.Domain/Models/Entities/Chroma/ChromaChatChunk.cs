@@ -16,6 +16,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         const string roleTag = "- ROLE: ";
         const string messageSeparator = " >>";
         public ChromaChatChunk() : base() { }
+        public ChromaChatChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
         public ChromaChatChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, embedding, metadata) { }
         public ChromaChatChunk(string id, string text, Dictionary<string, object> metadata) : base(id, text, metadata) { }
 

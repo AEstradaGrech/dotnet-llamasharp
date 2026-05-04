@@ -27,9 +27,9 @@ namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma
         {
             if (filters.Any() && filters.Count > 1)
             {
-                filters = new Dictionary<string, object>();
                 var conditions = new List<object>();
                 filters.Keys.ToList().ForEach(key => conditions.Add(new Dictionary<string, object> { [key] = filters[key] }));
+                filters = new Dictionary<string, object>();
                 filters.Add("$and", conditions);
             }
             
@@ -43,7 +43,7 @@ namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma
             var result = await _httpClient.PostAsJsonAsync($"{baseUrl}/api/v1/collections/{collectionId}/query", request);
 
             result.EnsureSuccessStatusCode();
-
+            
             return await result.Content.ReadFromJsonAsync<ChromaQueryResultModel>();
         }
     }

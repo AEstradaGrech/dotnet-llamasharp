@@ -190,13 +190,14 @@ Your task is to chat with the user according to the stated instructions if any.
             {
                 var filterMetas = new Dictionary<string, object>();
                 filterMetas.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
-                //filterMetas.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
+                filterMetas.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
                 //var dummyEmbedding = await _embeddingsService.GenerateEmbeddings(sessionChunk.Text, currentChunk.DefaultMetadata.DIMENSIONS, currentChunk.DefaultMetadata.MODEL)
                 var s = JsonSerializer.Serialize(sessionChunk.Embedding);
                 var chunks = await _chatsRepo.QueryCollection(collectionName, sessionChunk.Embedding, 1, filterMetas);
                 if (!chunks.Any())
                     throw new InvalidDataException($"No CURRENT chunk has been found for collection: {collectionName} | session chunk: {sessionChunk.Id}");
-                currentChunk = _mapper.Map<ChromaQueryChunk, ChromaChatChunk>(chunks.First());
+                
+                currentChunk = chunks.First().As<ChromaChatChunk>();
                 currentChunk.AppendMessage(ChatRole.User.ToString(), request.Prompt);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
 

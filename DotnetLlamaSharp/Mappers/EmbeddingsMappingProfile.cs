@@ -57,8 +57,6 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<ChromaQuery, ChromaQueryResponseDto>();
 
-            CreateMap<ChromaQueryChunk, ChromaChatChunk>()
-                .ForMember(dest => dest.Embedding, opt => opt.Ignore());
         }
     }
 }

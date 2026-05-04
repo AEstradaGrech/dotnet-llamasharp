@@ -10,6 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     public class ChromaChunksCollection<T> : ChromaBaseChunk where T : ChromaChunk
     {
         public ChromaChunksCollection() : base() {}
+        public ChromaChunksCollection(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
         public ChromaChunksCollection(string id, string name, Dictionary<string, object> metadata) : base(id, metadata)
         {
             Name = name;
