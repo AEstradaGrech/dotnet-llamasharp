@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using DocumentFormat.OpenXml.Wordprocessing;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -13,14 +14,15 @@ namespace DotnetLlamaSharp.Services.Embeddings
         private readonly IChromaFilesService _fileMgmtService;
         private readonly IEmbeddingsService _embeddingsService;
         private readonly IChromaChunksRepository _repo;
+        private readonly IChromaSysChunksRepository _sysRepo;
 
-
-        public ChromaService(ILogger<ChromaService> logger, IChromaFilesService ingestionService, IEmbeddingsService embeddingsService, IChromaChunksRepository repo)
+        public ChromaService(ILogger<ChromaService> logger, IChromaFilesService ingestionService, IEmbeddingsService embeddingsService, IChromaChunksRepository repo, IChromaSysChunksRepository sysRepo)
         {
             _logger = logger;
             _fileMgmtService = ingestionService;
             _embeddingsService = embeddingsService;
             _repo = repo;
+            _sysRepo = sysRepo;
         }
 
         public async Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request)
@@ -70,5 +72,42 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         public async Task<ChromaChunk> InspectChunk(string collectionName, string id)
             => await _repo.GetChunkById(collectionName, id);
+
+        public async Task<SysChunksCollection> CreateSystemChunksCollection(string name, string? description)
+        {
+            var embedding = await _embeddingsService.GenerateEmbeddings(string.IsNullOrEmpty(description) ? name : description);
+
+            if (!embedding.GeneratedEmbeddings.Any())
+                throw new InvalidDataException($"{nameof(CreateSystemChunksCollection)} >> collection: {name} >> No generated embeddings");
+
+            return await _sysRepo.CreateCollection(name, embedding.GeneratedEmbeddings.First().Vector, description);
+        }
+
+        public async Task<ChromaSysChunk> AddSysMessage(string collectionName, ChromaSysChunk chunk, string? version)
+        {
+            var collection = await _sysRepo.GetCollection(collectionName);
+
+            var newChunk = await _sysRepo.DefaultChunk(collectionName);
+
+            var embedding = await _embeddingsService.GenerateEmbeddings(chunk.Name, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+
+            if (!embedding.GeneratedEmbeddings.Any())
+                throw new InvalidDataException($"{nameof(CreateSystemChunksCollection)} >> collection: {collectionName} >> No generated embeddings");
+
+            newChunk.Text = chunk.Text;
+            newChunk.Embedding = embedding.GeneratedEmbeddings.First().Vector;
+            newChunk.AddMetadata(nameof(SysChunkMetadata.NAME).ToLower(), chunk.Name);
+            newChunk.AddMetadata(nameof(SysChunkMetadata.TAG).ToLower(), chunk.Tag);
+
+            if (!string.IsNullOrEmpty(version))
+                newChunk.AddMetadata(nameof(SysChunkMetadata.VERSION).ToLower(), version);
+
+            return await _sysRepo.UpsertChunk(collectionName, newChunk);
+        }
+
+        public Task<ChromaSysChunk> GetSysMessage(string collectionName, string name)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -56,6 +56,14 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> QueryCollection([FromBody] SimilaritySearchRequestDto request)
             => Ok(_mapper.Map<ChromaQuery, ChromaQueryResponseDto>(await _service.QueryCollection(request.Collection, request.Query.Trim(), request.ResultsNumber, request.MetadataFilters)));
 
+        [HttpGet("/collection/system/{name}/create")]
+        public async Task<IActionResult> CreateSysChunksCollection(string name, [FromQuery] string? description)
+            => Ok(_mapper.Map<ChromaChunksCollection<ChromaSysChunk>, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.CreateSystemChunksCollection(name, description)));
+
+        [HttpPost("/collection/system/{name}/create/message")]
+        public async Task<IActionResult> CreateSysChunksCollection(string name, [FromBody] ChromaSysChunkDto dto, [FromQuery] string? version)
+            => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.AddSysMessage(name, _mapper.Map<ChromaSysChunkDto,ChromaSysChunk>(dto), version)));
+
         [HttpGet("/documents/load/{docName}")]
         public async Task<IActionResult> LoadDocument(string docName)
             => Ok(_mapper.Map<Document, DocumentDto>(await _loader.LoadDocument(docName)));

@@ -6,9 +6,7 @@ using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Connectors.Chroma;
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 {
@@ -30,7 +28,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             var validatedName = $"{getValidConstructorNameTag(agentName, isUser: false)}-{getValidConstructorNameTag(userName, isUser: true)}";
 
-            ChromaChunk collectionChunk = await DefaultChunk(embeddingModel ?? _settings.DefaultEmbedder, dimensions ?? _settings.DefaultDimensions);
+            ChromaChunk collectionChunk = DefaultChunk(embeddingModel ?? _settings.DefaultEmbedder, dimensions ?? _settings.DefaultDimensions);
 
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.AGENT_NAME).ToLower(), agentName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);

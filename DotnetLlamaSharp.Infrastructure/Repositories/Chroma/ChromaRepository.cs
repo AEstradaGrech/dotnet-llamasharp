@@ -270,13 +270,13 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (collection.DefaultMetadata.DIMENSIONS <= 0)
                 throw new InvalidDataException($"{nameof(DefaultChunk)} >> {collectionName} >> Invalid collection settings >> Embedding DIMENSIONS value ({collection.DefaultMetadata.DIMENSIONS})");
 
-            var chunk = await DefaultChunk(collection.DefaultMetadata.MODEL, collection.DefaultMetadata.DIMENSIONS);
+            var chunk = DefaultChunk(collection.DefaultMetadata.MODEL, collection.DefaultMetadata.DIMENSIONS);
 
             chunk.AddMetadata(nameof(ChromaMetadata.DOCUMENT).ToLower(), collection.DefaultMetadata.DOCUMENT);
 
             return chunk;
         }
-        public async Task<TChunk> DefaultChunk(string embeddingModel, int dimensions)
+        public TChunk DefaultChunk(string embeddingModel, int dimensions)
         {
             if (string.IsNullOrEmpty(embeddingModel))
                 embeddingModel = _settings.DefaultEmbedder;
@@ -290,10 +290,10 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             metadata.Add(nameof(ChromaMetadata.DIMENSIONS).ToLower(), dimensions);
 
-            return await DefaultChunk(metadata);
+            return DefaultChunk(metadata);
         }
 
-        public async Task<TChunk> DefaultChunk(Dictionary<string, object>? metadata = null)
+        public TChunk DefaultChunk(Dictionary<string, object>? metadata = null)
         {
             var chunk = Activator.CreateInstance(typeof(TChunk)) as TChunk;
 

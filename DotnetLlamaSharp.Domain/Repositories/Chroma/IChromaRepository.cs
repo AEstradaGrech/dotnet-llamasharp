@@ -14,8 +14,8 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<TCol> CreateCollection(string name, ChromaChunk data);
         Task<TCol> UpdateCollectionData(string name, Dictionary<string, object> metadata, bool isOverride = true);
         Task<bool> DeleteCollection(string collection);
-        Task<TChunk> DefaultChunk(Dictionary<string, object>? metadata = null);
-        Task<TChunk> DefaultChunk(string embeddingModel, int dimensions);
+        TChunk DefaultChunk(Dictionary<string, object>? metadata = null);
+        TChunk DefaultChunk(string embeddingModel, int dimensions);
         Task<TChunk> DefaultChunk(string collectionName);
         Task<TChunk> GetChunkById(string collection, string id);
         Task<List<TChunk>> GetChunks(string collection, List<string> chunkIds, bool withEmbeddings = true);

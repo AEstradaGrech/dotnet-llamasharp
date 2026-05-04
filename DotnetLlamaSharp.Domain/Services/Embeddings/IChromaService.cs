@@ -1,9 +1,7 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace DotnetLlamaSharp.Domain.Services.Embeddings
 {
@@ -17,5 +15,9 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<ChromaFilesCollection> InspectFilesCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false); // Default: all chunks from idx 0
         Task<ChromaChunk> InspectChunk(string collectionName, string id);
         Task<ChromaQuery> QueryCollection(string name, string query, int resultsNumber, Dictionary<string, object> metadataFilters);
+
+        Task<SysChunksCollection> CreateSystemChunksCollection(string name, string? description);
+        Task<ChromaSysChunk> AddSysMessage(string collectionName, ChromaSysChunk chunk, string? version);
+        Task<ChromaSysChunk> GetSysMessage(string collectionName, string name);
     }
 }

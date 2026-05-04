@@ -305,7 +305,7 @@ Your task is to chat with the user according to the stated instructions if any.
                 collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_CHUNKS + 1, resetDefault: true);
             }
 
-            var nextChunk = await _chatsRepo.DefaultChunk(currentChunk.Metadata);
+            var nextChunk = _chatsRepo.DefaultChunk(currentChunk.Metadata);
             nextChunk.SetEmpty(isCurrent: true);
 
             //Both the last chunk and the first one (sessionChunk) track the total session chunks

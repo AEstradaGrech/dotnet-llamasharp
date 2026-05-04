@@ -22,6 +22,10 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<ChromaFileChunk, ChromaFileChunkDto>()
                 .IncludeBase<ChromaChunk, ChromaChunkDto>()
                 .ForMember(dest => dest.DocumentPageIds, opt => opt.MapFrom(src => src.GetMeta<FileChunkMetadata>().PAGES.Split(",").ToList()));
+            
+            CreateMap<ChromaSysChunk, ChromaSysChunkDto>()
+                .IncludeBase<ChromaChunk, ChromaChunkDto>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => $"{src.Name}-{src.GetMeta<SysChunkMetadata>().VERSION}"));
 
             CreateMap<ChromaChunksCollection<ChromaChunk>, ChromaChunksCollectionDto<ChromaChunkDto>>()
                 .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().MODEL))
@@ -32,6 +36,11 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<FileCollectionMetadata>().MODEL))
                 .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.GetMeta<FileCollectionMetadata>().DIMENSIONS))
                 .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.GetMeta<FileCollectionMetadata>().TOTAL_CHUNKS));
+
+            CreateMap<ChromaChunksCollection<ChromaSysChunk>, ChromaChunksCollectionDto<ChromaSysChunkDto>>()
+                .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().MODEL))
+                .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().DIMENSIONS))
+                .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().TOTAL_CHUNKS));
 
             CreateMap<ChromaFilesCollection, ChromaFilesCollectionDto>()
                 .IncludeBase<ChromaChunksCollection<ChromaFileChunk>, ChromaChunksCollectionDto<ChromaFileChunkDto>>()
@@ -56,7 +65,8 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Document, opt => opt.MapFrom(src => src.DefaultMetadata.DOCUMENT));
 
             CreateMap<ChromaQuery, ChromaQueryResponseDto>();
-
+            CreateMap<ChromaSysChunkDto, ChromaSysChunk>()
+                .ForMember(dest => dest.DefaultMetadata, opt => opt.Ignore());
         }
     }
 }
