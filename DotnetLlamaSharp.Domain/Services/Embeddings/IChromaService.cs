@@ -15,6 +15,7 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<ChromaChunksCollection<ChromaChunk>> GetCollection(string name);
         Task<ChromaFilesCollection> CreateCollectionFromFile(EmbedCollectionRequest request);
         Task<ChromaFilesCollection> InspectFilesCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false); // Default: all chunks from idx 0
+        Task<ChromaChunk> InspectChunk(string collectionName, string id);
         Task<ChromaQuery> QueryCollection(string name, string query, int resultsNumber, Dictionary<string, object> metadataFilters);
     }
 }

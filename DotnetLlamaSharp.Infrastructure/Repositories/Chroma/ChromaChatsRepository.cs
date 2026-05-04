@@ -26,12 +26,12 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return await GetChunkById(collection.Name, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
         }
 
-        public async Task<ChromaChatCollection> InitCollection(string agentName, string userName, string? description)
+        public async Task<ChromaChatCollection> InitCollection(string agentName, string userName, string? embeddingModel, int? dimensions, string? description = null)
         {
             var validatedName = $"{getValidConstructorNameTag(agentName, isUser: false)}-{getValidConstructorNameTag(userName, isUser: true)}";
 
-            ChromaChunk collectionChunk = await DefaultChunk();
-            
+            ChromaChunk collectionChunk = await DefaultChunk(embeddingModel ?? _settings.DefaultEmbedder, dimensions ?? _settings.DefaultDimensions);
+
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.AGENT_NAME).ToLower(), agentName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.DOCUMENT).ToLower(), validatedName, resetDefault: true);

@@ -48,6 +48,10 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> InspectFilesCollection([FromBody] InspectCollectionRequestDto request)
             => Ok(_mapper.Map<ChromaFilesCollection, ChromaFilesCollectionDto>(await _service.InspectFilesCollection(request.Name, request.StartIndex, request.SamplesNumber, request.IncludeEmbeddings)));
 
+        [HttpGet("/collection/{name}/inspect/chunk/{id}")]
+        public async Task<IActionResult> InspectChunk(string name, string id)
+            => Ok(_mapper.Map<ChromaChunk, ChromaChunkDto>(await _service.InspectChunk(name, id)));
+
         [HttpPost("/collection/query")]
         public async Task<IActionResult> QueryCollection([FromBody] SimilaritySearchRequestDto request)
             => Ok(_mapper.Map<ChromaQuery, ChromaQueryResponseDto>(await _service.QueryCollection(request.Collection, request.Query.Trim(), request.ResultsNumber, request.MetadataFilters)));

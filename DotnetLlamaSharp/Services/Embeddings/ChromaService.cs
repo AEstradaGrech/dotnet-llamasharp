@@ -67,5 +67,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 QueryEmbedding = queryEmbedding.Vector
             };
         }
+
+        public async Task<ChromaChunk> InspectChunk(string collectionName, string id)
+            => await _repo.GetChunkById(collectionName, id);
     }
 }

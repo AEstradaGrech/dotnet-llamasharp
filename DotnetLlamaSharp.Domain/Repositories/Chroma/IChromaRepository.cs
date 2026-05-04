@@ -18,6 +18,7 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<TCol> UpdateCollectionData(string name, Dictionary<string, object> metadata, bool isOverride = true);
         Task<bool> DeleteCollection(string collection);
         Task<TChunk> DefaultChunk(Dictionary<string, object>? metadata = null);
+        Task<TChunk> DefaultChunk(string embeddingModel, int dimensions);
         Task<TChunk> GetChunkById(string collection, string id);
         Task<List<TChunk>> GetChunks(string collection, List<string> chunkIds, bool withEmbeddings = true);
         Task<TChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null);

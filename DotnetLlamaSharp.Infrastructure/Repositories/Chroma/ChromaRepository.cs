@@ -18,7 +18,10 @@ using System.Text.Json;
 
 namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 {
-
+    // IMPORTANT:
+    //  - For this package: Microsoft.SemanticKernel.Connectors.Chroma --version 1.74.0-alpha
+    //  - USE THIS exact Chroma image VERSION: chromadb/chroma:0.4.24
+    //  - Run the container: docker run --name local-chroma -v ./chroma-data:/data -p XXXX:8000 chromadb/chroma:0.4.24
 #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     public abstract class  ChromaRepository<TCol, TChunk> where TCol : ChromaChunksCollection<TChunk> where TChunk : ChromaChunk
     {
@@ -144,11 +147,14 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                     if (string.IsNullOrEmpty(chunk.Text))
                         throw new InvalidOperationException("Chroma chunk has no associated text");
 
-                    chunk.AddMetadata(nameof(FileChunkMetadata.TEXT).ToLower(), chunk.Text);
+                    chunk.AddMetadata(nameof(ChromaMetadata.TEXT).ToLower(), chunk.Text);
                 }
 
                 if (extraTags != null && extraTags.Count() > 0)
                     extraTags.Keys.ToList().ForEach(key => chunk.AddMetadata(key, extraTags[key], resetDefault: true));
+
+                if (chunk.HasMetadata(nameof(ChromaMetadata.TEXT).ToLower()))
+                    chunk.AddMetadata(nameof(ChromaMetadata.TEXT).ToLower(), chunk.GetMeta<ChromaMetadata>().TEXT.Replace("\r", ""));
 
                 await RequestUpsert(collection.Id, [chunk.Id], [chunk.Embedding], [chunk.Metadata]);
 
@@ -252,6 +258,23 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 results.Add((TChunk)Activator.CreateInstance(typeof(TChunk), chunks.Ids[i], withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
 
             return results;
+        }
+
+        public async Task<TChunk> DefaultChunk(string embeddingModel, int dimensions)
+        {
+            if (string.IsNullOrEmpty(embeddingModel))
+                embeddingModel = _settings.DefaultEmbedder;
+
+            if (dimensions <= 0)
+                dimensions = _settings.DefaultDimensions;
+
+            var metadata = new Dictionary<string, object>();
+
+            metadata.Add(nameof(ChromaMetadata.MODEL).ToLower(), embeddingModel);
+
+            metadata.Add(nameof(ChromaMetadata.DIMENSIONS).ToLower(), dimensions);
+
+            return await DefaultChunk(metadata);
         }
 
         public async Task<TChunk> DefaultChunk(Dictionary<string, object>? metadata = null)

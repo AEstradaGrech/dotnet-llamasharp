@@ -13,10 +13,14 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public class ChromaChatChunk : ChromaChunk
     {
-        public ChromaChatChunk() { }
+        const string roleTag = "- ROLE: ";
+        const string messageSeparator = " >>";
+        public ChromaChatChunk() : base() { }
         public ChromaChatChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, embedding, metadata) { }
         public ChromaChatChunk(string id, string text, Dictionary<string, object> metadata) : base(id, text, metadata) { }
-       
+
+        public string EmbeddedText => Text.Replace(roleTag, "- ").Replace(messageSeparator, ":");
+
         protected override void setDefaultMetadata()
         {
             base.setDefaultMetadata();
@@ -28,12 +32,15 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         {
             var meta = GetMeta<ChatChunkMetadata>();
 
-            AddMetadata(nameof(ChatChunkMetadata.TEXT).ToLower(), (meta.TEXT + $"\n\n- ROLE: {role.ToString()} >> {message}").Trim());
+            AddMetadata(nameof(ChatChunkMetadata.TEXT).ToLower(), (meta.TEXT + $"\n\n{roleTag}{role.ToString()}{messageSeparator} {message}").Trim());
             AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), meta.TOTAL_MESSAGES + 1, resetDefault:true);
         }
 
+        
+
         public void SetEmpty(bool isCurrent = false)
         {
+            AddMetadata(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), false);
             AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), isCurrent);
             AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 0);
             AddMetadata(nameof(ChatChunkMetadata.TEXT).ToLower(), string.Empty, resetDefault:true);
