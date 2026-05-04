@@ -1,8 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using Microsoft.SemanticKernel.Connectors.Chroma;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Repositories.Chroma
 {
@@ -19,6 +16,7 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<bool> DeleteCollection(string collection);
         Task<TChunk> DefaultChunk(Dictionary<string, object>? metadata = null);
         Task<TChunk> DefaultChunk(string embeddingModel, int dimensions);
+        Task<TChunk> DefaultChunk(string collectionName);
         Task<TChunk> GetChunkById(string collection, string id);
         Task<List<TChunk>> GetChunks(string collection, List<string> chunkIds, bool withEmbeddings = true);
         Task<TChunk> UpsertChunk(string collection, ChromaChunk chunk, bool bAddTextAsMeta = true, Dictionary<string, object> extraTags = null);

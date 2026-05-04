@@ -260,6 +260,22 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return results;
         }
 
+        public async Task<TChunk> DefaultChunk(string collectionName)
+        {
+            var collection = await GetCollection(collectionName);
+
+            if (string.IsNullOrEmpty(collection.DefaultMetadata.MODEL))
+                throw new InvalidDataException($"{nameof(DefaultChunk)} >> {collectionName} >> Invalid collection settings >> Embedding MODEL name empty");
+
+            if (collection.DefaultMetadata.DIMENSIONS <= 0)
+                throw new InvalidDataException($"{nameof(DefaultChunk)} >> {collectionName} >> Invalid collection settings >> Embedding DIMENSIONS value ({collection.DefaultMetadata.DIMENSIONS})");
+
+            var chunk = await DefaultChunk(collection.DefaultMetadata.MODEL, collection.DefaultMetadata.DIMENSIONS);
+
+            chunk.AddMetadata(nameof(ChromaMetadata.DOCUMENT).ToLower(), collection.DefaultMetadata.DOCUMENT);
+
+            return chunk;
+        }
         public async Task<TChunk> DefaultChunk(string embeddingModel, int dimensions)
         {
             if (string.IsNullOrEmpty(embeddingModel))
@@ -286,6 +302,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             return chunk;
         }
+       
         public async Task<TChunk> GetChunkById(string collectionName, string id)
         {
             if (!await CollectionExists(collectionName))
@@ -302,7 +319,6 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             return Activator.CreateInstance(typeof(TChunk), chunk.Ids.First(), embedding, metas) as TChunk;
         }
-
         public async Task<bool> DeleteCollection(string collection)
         {
             if (await CollectionExists(collection))

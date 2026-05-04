@@ -122,7 +122,7 @@ the retrieved data topic.
             
             else collection = await _chatsRepo.GetCollection(collectionName);
 
-            var sessionChunk = isFirstSession ? await _chatsRepo.DefaultChunk(_settings.DefaultEmbedder, _settings.DefaultDimensions) : await _chatsRepo.GetChunkById(collection.Name, "1");
+            var sessionChunk = isFirstSession ? await _chatsRepo.DefaultChunk(collection.Name) : await _chatsRepo.GetChunkById(collection.Name, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
 
             ChromaChatChunk currentChunk = null;
             if (isFirstSession || request.IsNewSession)
@@ -161,45 +161,34 @@ Your task is to chat with the user according to the stated instructions if any.
 
 [[-RETRIEVED_DATA-]]
 ";
-                var sessionEmbedding = await _embeddingsService.GenerateEmbeddings(ragChatTemplate, collection.GetMeta<ChatCollectionMetadata>().DIMENSIONS, collection.GetMeta<ChatCollectionMetadata>().MODEL);
-
-                if (!sessionEmbedding.GeneratedEmbeddings.Any())
-                    throw new InvalidOperationException($"An error has occured while generating the session embedding for chat collection: {collection.Name}");
-                sessionChunk.Embedding = sessionEmbedding.GeneratedEmbeddings.First().Vector;
                 sessionChunk.AppendMessage(ChatRole.System, ragChatTemplate); // UserSysMessage + RagChatTemplate
-                sessionChunk.AppendMessage(ChatRole.User, request.Prompt);
 
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 2);
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 1);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), true);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.LLM_MODEL).ToLower(), request.Model);
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.DOCUMENT).ToLower(), collection.Name);
-                sessionChunk = await _chatsRepo.UpsertChunk(collectionName, sessionChunk, bAddTextAsMeta: true);
-                currentChunk = sessionChunk;
-                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), currentChunk.Id);
-                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), 1);
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.LLM_MODEL).ToLower(), request.Model, resetDefault: true);
 
-                collection.AddMetadata(nameof(ChatCollectionMetadata.SESSION_IDS).ToLower(), isFirstSession ? currentChunk.Id : $"{collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS},{currentChunk.Id}");
-                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_ID).ToLower(), currentChunk.Id);
-                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_SESSIONS).ToLower(), isFirstSession ? 1 : collection.GetMeta<ChatCollectionMetadata>().TOTAL_SESSIONS + 1);
-                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), 1);
-                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_CHUNKS + 1);
-                collection = await _chatsRepo.UpdateCollectionData(collectionName, collection.Metadata);
+                currentChunk = await generateNextChunk(sessionChunk, sessionChunk, collection, [new ChatMessage(ChatRole.User.ToString(), request.Prompt)], isSessionInit: true);
+
+                collection = await _chatsRepo.GetCollection(collection.Name);
+
+                sessionChunk = await _chatsRepo.GetChunkById(collection.Name, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
             }
             else 
             {
                 var filterMetas = new Dictionary<string, object>();
+                
                 filterMetas.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
                 filterMetas.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
-                //var dummyEmbedding = await _embeddingsService.GenerateEmbeddings(sessionChunk.Text, currentChunk.DefaultMetadata.DIMENSIONS, currentChunk.DefaultMetadata.MODEL)
-                var s = JsonSerializer.Serialize(sessionChunk.Embedding);
+
                 var chunks = await _chatsRepo.QueryCollection(collectionName, sessionChunk.Embedding, 1, filterMetas);
+                
                 if (!chunks.Any())
                     throw new InvalidDataException($"No CURRENT chunk has been found for collection: {collectionName} | session chunk: {sessionChunk.Id}");
                 
                 currentChunk = chunks.First().As<ChromaChatChunk>();
                 currentChunk.AppendMessage(ChatRole.User.ToString(), request.Prompt);
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1, resetDefault: true);
 
             }
             var messages = currentChunk.TextAsMessages();
@@ -207,7 +196,7 @@ Your task is to chat with the user according to the stated instructions if any.
             var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault(); //Se guarda RagChatTemplate sin formatear. Se hace replace en cada request y se pasa como sysmesage
             // SYSTEM MESSAGE / RAG stuff
             var memoBuilder = new StringBuilder();
-            if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1)
+            if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 2) //Skip Session chunk w/system message template & first session chunk
             {
                 var chatMemos = new List<ChromaQueryChunk>();
 
@@ -233,11 +222,6 @@ Your task is to chat with the user according to the stated instructions if any.
 
             systemMessage.Content = systemMessage.Content.Replace("[[-RETRIEVED_DATA-]]", string.IsNullOrEmpty(ragData) ? "(Nothing relevant...)" : ragData);
 
-            // getSessionSysMsg -> GetChunkById(1).TextAsMessages().First();
-            // if currentChunk.Id > 1 <-- se puede hacer vector search
-            // si collection.TotalSession > 1 <-- se puede hace vector search por sessions
-            // si request.QueryCollections <-- se puede hacer vector search por files
-
             request.ChatHistory = [systemMessage]; //PerfilBot + TemplateMsg
 
             if(currentChunk.Id == sessionChunk.Id)
@@ -251,58 +235,21 @@ Your task is to chat with the user according to the stated instructions if any.
             var response = await _chatService.ChatPrompt(request);
 
             currentChunk.AppendMessage(ChatRole.Assistant.ToString(), response.Output);
-            
-            if(currentChunk != sessionChunk)
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
 
             currentChunk = await _chatsRepo.UpsertChunk(collectionName, currentChunk);
 
+            //TotalMessages does not count original Session message (with instrucition message)
+            sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
+
+            sessionChunk = await _chatsRepo.UpsertChunk(collection.Name, sessionChunk);
+            
             if (currentChunk.Text.Length >= _settings.RagChatChunkSize)
             {
-                var embeddings = await _embeddingsService.GenerateEmbeddings(currentChunk.EmbeddedText, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
-
-                if (!embeddings.GeneratedEmbeddings.Any())
-                    throw new ArgumentNullException($"An error has occured while generating the embeddings for chat collection: {collection.Name} >> CHUNK: {currentChunk.Id} >> No generated embeddings");
-
-                var s = JsonSerializer.Serialize(embeddings.GeneratedEmbeddings.First().Vector);
-                currentChunk.Embedding = embeddings.GeneratedEmbeddings.First().Vector;
-                currentChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), false);
-
-                currentChunk = await _chatsRepo.UpsertChunk(collection.Name, currentChunk);
-
-                var nextChunk = await _chatsRepo.DefaultChunk(currentChunk.Metadata);
-                nextChunk.SetEmpty(isCurrent: true);
-
-                //Both the last chunk and the first one (sessionChunk) track the total session chunks
-                nextChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1); 
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1, resetDefault:true);
-
-                nextChunk.AppendMessage(ChatRole.User, response.Input);
-                nextChunk.AppendMessage(ChatRole.Assistant, response.Output);
-
-                var nextChunkEmbeddings = await _embeddingsService.GenerateEmbeddings(nextChunk.EmbeddedText, nextChunk.GetMeta<ChromaMetadata>().DIMENSIONS, nextChunk.GetMeta<ChromaMetadata>().MODEL);
-
-                if (!nextChunkEmbeddings.GeneratedEmbeddings.Any())
-                    throw new InvalidDataException($"An error has occured while generating the chunk overlap for the next chunk >> NO EMBEDDINGS >> collection: {collection.Name} >> current chunk ID: {currentChunk.Id}");
-
-                nextChunk.Embedding = nextChunkEmbeddings.GeneratedEmbeddings.First().Vector;
-
-                nextChunk = await _chatsRepo.UpsertChunk(collection.Name, nextChunk);
-
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), false);
-                
-                if (currentChunk.Id == sessionChunk.Id)
-                    sessionChunk = await _chatsRepo.UpsertChunk(collection.Name, sessionChunk);
-
-                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_CHUNKS + 1);
-                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS);
-
-                await _chatsRepo.UpdateCollectionData(collection.Name, collection.Metadata);
+                var overlaps = new List<ChatMessage> { new ChatMessage(ChatRole.User.ToString(), response.Input) };
+                overlaps.Add(new ChatMessage(ChatRole.Assistant.ToString(), response.Output));
+                var nextChunk = await generateNextChunk(currentChunk, sessionChunk, collection, overlaps);
             }
 
-            if(currentChunk.Id != sessionChunk.Id)
-                sessionChunk = await _chatsRepo.UpsertChunk(collection.Name, sessionChunk); 
-            
             return response;
         }
 
@@ -331,6 +278,62 @@ Your task is to chat with the user according to the stated instructions if any.
 
         public async Task<string> QueryCollections(string text, List<string> names, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
             => getFileRagStringResult(await QueryCollections(names, text, resultsNumber, minDistance, filters));
+
+        private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatCollection collection, List<ChatMessage> overlaps, bool isSessionInit = false)
+        {
+            var embeddings = await _embeddingsService.GenerateEmbeddings(currentChunk.EmbeddedText, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+
+            if (!embeddings.GeneratedEmbeddings.Any())
+                throw new ArgumentNullException($"An error has occured while generating the embeddings for chat collection: {collection.Name} >> CHUNK: {currentChunk.Id} >> No generated embeddings");
+
+            currentChunk.Embedding = embeddings.GeneratedEmbeddings.First().Vector;
+            currentChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), false);
+
+            currentChunk = await _chatsRepo.UpsertChunk(collection.Name, currentChunk);
+
+            if(isSessionInit)
+            {
+                sessionChunk = currentChunk;
+                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), currentChunk.Id);
+                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), 1, resetDefault:true);
+            
+
+                collection.AddMetadata(nameof(ChatCollectionMetadata.SESSION_IDS).ToLower(), string.IsNullOrEmpty(collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS) ? currentChunk.Id : $"{collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS},{currentChunk.Id}");
+                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_ID).ToLower(), currentChunk.Id);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_SESSIONS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_SESSIONS + 1);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), 1);
+                collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_CHUNKS + 1, resetDefault: true);
+            }
+
+            var nextChunk = await _chatsRepo.DefaultChunk(currentChunk.Metadata);
+            nextChunk.SetEmpty(isCurrent: true);
+
+            //Both the last chunk and the first one (sessionChunk) track the total session chunks
+            nextChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
+
+            if (overlaps.Count > 0)
+                overlaps.ForEach(message => nextChunk.AppendMessage(new ChatRole(message.Role), message.Content));
+
+            var nextChunkEmbeddings = await _embeddingsService.GenerateEmbeddings(nextChunk.EmbeddedText, nextChunk.DefaultMetadata.DIMENSIONS, nextChunk.DefaultMetadata.MODEL);
+
+            if (!nextChunkEmbeddings.GeneratedEmbeddings.Any())
+                throw new InvalidDataException($"An error has occured while generating the chunk overlap for the next chunk >> NO EMBEDDINGS >> collection: {collection.Name} >> current chunk ID: {currentChunk.Id}");
+
+            nextChunk.Embedding = nextChunkEmbeddings.GeneratedEmbeddings.First().Vector;
+
+            nextChunk = await _chatsRepo.UpsertChunk(collection.Name, nextChunk);
+
+            sessionChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
+
+            sessionChunk = await _chatsRepo.UpsertChunk(collection.Name, sessionChunk);
+
+            collection.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), collection.GetMeta<ChatCollectionMetadata>().TOTAL_CHUNKS + 1);
+            collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS);
+
+            await _chatsRepo.UpdateCollectionData(collection.Name, collection.Metadata);
+
+            return nextChunk;
+        }
 
         private string getFileRagStringResult(Dictionary<string, List<ChromaQueryChunk>> collectionQueries)
         {

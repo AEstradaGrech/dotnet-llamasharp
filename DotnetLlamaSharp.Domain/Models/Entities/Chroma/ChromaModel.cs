@@ -26,6 +26,21 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
                 setDefaultMetadata();
         }
 
+        public bool TryRemoveMetadata(string key, bool updateDefault = false)
+        {
+            if (!HasMetadata(key)) return false;
+
+            if(Metadata.Remove(key))
+            {
+                if (updateDefault)
+                    setDefaultMetadata();
+
+                return true;
+            }
+
+            return false;
+        }
+
         public void CloneMetadata(Dictionary<string, object> metadata, bool resetDefault = false)
         {
             var clone = new Dictionary<string, object>();
