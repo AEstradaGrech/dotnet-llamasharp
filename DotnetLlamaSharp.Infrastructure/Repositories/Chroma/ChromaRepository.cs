@@ -159,7 +159,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             chunk.Id = $"{collection.GetMeta<ChromaCollectionMetadata>().TOTAL_CHUNKS + 1}";
 
-            await RequestEmbeddingsUpsert(collection.Id, [chunk.Id], [chunk.Text], [chunk.Embedding], [chunk.Metadata]);
+            await RequestEmbeddingsUpsert(collection.Id, [chunk.Id], [chunk.Text], [chunk.Embedding], [chunk.Metadata], isCreate: true);
 
             await updateCollectionChunksCount(collectionName, bIncrease: true);
 
@@ -193,7 +193,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                     extraTags.Keys.ToList().ForEach(key => chunk.AddMetadata(key, extraTags[key]));
             }
 
-            await RequestEmbeddingsUpsert(collection.Id, selectedChunks.Select(x => $"{x.Id}").ToList(), selectedChunks.Select(x => x.Text).ToList(), selectedChunks.Select(x => x.Embedding).ToList(), selectedChunks.Select(x => x.Metadata).ToList());
+            await RequestEmbeddingsUpsert(collection.Id, selectedChunks.Select(x => $"{x.Id}").ToList(), selectedChunks.Select(x => x.Text).ToList(), selectedChunks.Select(x => x.Embedding).ToList(), selectedChunks.Select(x => x.Metadata).ToList(), isCreate: true);
 
             await updateCollectionChunksCount(collectionName, bIncrease: true, amount: selectedChunks.Count());
 
@@ -206,7 +206,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var chunks = await GetChunks(name, chunkIds, includeEmbeddings);
 
-            return Activator.CreateInstance(typeof(TCol), collection.Id, collection.Name, collection.Metadata, chunks) as TCol;
+            return Activator.CreateInstance(typeof(TCol), collection.Id, collection.Name, collection.Description, collection.Metadata, chunks) as TCol;
         }
 
         public async Task<List<TChunk>> GetChunks(string collectionName, List<string> chunkIds, bool withEmbeddings = true)
@@ -218,7 +218,10 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             var results = new List<TChunk>();
 
             for (int i = 0; i < chunks.Ids.Count; i++)
-                results.Add((TChunk)Activator.CreateInstance(typeof(TChunk), chunks.Ids[i], withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
+                results.Add((TChunk)Activator.CreateInstance(typeof(TChunk), chunks.Ids[i], 
+                    i <= chunks.Documents.Count ?  chunks.Documents[i] : string.Empty, 
+                    withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), 
+                    i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
 
             return results;
         }
