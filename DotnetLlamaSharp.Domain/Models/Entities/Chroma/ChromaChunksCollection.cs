@@ -11,12 +11,13 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         public ChromaChunksCollection() : base() {}
         public ChromaChunksCollection(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
-        public ChromaChunksCollection(string id, string name, Dictionary<string, object> metadata) : base(id, metadata)
+        public ChromaChunksCollection(string id, string name, string description, Dictionary<string, object> metadata) : base(id, metadata)
         {
             Name = name;
+            Description = description;
             Chunks = new List<T>();
         }
-        public ChromaChunksCollection(string id, string name, Dictionary<string, object> metadata, List<T> chunks) : base(id, metadata)
+        public ChromaChunksCollection(string id, string name, string description, Dictionary<string, object> metadata, List<T> chunks) : this(id, name, description, metadata)
         {
             Chunks = chunks.OrderBy(x => int.Parse(x.Id)).ToList();
         }
@@ -28,7 +29,6 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         protected override void setDefaultMetadata()
         {
             DefaultMetadata = JsonSerializer.Deserialize<ChromaCollectionMetadata>(JsonSerializer.Serialize(Metadata));
-            Description = DefaultMetadata.TEXT;
         }
     }
 }

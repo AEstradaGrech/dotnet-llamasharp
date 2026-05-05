@@ -1,7 +1,4 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
@@ -10,7 +7,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         public ChromaFileChunk() : base() { }
         public ChromaFileChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
-        public ChromaFileChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, embedding, metadata) {}
+        public ChromaFileChunk(string id, string text, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, text, embedding, metadata) {}
 
         protected override void setDefaultMetadata()
         {

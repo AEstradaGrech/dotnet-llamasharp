@@ -105,9 +105,20 @@ namespace DotnetLlamaSharp.Services.Embeddings
             return await _sysRepo.UpsertChunk(collectionName, newChunk);
         }
 
-        public Task<ChromaSysChunk> GetSysMessage(string collectionName, string name)
+        public async Task<ChromaSysChunk> GetSysMessage(string collectionName, string name)
+            => await _sysRepo.GetByName(collectionName, name);
+
+        public async Task<ChromaChatCollection> GetChatsCollection(string name)
         {
-            throw new NotImplementedException();
+            var collection = await _repo.GetCollection(name);
+
+            //collection.CURRENT_SESSION_ID 
+            // QueryCollection(name, metas = sessionId ) //TODOS LOS CHUNKS DE LA SESSION
+            //  OrderByDesc(chunk.Id)
+            //      for n = req.Results i++:            <-- SI EL TIO CAMBIA DE SESSION, LOS IDS' no incrementan secuencialmente. Pero da igual si lo ordeno por id
+            //          resultChunks.Add(sessionChunk)
+
+            return null;
         }
     }
 }

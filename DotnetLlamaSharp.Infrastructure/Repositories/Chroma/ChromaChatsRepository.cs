@@ -2,6 +2,7 @@
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
+using DotnetLlamaSharp.Infrastructure.Exceptions;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,11 +18,30 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
         }
 
+        public Task<List<ChromaChatChunk>> GetCollectionSessions(string collectionName)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ChromaChatChunk> GetCurrentSessionChunk(string collectionName)
         {
             var collection = await GetCollection(collectionName);
 
             return await GetChunkById(collection.Name, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
+        }
+
+        public async Task<List<ChromaChatChunk>> GetSessionChunks(string collectionName, string sessionId, bool isDescendingOrder = false, int? results = null)
+        {
+            var collection = await GetCollection(collectionName);
+
+            if (!collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS.Contains(sessionId))
+                throw new InvalidOperationException($"{collectionName} >> {nameof(GetSessionChunks)} >> Session {sessionId} does is not part of the collection sessions");
+
+            var sessionChunk = await GetChunkById(collectionName, sessionId);
+
+            //var sessionChunks = await QueryCollection(collectionName, sessionChunk.Embedding,)
+
+            return null;
         }
 
         public async Task<ChromaChatCollection> InitCollection(string agentName, string userName, string? embeddingModel, int? dimensions, string? description = null)
@@ -32,7 +52,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.AGENT_NAME).ToLower(), agentName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);
-            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.DOCUMENT).ToLower(), validatedName, resetDefault: true);
+            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.DOCUMENT_NAME).ToLower(), validatedName, resetDefault: true);
             collectionChunk.Text = description ?? $"Ollama Rag Chat >> {agentName} - {userName} >> {DateTime.Now}";
 
             return await CreateCollection(validatedName, collectionChunk);

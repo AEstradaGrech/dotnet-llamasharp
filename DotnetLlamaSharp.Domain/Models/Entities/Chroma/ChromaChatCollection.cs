@@ -11,8 +11,8 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         public ChromaChatCollection() : base() { }
         public ChromaChatCollection(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
-        public ChromaChatCollection(string id, string name, Dictionary<string, object> metadata): base(id, name, metadata) { }
-
+        public ChromaChatCollection(string id, string name, string description, Dictionary<string, object> metadata): base(id, name, description, metadata) { }
+        public ChromaChatCollection(string id, string name, string description, Dictionary<string, object> metadata, List<ChromaChatChunk> chunks) : base(id, name, description, metadata, chunks) { }
         //Original display names. With whitespaces
         public string AgentName { get; set; }
         public string UserName { get; set; }
@@ -21,10 +21,9 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         protected override void setDefaultMetadata()
         {
             DefaultMetadata = JsonSerializer.Deserialize<ChatCollectionMetadata>(JsonSerializer.Serialize(Metadata));
-            Description = DefaultMetadata.TEXT;
             AgentName = GetMeta<ChatCollectionMetadata>().AGENT_NAME;
             UserName = GetMeta<ChatCollectionMetadata>().USER_NAME;
-            CollectionName = DefaultMetadata.DOCUMENT;
+            CollectionName = DefaultMetadata.DOCUMENT_NAME;
         }
     }
 }

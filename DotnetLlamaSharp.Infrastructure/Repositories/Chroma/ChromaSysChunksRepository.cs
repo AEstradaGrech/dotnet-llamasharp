@@ -24,22 +24,21 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var collectionChunk = DefaultChunk();
 
-            collectionChunk.AddMetadata(nameof(SysCollectionMetadata.COL_EMBEDDING).ToLower(), embedding);
-            collectionChunk.AddMetadata(nameof(SysCollectionMetadata.TEXT).ToLower(), string.IsNullOrEmpty(description) ? name : description, resetDefault: true);
-
+            //collectionChunk.AddMetadata(nameof(SysCollectionMetadata.COL_EMBEDDING).ToLower(), embedding);
+           
             return await CreateCollection(name, collectionChunk);
         }
 
-        public async Task<ChromaSysChunk> GetByName(string collectionName, string name)
+        public async Task<ChromaSysChunk> GetByName(string collectionName, string name) //WHERE chunk.Meta.NAME = name
         {
             var collection = await GetCollection(collectionName);
 
-            var results = await QueryCollection(collectionName, collection.CollectionEmbedding, 1, new Dictionary<string, object> { [nameof(ChromaSysChunk.Name).ToLower()] = name });
+            //var results = await GetChunks(collectionName,  1, new Dictionary<string, object> { [nameof(ChromaSysChunk.Name).ToLower()] = name });
 
-            if (!results.Any())
-                throw new ArgumentNullException($"{collection.Name} >> {nameof(GetByName)} >> No System Message Chunk has been found with name {name}");
-
-            return results.First().As<ChromaSysChunk>();
+            //if (!results.Any())
+            //    throw new ArgumentNullException($"{collection.Name} >> {nameof(GetByName)} >> No System Message Chunk has been found with name {name}");
+            return null;
+            //return results.First().As<ChromaSysChunk>();
         }
     }
 }

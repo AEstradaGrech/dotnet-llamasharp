@@ -1,14 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace DotnetLlamaSharp.Infrastructure.Models
+namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma.Models
 {
-    public class ChromaClientQueryRequest
+    public class ChromaClientQueryRequest : ChromaClientFilterRequest
     {
         [JsonPropertyName("query_embeddings")]
         public List<ReadOnlyMemory<float>> Embeddings { get; set; }
         [JsonPropertyName("n_results")]
         public int Results { get; set; }
-        [JsonPropertyName("where")]
-        public Dictionary<string, object> MetadataFilters { get; set; }
     }
 }

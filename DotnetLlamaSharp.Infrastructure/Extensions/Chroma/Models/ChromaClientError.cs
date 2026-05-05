@@ -4,7 +4,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace DotnetLlamaSharp.Infrastructure.Models
+namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma.Models
 {
     public class ChromaClientError
     {

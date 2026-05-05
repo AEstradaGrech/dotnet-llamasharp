@@ -211,7 +211,7 @@ Your task is to chat with the user according to the stated instructions if any.
                 chatMemos = _settings.RagChatMemoMinDistance <= 0 ? sessionEmbeddings : sessionEmbeddings.Where(x => x.Distance <= _settings.RagChatMemoMinDistance).ToList();
 
                 for (int i = 0; i < chatMemos.Count; i++)
-                    memoBuilder.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n\n").Append(chatMemos[i].DefaultMetadata.TEXT);
+                    memoBuilder.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n\n").Append(chatMemos[i].Text);
             }
 
             systemMessage.Content = systemMessage.Content.Replace("[[-CHAT_MEMORIES-]]", currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1 ? memoBuilder.ToString().Trim() : "(No memories yet for this conversation)");
@@ -347,9 +347,9 @@ Your task is to chat with the user according to the stated instructions if any.
                         sb.Append($"\n- Topic: ")
                             .Append(key)
                             .Append("\n- Source document: ")
-                            .Append(chunk.DefaultMetadata.DOCUMENT)
+                            .Append(chunk.DefaultMetadata.DOCUMENT_NAME)
                             .Append("\n- Data:\n\n")
-                            .Append(chunk.DefaultMetadata.TEXT)
+                            .Append(chunk.Text)
                             .Append("\n")));
 
             return sb.ToString().Trim();
