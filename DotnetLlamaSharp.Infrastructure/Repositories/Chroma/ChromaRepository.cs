@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+﻿using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
@@ -204,45 +205,21 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             var collection = await GetCollection(name);
 
-            var chunks = await GetChunks(name, chunkIds, includeEmbeddings);
-
-            return Activator.CreateInstance(typeof(TCol), collection.Id, collection.Name, collection.Description, collection.Metadata, chunks) as TCol;
+            return Activator.CreateInstance(typeof(TCol), collection.Id, collection.Name, collection.Description, collection.Metadata, await GetChunks(name, chunkIds, includeEmbeddings)) as TCol;
         }
 
         public async Task<List<TChunk>> GetChunks(string collectionName, List<string> chunkIds, bool withEmbeddings = true)
         {
             var collection = await GetCollection(collectionName);
 
-            var chunks = await RequestDocuments(collection.Id, chunkIds, withEmbeddings);
-
-            var results = new List<TChunk>();
-
-            for (int i = 0; i < chunks.Ids.Count; i++)
-                results.Add((TChunk)Activator.CreateInstance(typeof(TChunk), chunks.Ids[i], 
-                    i <= chunks.Documents.Count ?  chunks.Documents[i] : string.Empty, 
-                    withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), 
-                    i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
-
-            return results;
+            return mapChunks(await RequestDocuments(collection.Id, chunkIds, withEmbeddings), withEmbeddings);
         }
 
-        public async Task<List<TChunk>> GetChunks(string collectionName, int? pageSize = null, int? skip = null, Dictionary<string, object>? filters = null, bool withEmbeddings = true)
+        public async Task<List<TChunk>> GetChunks(string collectionName, Dictionary<string, object>? filters = null, bool withEmbeddings = true, int ? pageSize = null, int? skip = null)
         {
             var collection = await GetCollection(collectionName);
 
-            List<string> metadatas = ["documents", "metadatas"];
-
-            if (withEmbeddings)
-                metadatas.Add("embeddings");
-
-            var chunks = await RequestDocuments(collection.Id, withEmbeddings, filters, pageSize, skip);
-
-            var results = new List<TChunk>();
-
-            for (int i = 0; i < chunks.Ids.Count; i++)
-                results.Add((TChunk)Activator.CreateInstance(typeof(TChunk), chunks.Ids[i], withEmbeddings ? i <= chunks.Embeddings.Count ? new ReadOnlyMemory<float>(chunks.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]), i <= chunks.Metadatas.Count ? chunks.Metadatas[i] : []));
-
-            return results;
+            return mapChunks(await RequestDocuments(collection.Id, withEmbeddings, filters, pageSize, skip), withEmbeddings);
         }
 
         public async Task<TChunk> DefaultChunk(string collectionName)
@@ -295,14 +272,9 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var collection = await RequestCollection(collectionName);
 
-            var chunk = await RequestDocuments(collection.Id, [id], withEmbeddings: true);
+            var chunks = await RequestDocuments(collection.Id, [id], withEmbeddings: true);
 
-            if (!chunk.Ids.Any()) return null;
-
-            var metas = chunk.Metadatas.Any() ? chunk.Metadatas.First() : [];
-            var embedding = chunk.Embeddings.Any() ? new ReadOnlyMemory<float>(chunk.Embeddings.First()) : new ReadOnlyMemory<float>([]);
-            var document = chunk.Documents.Any() ? chunk.Documents.First() : string.Empty;
-            return Activator.CreateInstance(typeof(TChunk), chunk.Ids.First(), document, embedding, metas) as TChunk;
+            return mapChunks(chunks, withEmbeddings: true).FirstOrDefault();
         }
         public async Task<bool> DeleteCollection(string collection)
         {
@@ -325,12 +297,12 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             await RequestDelete(collection.Id, [id]);
 
-            var chunk = await GetChunkById(collection.Id, id);
+            var chunk = await GetChunkById(collection.Name, id);
 
             bool bSucceeded = chunk == null;
 
             if (bSucceeded)
-                await updateCollectionChunksCount(collection.Id, bIncrease: false);
+                await updateCollectionChunksCount(collection.Name, bIncrease: false);
 
             return bSucceeded;
         }
@@ -481,6 +453,20 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         private ChromaClientError handleChromaClientError(HttpOperationException ex)
             => !string.IsNullOrEmpty(ex.ResponseContent) ? JsonSerializer.Deserialize<ChromaClientError>(ex.ResponseContent) : new ChromaClientError { Error = ex.Message, Code = HttpStatusCode.InternalServerError };
 
+        private List<TChunk> mapChunks(DocumentGetResultModel query, bool withEmbeddings)
+        {
+            var results = new List<TChunk>();
+
+            if (!query.Ids.Any()) return results;
+
+            for (int i = 0; i < query.Ids.Count; i++)
+                results.Add((TChunk)Activator.CreateInstance(typeof(TChunk), query.Ids[i],
+                    i <= query.Documents.Count ? query.Documents[i] : string.Empty,
+                    withEmbeddings ? query.Embeddings != null && query.Embeddings.Any() && i <= query.Embeddings.Count? new ReadOnlyMemory<float>(query.Embeddings[i]) : new ReadOnlyMemory<float>([]) : new ReadOnlyMemory<float>([]),
+                    i <= query.Metadatas.Count ? query.Metadatas[i] : []));
+
+            return results;
+        }
         private async Task<int> updateCollectionChunksCount(string name, bool bIncrease, int amount = 1)
         {
             var collection = await GetCollection(name);

@@ -19,7 +19,7 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<TChunk> DefaultChunk(string collectionName);
         Task<TChunk> GetChunkById(string collection, string id);
         Task<List<TChunk>> GetChunks(string collection, List<string> chunkIds, bool withEmbeddings = true);
-        Task<List<TChunk>> GetChunks(string collection, int? pageSize, int? skip = null, Dictionary<string, object>? filters = null, bool withEmbeddings = true);
+        Task<List<TChunk>> GetChunks(string collection, Dictionary<string, object>? filters = null, bool withEmbeddings = true, int? pageSize = null, int? skip = null);
         Task<TChunk> UpsertChunk(string collection, ChromaChunk chunk, Dictionary<string, object> extraTags = null);
         Task<int> InsertChunks(string collection, List<ChromaChunk> chunks, Dictionary<string, object> extraMetas = null);
         Task<TChunk> InsertChunk(string collection, ChromaChunk chunk, Dictionary<string, object> extraMetas = null);

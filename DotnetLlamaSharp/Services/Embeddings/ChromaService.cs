@@ -74,18 +74,17 @@ namespace DotnetLlamaSharp.Services.Embeddings
             => await _repo.GetChunkById(collectionName, id);
 
         public async Task<SysChunksCollection> CreateSystemChunksCollection(string name, string? description)
-        {
-            var embedding = await _embeddingsService.GenerateEmbeddings(string.IsNullOrEmpty(description) ? name : description);
-
-            if (!embedding.GeneratedEmbeddings.Any())
-                throw new InvalidDataException($"{nameof(CreateSystemChunksCollection)} >> collection: {name} >> No generated embeddings");
-
-            return await _sysRepo.CreateCollection(name, embedding.GeneratedEmbeddings.First().Vector, description);
-        }
-
+            => await _sysRepo.CreateCollection(name, description ?? name);
+        
         public async Task<ChromaSysChunk> AddSysMessage(string collectionName, ChromaSysChunk chunk, string? version)
         {
             var collection = await _sysRepo.GetCollection(collectionName);
+
+            if (string.IsNullOrEmpty(version))
+                version = "v1";
+
+            if (await _sysRepo.ExistsMessage(collection.Name, chunk.Name, version))
+                throw new InvalidOperationException($"{collection.Name} >> {nameof(AddSysMessage)} >> A message with name-version: {chunk.Name}-{version} already exists");
 
             var newChunk = await _sysRepo.DefaultChunk(collectionName);
 
@@ -96,17 +95,20 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             newChunk.Text = chunk.Text;
             newChunk.Embedding = embedding.GeneratedEmbeddings.First().Vector;
-            newChunk.AddMetadata(nameof(SysChunkMetadata.NAME).ToLower(), chunk.Name);
+            newChunk.AddMetadata(nameof(ChromaMetadata.DOCUMENT_NAME).ToLower(), chunk.Name);
             newChunk.AddMetadata(nameof(SysChunkMetadata.TAG).ToLower(), chunk.Tag);
 
             if (!string.IsNullOrEmpty(version))
                 newChunk.AddMetadata(nameof(SysChunkMetadata.VERSION).ToLower(), version);
 
-            return await _sysRepo.UpsertChunk(collectionName, newChunk);
+            return await _sysRepo.InsertChunk(collectionName, newChunk);
         }
 
-        public async Task<ChromaSysChunk> GetSysMessage(string collectionName, string name)
-            => await _sysRepo.GetByName(collectionName, name);
+        public async Task<ChromaSysChunk> GetSysMessage(string collectionName, string name, string? version = null)
+            => await _sysRepo.GetByName(collectionName, name, version);
+
+        public async Task<ChromaSysChunk> DeleteSysMessage(string collectionName, string name, string? version = null)
+            => await _sysRepo.DeleteByName(collectionName, name, version);
 
         public async Task<ChromaChatCollection> GetChatsCollection(string name)
         {

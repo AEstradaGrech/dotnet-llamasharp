@@ -66,8 +66,16 @@ namespace DotnetLlamaSharp.Controllers
             => Ok(_mapper.Map<ChromaChunksCollection<ChromaSysChunk>, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.CreateSystemChunksCollection(name, description)));
 
         [HttpPost("/collection/system/{name}/create/message")]
-        public async Task<IActionResult> CreateSysChunksCollection(string name, [FromBody] ChromaSysChunkDto dto, [FromQuery] string? version)
-            => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.AddSysMessage(name, _mapper.Map<ChromaSysChunkDto,ChromaSysChunk>(dto), version)));
+        public async Task<IActionResult> CreateSysChunksCollection(string name, [FromBody] CreateSysChunkRequestDto dto)
+            => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.AddSysMessage(name, _mapper.Map<CreateSysChunkRequestDto,ChromaSysChunk>(dto), dto.Version)));
+
+        [HttpGet("/collection/system/{collection}/message/{name}")]
+        public async Task<IActionResult> GetSystemChunk(string collection, string name, [FromQuery] string? version)
+            => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.GetSysMessage(collection, name, version)));
+
+        [HttpDelete("/collection/system/{collection}/delete/{name}")]
+        public async Task<IActionResult> DeleteSystemChunk(string collection, string name, [FromQuery] string? version)
+            => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.DeleteSysMessage(collection, name, version)));
 
         [HttpGet("/documents/load/{docName}")]
         public async Task<IActionResult> LoadDocument(string docName)

@@ -68,15 +68,17 @@ namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma
 
         public static async Task<DocumentGetResultModel> GetDocuments(this IChromaClient chromaClient, string baseUrl, string collectionId, bool withEmbeddings, Dictionary<string, object>? filters = null, int? pageSize = null, int? skip = null, List<string>? ids = null)
         {
-            if (filters != null && filters.Any() && filters.Count > 1)
+            if(filters != null)
             {
-                var conditions = new List<object>();
-                filters.Keys.ToList().ForEach(key => conditions.Add(new Dictionary<string, object> { [key] = filters[key] }));
-                filters = new Dictionary<string, object>();
-                filters.Add("$and", conditions);
+                if (filters.Any() && filters.Count > 1)
+                {
+                    var conditions = new List<object>();
+                    filters.Keys.ToList().ForEach(key => conditions.Add(new Dictionary<string, object> { [key] = filters[key] }));
+                    filters = new Dictionary<string, object>();
+                    filters.Add("$and", conditions);
+                }
             }
-            else filters = null;
-
+            
             var includes = new List<string> {"metadatas", "documents" };
 
             if (withEmbeddings)
@@ -94,14 +96,16 @@ namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma
 
         public static async Task<DocumentsQueryResultModel> QueryDocuments(this IChromaClient chromaClient, string baseUrl, string collectionId, List<ReadOnlyMemory<float>> queryEmbeddings, int nResults, Dictionary<string, object>? filters = null)
         {
-            if (filters != null && filters.Any() && filters.Count > 1)
+            if (filters != null)
             {
-                var conditions = new List<object>();
-                filters.Keys.ToList().ForEach(key => conditions.Add(new Dictionary<string, object> { [key] = filters[key] }));
-                filters = new Dictionary<string, object>();
-                filters.Add("$and", conditions);
+                if (filters.Any() && filters.Count > 1)
+                {
+                    var conditions = new List<object>();
+                    filters.Keys.ToList().ForEach(key => conditions.Add(new Dictionary<string, object> { [key] = filters[key] }));
+                    filters = new Dictionary<string, object>();
+                    filters.Add("$and", conditions);
+                }
             }
-            else filters = null;
 
             var request = new ChromaClientQueryRequest
             {

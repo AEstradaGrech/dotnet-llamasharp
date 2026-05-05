@@ -7,13 +7,14 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         public ChromaSysChunk() : base() { }
         public ChromaSysChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
-        public ChromaSysChunk(string id, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, metadata) { Embedding = embedding; }
+        public ChromaSysChunk(string id, string document, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, document, embedding, metadata) { }
         protected override void setDefaultMetadata()
         {
             base.setDefaultMetadata();
 
             DefaultMetadata = JsonSerializer.Deserialize<SysChunkMetadata>(JsonSerializer.Serialize(Metadata));
-            Name = GetMeta<SysChunkMetadata>().NAME;
+            Name = GetMeta<SysChunkMetadata>().DOCUMENT_NAME;
+            Tag = GetMeta<SysChunkMetadata>().TAG;
         }
 
         public string Name { get; set; }

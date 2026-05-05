@@ -65,7 +65,9 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Document, opt => opt.MapFrom(src => src.DefaultMetadata.DOCUMENT_NAME));
 
             CreateMap<ChromaQuery, ChromaQueryResponseDto>();
-            CreateMap<ChromaSysChunkDto, ChromaSysChunk>()
+            CreateMap<CreateSysChunkRequestDto, ChromaSysChunk>()
+                .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.Message))
+                .ForMember(dest => dest.Embedding, opt => opt.Ignore())
                 .ForMember(dest => dest.DefaultMetadata, opt => opt.Ignore());
         }
     }

@@ -24,21 +24,81 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var collectionChunk = DefaultChunk();
 
-            //collectionChunk.AddMetadata(nameof(SysCollectionMetadata.COL_EMBEDDING).ToLower(), embedding);
-           
             return await CreateCollection(name, collectionChunk);
         }
 
-        public async Task<ChromaSysChunk> GetByName(string collectionName, string name) //WHERE chunk.Meta.NAME = name
+        public async Task<ChromaSysChunk> DeleteByName(string collectionName, string name, string? version = null)
         {
             var collection = await GetCollection(collectionName);
 
-            //var results = await GetChunks(collectionName,  1, new Dictionary<string, object> { [nameof(ChromaSysChunk.Name).ToLower()] = name });
+            var query = await GetChunks(collection.Name, new Dictionary<string, object> { [nameof(ChromaMetadata.DOCUMENT_NAME).ToLower()] = name }, withEmbeddings: false);
 
-            //if (!results.Any())
-            //    throw new ArgumentNullException($"{collection.Name} >> {nameof(GetByName)} >> No System Message Chunk has been found with name {name}");
-            return null;
-            //return results.First().As<ChromaSysChunk>();
+            if (!query.Any())
+                throw new FileNotFoundException($"{collection.Name} >> {nameof(DeleteByName)} >> No system chunk has been found with name: {name}");
+
+            if(string.IsNullOrEmpty(version))
+            {
+                foreach(var chunk in query)
+                    if (!await DeleteChunk(collection.Name, chunk.Id))
+                        throw new InvalidOperationException($"{collection.Name} >> {nameof(DeleteByName)} >> An error has occured while deleting sys chunk with name: {name} - {version}");
+
+                return query.First();
+            }
+            else
+            {
+                if (!query.Any(chunk => chunk.GetMeta<SysChunkMetadata>().VERSION == version))
+                    throw new FileNotFoundException($"{collection.Name} >> {nameof(DeleteByName)} >> No VERSION {version} has been found for sys chunk: {name}");
+
+                var chunk = query.Where(chunk => chunk.GetMeta<SysChunkMetadata>().VERSION == version).FirstOrDefault();
+
+                if (!await DeleteChunk(collection.Name, chunk.Id))
+                    throw new InvalidOperationException($"{collection.Name} >> {nameof(DeleteByName)} >> An error has occured while deleting sys chunk with name: {name} - {version}");
+                
+                return chunk;
+            }
+            
+        }
+
+        public async Task<bool> ExistsMessage(string collectionName, string name, string? version)
+        {
+            var filters = new Dictionary<string, object> { [nameof(ChromaMetadata.DOCUMENT_NAME).ToLower()] = name };
+
+            if(!string.IsNullOrEmpty(version))
+                filters.Add(nameof(SysChunkMetadata.VERSION).ToLower(), version);
+
+            var query = await GetChunks(collectionName, filters, withEmbeddings: false);
+
+            return query.Any();
+        }
+
+        public async Task<ChromaSysChunk> GetByName(string collectionName, string name, string? version = null) //WHERE chunk.Meta.NAME = name
+        {
+            if (string.IsNullOrEmpty(version))
+            {
+                var query = await GetChunks(collectionName, new Dictionary<string, object> { [nameof(ChromaMetadata.DOCUMENT_NAME).ToLower()] = name }, withEmbeddings: false);
+
+                if (!query.Any())
+                    throw new FileNotFoundException($"{collectionName} >> {nameof(GetByName)} >> No chunks found with name: {name}");
+
+                return query.OrderByDescending(chunk => int.Parse(chunk.Id)).First();
+            }
+            else
+            {
+                var filters = new Dictionary<string, object> { [nameof(ChromaMetadata.DOCUMENT_NAME).ToLower()] = name };
+                
+                filters.Add(nameof(SysChunkMetadata.VERSION).ToLower(), version);
+
+                var query = await GetChunks(collectionName, filters, withEmbeddings: false);
+
+                if (!query.Any())
+                    throw new FileNotFoundException($"{collectionName} >> {nameof(GetByName)} >> No chunks found with name: {name}-{version}");
+
+                return query.First();
+            }
+        }
+        public Task<ChromaSysChunk> UpdateMessage(string collectionName, string name, string message, ReadOnlyMemory<float> embedding)
+        {
+            throw new NotImplementedException();
         }
     }
 }
