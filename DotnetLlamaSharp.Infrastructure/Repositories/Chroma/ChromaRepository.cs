@@ -215,6 +215,25 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return mapChunks(await RequestDocuments(collection.Id, chunkIds, withEmbeddings), withEmbeddings);
         }
 
+        public async Task<TCol> GetCollectionPage(string name, Dictionary<string, object>? filters = null, bool withEmbeddings = true, int pageSize = 10, int page = 0)
+        {
+            var collection = await GetCollection(name);
+
+            if (pageSize <= 0)
+                pageSize = 1;
+            
+            if (page < 0)
+                page = 0;
+
+            if (page * pageSize > collection.GetMeta<ChromaCollectionMetadata>().TOTAL_CHUNKS)
+                throw new InvalidOperationException($"{name} >> {nameof(GetCollectionPage)} >> Requested page index out of range");
+
+            var chunks = await GetChunks(name, filters, withEmbeddings, pageSize, page * pageSize);
+
+            collection.Chunks = chunks;
+
+            return collection;
+        }
         public async Task<List<TChunk>> GetChunks(string collectionName, Dictionary<string, object>? filters = null, bool withEmbeddings = true, int ? pageSize = null, int? skip = null)
         {
             var collection = await GetCollection(collectionName);

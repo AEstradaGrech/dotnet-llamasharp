@@ -65,6 +65,10 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> CreateSysChunksCollection(string name, [FromQuery] string? description)
             => Ok(_mapper.Map<ChromaChunksCollection<ChromaSysChunk>, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.CreateSystemChunksCollection(name, description)));
 
+        [HttpPost("/collection/system/{name}/page")]
+        public async Task<IActionResult> GetSystemChunksPage(string name, [FromBody] ChromaPageRequestDto dto)
+            => Ok(_mapper.Map<SysChunksCollection, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.GetSysChunksPage(name, dto.PageSize, dto.Page, dto.Filters)));
+
         [HttpPost("/collection/system/{name}/create/message")]
         public async Task<IActionResult> CreateSysChunksCollection(string name, [FromBody] CreateSysChunkRequestDto dto)
             => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.AddSysMessage(name, _mapper.Map<CreateSysChunkRequestDto,ChromaSysChunk>(dto), dto.Version)));

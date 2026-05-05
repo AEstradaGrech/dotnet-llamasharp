@@ -122,5 +122,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             return null;
         }
+
+        public async Task<SysChunksCollection> GetSysChunksPage(string collectionName, int pageSize = 10, int page = 0, Dictionary<string, object> filters = null)
+            => await _sysRepo.GetCollectionPage(collectionName, filters, withEmbeddings: false, pageSize, page);
     }
 }

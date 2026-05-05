@@ -20,5 +20,6 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<ChromaSysChunk> AddSysMessage(string collectionName, ChromaSysChunk chunk, string? version);
         Task<ChromaSysChunk> GetSysMessage(string collectionName, string name, string? version = null);
         Task<ChromaSysChunk> DeleteSysMessage(string collectionName, string name, string? version = null);
+        Task<SysChunksCollection> GetSysChunksPage(string collectionName, int pageSize = 10, int page = 0, Dictionary<string, object> filters = null);
     }
 }

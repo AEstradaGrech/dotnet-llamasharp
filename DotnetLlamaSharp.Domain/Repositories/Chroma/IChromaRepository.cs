@@ -10,6 +10,7 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<bool> CollectionExists(string name);
         Task<TCol> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false);
         Task<TCol> GetCollection(string collection);
+        Task<TCol> GetCollectionPage(string collection, Dictionary<string, object>? filters = null, bool withEmbeddings = true, int pageSize = 10, int page = 0);
         Task<TCol> CreateCollection(string collection, string description, string? model = null, int? dimensions = null);
         Task<TCol> CreateCollection(string name, ChromaChunk data);
         Task<TCol> UpdateCollectionData(string name, Dictionary<string, object> metadata, bool isOverride = true);
