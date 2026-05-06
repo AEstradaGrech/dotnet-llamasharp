@@ -4,10 +4,13 @@ using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
-    public class ChromaChunk : ChromaBaseChunk
+    public class ChromaChunk : ChromaModel
     {
-        public ChromaChunk() : base() {  }
-        public ChromaChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
+        public ChromaChunk() : base() 
+        {
+            Text = string.Empty;
+        }
+        public ChromaChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { Text = string.Empty; }
         public ChromaChunk(string id, string document, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, metadata) { Text = document; Embedding = embedding; }
 
         public string Text { get; set; } //Document
@@ -15,9 +18,10 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 
         protected override void setDefaultMetadata()
         {
-            base.setDefaultMetadata();
-
-            //Text = DefaultMetadata.DOCUMENT; //TODO remove text from meta | main model
+            DefaultMetadata = JsonSerializer.Deserialize<ChromaMetadata>(JsonSerializer.Serialize(Metadata));;
         }
+
+        public T As<T>() where T : ChromaChunk
+            => Activator.CreateInstance(typeof(T), Id, Text, Embedding, Metadata) as T;
     }
 }

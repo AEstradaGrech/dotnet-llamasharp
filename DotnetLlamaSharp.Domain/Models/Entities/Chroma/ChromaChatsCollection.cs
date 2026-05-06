@@ -20,6 +20,8 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         
         protected override void setDefaultMetadata()
         {
+            base.setDefaultMetadata();
+
             DefaultMetadata = JsonSerializer.Deserialize<ChatCollectionMetadata>(JsonSerializer.Serialize(Metadata));
             AgentName = GetMeta<ChatCollectionMetadata>().AGENT_NAME;
             UserName = GetMeta<ChatCollectionMetadata>().USER_NAME;

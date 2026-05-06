@@ -7,7 +7,7 @@ using System.Xml.Linq;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
-    public class ChromaChunksCollection<T> : ChromaBaseChunk where T : ChromaChunk
+    public class ChromaChunksCollection<T> : ChromaModel where T : ChromaChunk
     {
         public ChromaChunksCollection() : base() {}
         public ChromaChunksCollection(string id, Dictionary<string, object> metadata) : base(id, metadata) { }

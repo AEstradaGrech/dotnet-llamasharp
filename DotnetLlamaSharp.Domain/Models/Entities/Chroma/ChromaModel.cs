@@ -1,17 +1,24 @@
 ﻿
 
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
+using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public abstract class ChromaModel
     {
-        public ChromaModel() { Metadata = new Dictionary<string, object>(); }
+        public ChromaModel() { Metadata = new Dictionary<string, object>(); setDefaultMetadata(); }
         public ChromaModel(string id) : this() { Id = id; }
-        public string Id { get; set; }
+        public ChromaModel(string id, Dictionary<string, object> metadata) : this(id) 
+        {
+            Metadata = metadata;    
+            setDefaultMetadata(); 
+        }
 
-        // all metadata for write, extra-metas for read
+        public string Id { get; set; }
         public Dictionary<string, object> Metadata { get; set; }
+        public ChromaMetadata DefaultMetadata { get; set; }
+
 
         public void AddMetadata(string key, object value, bool resetDefault = false, bool isOverride = true)
         {
@@ -56,5 +63,8 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         public bool HasMetadata(string key) => Metadata != null && Metadata.ContainsKey(key);
 
         protected abstract void setDefaultMetadata();
+       
+        public T GetMeta<T>() where T : ChromaMetadata
+            => (T)DefaultMetadata;
     }
 }

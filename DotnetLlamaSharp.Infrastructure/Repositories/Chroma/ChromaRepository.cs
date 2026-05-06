@@ -103,11 +103,11 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             var collection = await GetCollection(name);
 
-            var queryResult = await RequestQuery(name, queryEmbedding, resultsNumber, filters);
+            var queryResult = await RequestQuery(collection.Id, queryEmbedding, resultsNumber, filters);
 
             var results = new List<ChromaQueryChunk>();
 
-            if (queryResult.Ids.Count > 1 && queryResult.Distances.Count > 1 && queryResult.Metadatas.Count > 1 && queryResult.Documents.Count > 1 && queryResult.Embeddings.Count > 1)
+            if (queryResult.Ids.Count >= 1 && queryResult.Distances.Count >= 1 && queryResult.Metadatas.Count >= 1 && queryResult.Documents.Count >= 1 && queryResult.Embeddings.Count >= 1)
             {
                 var resultIds = queryResult.Ids.First();
                 var resultDistances = queryResult.Distances.First();
@@ -115,7 +115,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 var resultDocuments = queryResult.Documents.First();
                 var resultEmbeddings = queryResult.Embeddings.First();
 
-                if (resultIds.Count != resultsNumber || resultIds.Count != resultsNumber || resultMetas.Count != resultsNumber)
+                if (resultIds.Count > resultsNumber || resultIds.Count > resultsNumber || resultMetas.Count > resultsNumber)
                     throw new InvalidDataException($"Invalid number of results");
 
                 for (int i = 0; i < resultIds.Count; i++)

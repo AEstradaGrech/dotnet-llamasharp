@@ -205,13 +205,17 @@ Your task is to chat with the user according to the stated instructions if any.
                 var memoFilters = new Dictionary<string, object>();
                 memoFilters.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), sessionChunk.Id);
                 memoFilters.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), false);
+                memoFilters.Add(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), false);
 
                 var sessionEmbeddings = await _chatsRepo.QueryCollection(collection.Name, currentEmbedding.GeneratedEmbeddings.FirstOrDefault().Vector, _settings.RagChatMemoryRetrievals, memoFilters);
 
                 chatMemos = _settings.RagChatMemoMinDistance <= 0 ? sessionEmbeddings : sessionEmbeddings.Where(x => x.Distance <= _settings.RagChatMemoMinDistance).ToList();
 
                 for (int i = 0; i < chatMemos.Count; i++)
-                    memoBuilder.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n\n").Append(chatMemos[i].Text);
+                    memoBuilder.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n")
+                               .Append(chatMemos[i]
+                                .As<ChromaChatChunk>()
+                                .EmbeddedText(collection.AgentName, collection.UserName));
             }
 
             systemMessage.Content = systemMessage.Content.Replace("[[-CHAT_MEMORIES-]]", currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1 ? memoBuilder.ToString().Trim() : "(No memories yet for this conversation)");
@@ -281,7 +285,7 @@ Your task is to chat with the user according to the stated instructions if any.
 
         private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatsCollection collection, List<ChatMessage> overlaps, bool isSessionInit = false)
         {
-            var embeddings = await _embeddingsService.GenerateEmbeddings(currentChunk.EmbeddedText, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+            var embeddings = await _embeddingsService.GenerateEmbeddings(currentChunk.EmbeddedText(collection.AgentName, collection.UserName), collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
 
             if (!embeddings.GeneratedEmbeddings.Any())
                 throw new ArgumentNullException($"An error has occured while generating the embeddings for chat collection: {collection.Name} >> CHUNK: {currentChunk.Id} >> No generated embeddings");
@@ -314,7 +318,7 @@ Your task is to chat with the user according to the stated instructions if any.
             if (overlaps.Count > 0)
                 overlaps.ForEach(message => nextChunk.AppendMessage(new ChatRole(message.Role), message.Content));
 
-            var nextChunkEmbeddings = await _embeddingsService.GenerateEmbeddings(nextChunk.EmbeddedText, nextChunk.DefaultMetadata.DIMENSIONS, nextChunk.DefaultMetadata.MODEL);
+            var nextChunkEmbeddings = await _embeddingsService.GenerateEmbeddings(nextChunk.EmbeddedText(collection.AgentName, collection.UserName), nextChunk.DefaultMetadata.DIMENSIONS, nextChunk.DefaultMetadata.MODEL);
 
             if (!nextChunkEmbeddings.GeneratedEmbeddings.Any())
                 throw new InvalidDataException($"An error has occured while generating the chunk overlap for the next chunk >> NO EMBEDDINGS >> collection: {collection.Name} >> current chunk ID: {currentChunk.Id}");

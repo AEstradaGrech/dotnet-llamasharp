@@ -18,9 +18,12 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
         public ChromaChatChunk() : base() { }
         public ChromaChatChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
         public ChromaChatChunk(string id, string text, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, text, embedding, metadata) { }
-        
-        public string EmbeddedText => Text.Replace(roleTag, "- ").Replace(messageSeparator, ":");
 
+        public string EmbeddedText(string? agentName = null, string? userName = null)
+            => string.IsNullOrEmpty(agentName) && string.IsNullOrEmpty(userName) ?
+                Text.Replace(roleTag, "- ").Replace(messageSeparator, ":") :
+                Text.Replace($"{roleTag}{ChatRole.Assistant.ToString()}", $"- {agentName}").Replace($"{roleTag}{ChatRole.User.ToString()}", $"- {userName}").Replace(messageSeparator, ":");
+        
         protected override void setDefaultMetadata()
         {
             base.setDefaultMetadata();
