@@ -4,7 +4,7 @@ using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Models.Request
 {
-    public class RagPromptRequest : ChatPromptRequest
+    public class RagPromptRequest : SimplePromptRequest
     {
         public List<string> QueryCollections { get; set; } = new List<string>();
         public int CollectionRetrievals { get; set; } = 1;

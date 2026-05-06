@@ -47,31 +47,16 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var baseIntruction = request.SystemMessage.Trim();
 
+            var systemChunk = await _chromaService.GetSysMessage("system-messages", "rag-query");
             var systemMessage = @$"
 {(string.IsNullOrEmpty(baseIntruction) ? "You are a helpful assistant." : baseIntruction)}
-Your task is to chat with the user and answer any question using the RETRIEVED_DATA (if any) as a grounded source of truth.
-            
-Each item in the retrieve data section has three sections that will help you to understand the source and topic
-of the data along with the relevant document data that you must use to generate your response.
 
-Use the retrieved information to answer the user questions only if the question is related to
-the retrieved data topic.
-
-### IMPORTANT: follow this STEPS in order to generate your response:
-
-# STEP 1: Analyze the content of the user query to get an idea of the topic he is querying about.
-# STEP 2: Review the RETRIEVED DATA section and try to find relevant data to use as source to generate your response (the 'Topic' and 'Source' values of 
-            each data item will help you to do that).
-# STEP 3: Use your reasonaments from STEP 1 and STEP 2 to decide if the RETRIEVED DATA is meaningful in order to generate your response according to
-            the queried topic.
-# STEP 4: Based on your analysis from STEP 3 generate a coherent response using the RETRIEVED DATA to support your answer if you have decided that it
-            is aligned with the general topic of the user question. In case you have decided that the user query is unrelated to the retrived data, 
-            ignore the RETRIEVED DATA and try to answer the anyways but always informing the user that you have not found any relevant data in your Knowledge Base about the queried topic.
-# STEP 5: Use the result of your analisys from the previous steps to generate answer the user in a natural / conversational way and accordingly to any provided role or character profile.
+{systemChunk.Text}
 
 {getFileRagStringResult(collectionQueries)}";
         
-            var chatRequest = _mapper.Map<RagPromptRequest, ChatPromptRequest>(request);
+            var chatRequest = _mapper.Map<RagPromptRequest, SimplePromptRequest>(request);
+
             chatRequest.SystemMessage = systemMessage;
       
             var response = await _chatService.SimplePrompt(chatRequest);
@@ -212,7 +197,7 @@ the retrieved data topic.
             if (request.ChatHistory.Last().Role == ChatRole.User.ToString())
                 request.ChatHistory = request.ChatHistory.SkipLast(1).ToList();
 
-            var response = await _chatService.ChatPrompt(request);
+            var response = await _chatService.ChatPrompt(_mapper.Map<RagChatRequest, ChatPromptRequest>(request));
 
             currentChunk.AppendMessage(ChatRole.Assistant.ToString(), response.Output);
 
@@ -333,6 +318,34 @@ the retrieved data topic.
                             .Append("\n")));
 
             return sb.ToString().Trim();
+        }
+
+        public async Task<RagPrompt> YesNoQuestion(RagPromptRequest request)
+        {
+            var systemMessage = $"{request.SystemMessage.Trim()}";
+            ChromaQuery chromaQuery = null;
+            var collectionQueries = new Dictionary<string, List<ChromaQueryChunk>>();
+
+            if (request.QueryCollections.Count > 0)
+            {
+                collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
+                systemMessage += $"{getFileRagStringResult(collectionQueries)}";
+            }
+
+            request.SystemMessage = systemMessage;
+
+            var response = await _chatService.BooleanQuestion(_mapper.Map<RagPromptRequest, SimplePromptRequest>(request));
+
+            return new RagPrompt
+            {
+                Model = response.Model,
+                EmbeddingModel = chromaQuery != null ? chromaQuery.EmbeddingModel : null,
+                Input = request.Prompt,
+                Output = response.Output,
+                IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value).ToList(),
+                ChatHistory = response.ChatHistory,
+                InputEmbedding = chromaQuery != null ? chromaQuery.QueryEmbedding : null
+            };
         }
     }
 }

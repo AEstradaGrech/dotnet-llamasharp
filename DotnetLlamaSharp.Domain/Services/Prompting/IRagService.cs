@@ -7,6 +7,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
     public interface IRagService
     {
         // Q&A
+        Task<RagPrompt> YesNoQuestion(RagPromptRequest request);
         Task<RagPrompt> SimpleRagQuery(RagPromptRequest request);
         // Chat Turns with rag
         Task<ChatPrompt> RagChatPrompt(RagChatRequest request);

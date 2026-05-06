@@ -44,9 +44,9 @@ namespace DotnetLlamaSharp.Controllers
         //    return StatusCode((int)HttpStatusCode.InternalServerError);
         //}
         [HttpPost("/simple/prompt")]
-        public async Task<IActionResult> SimplePrompt([FromBody]ChatPromptRequestDto request)
+        public async Task<IActionResult> SimplePrompt([FromBody]SimplePromptRequestDto request)
         {
-            var response = await _ollamaService.SimplePrompt(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request));
+            var response = await _ollamaService.SimplePrompt(_mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(request));
 
             if (response != null)
                 return Ok(response);
@@ -111,10 +111,10 @@ namespace DotnetLlamaSharp.Controllers
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
-        [HttpPost("/chat/boolean/prompt")]
-        public async Task<IActionResult> BooleanPrompt([FromBody] ChatPromptRequestDto request)
+        [HttpPost("/rag/qa/y-n/prompt")]
+        public async Task<IActionResult> YesNoQuestion([FromBody] RagPromptRequestDto request)
         {
-            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.BooleanQuestion(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request)));
+            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.YesNoQuestion(_mapper.Map<RagPromptRequestDto, RagPromptRequest>(request)));
 
             if (response != null)
                 return Ok(response);

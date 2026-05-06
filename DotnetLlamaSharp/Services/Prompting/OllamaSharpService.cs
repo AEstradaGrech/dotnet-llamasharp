@@ -39,24 +39,24 @@ namespace DotnetLlamaSharp.Services.Prompting
             => await _embeddingsGenerator.GenerateAsync(texts);
 
         // call to '/api/generate' endpoint for single Q&A inference
-        public async Task<ChatPrompt> SimplePrompt(ChatPromptRequest request)
+        public async Task<ChatPrompt> SimplePrompt(SimplePromptRequest request)
         {
             if (string.IsNullOrEmpty(request.SystemMessage))
                 request.SystemMessage = "You are a helpful assistant";
 
-            request.ChatHistory = new List<ChatMessage> {
+            var messages = new List<ChatMessage> {
                 new ChatMessage(ChatRole.System.ToString(), request.SystemMessage),
                 new ChatMessage(ChatRole.User.ToString(), request.Prompt)
             };
 
             var response = await _ollamaService.SimplePrompt(getGenerateRequest(request, isStream: false));
 
-            request.ChatHistory.Add(_mapper.Map<Message, ChatMessage>(response));
+            messages.Add(_mapper.Map<Message, ChatMessage>(response));
 
-            return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
+            return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = messages };
         }
 
-        public IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(ChatPromptRequest request)
+        public IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(SimplePromptRequest request)
             => _ollamaService.SimplePromptStream(getGenerateRequest(request, isStream: true));
 
 
@@ -87,7 +87,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return await _ollamaService.GetEmbeddings(request);
         }
-        private GenerateRequest getGenerateRequest(ChatPromptRequest promptRequest, bool isStream = false)
+        private GenerateRequest getGenerateRequest(SimplePromptRequest promptRequest, bool isStream = false)
         {
             var settings = _settings;
             settings.NumPredict = promptRequest.MaxTokens;
@@ -121,26 +121,6 @@ namespace DotnetLlamaSharp.Services.Prompting
             };
         }
 
-        private ChatRequest getChatRequestFor<T>(ChatPromptRequest promptRequest) where T : class
-        {
-            var settings = _settings;
-            settings.NumPredict = promptRequest.MaxTokens;
-            settings.Temperature = promptRequest.Temperature;
-
-            var messages = new List<Message>();
-
-            promptRequest.ChatHistory.ForEach(x => messages.Add(new Message(new ChatRole(x.Role), x.Content)));
-  
-            return new ChatRequest
-            {
-                Model = promptRequest.Model,
-                Messages = messages,
-                Stream = false,
-                Options = settings,
-                Format = JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(T))
-            };
-        }
-
         private ChatPromptRequest setRequestForChat(ChatPromptRequest request, bool bWithSysmsgUpdate)
         {
             if (request.ChatHistory.Count == 0)
@@ -159,18 +139,20 @@ namespace DotnetLlamaSharp.Services.Prompting
             return request;
         }
 
-        public async Task<ChatPrompt> BooleanQuestion(ChatPromptRequest req)
+        public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)
         {
-            req = setRequestForChat(req, bWithSysmsgUpdate: false);
-            var request = getChatRequestFor<BooleanResponse>(req);
+            var response = await _ollamaService.StructuredPrompt<BooleanResponse>(req.Prompt, string.IsNullOrEmpty(req.SystemMessage) ? null : req.SystemMessage, req.Model);
 
-            var response = await _ollamaService.StructuredPrompt<BooleanResponse>(request);
-
+            if (response == null)
+                throw new ArgumentNullException($"{nameof(OllamaSharpService)} >> {nameof(BooleanQuestion)} >> An error has ocurred while requesting the structured output, try again");
+            
             var stringResponse = response.Answer ? "YES" : "NO";
 
-            req.ChatHistory.Add(new ChatMessage(ChatRole.Assistant.ToString(), stringResponse));
+            var messages = new List<ChatMessage> { new ChatMessage(ChatRole.System.ToString(), req.SystemMessage), new ChatMessage(ChatRole.User.ToString(), req.Prompt)};
 
-            return new ChatPrompt { Model = req.Model, Input = req.Prompt, Output =  stringResponse, ChatHistory = req.ChatHistory };
+            messages.Add(new ChatMessage(ChatRole.Assistant.ToString(), stringResponse));
+
+            return new ChatPrompt { Model = req.Model, Input = req.Prompt, Output =  stringResponse, ChatHistory = messages };
         }
     }
 }

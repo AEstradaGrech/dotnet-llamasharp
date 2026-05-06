@@ -8,12 +8,12 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
 {
     public interface IOllamaSharpService
     {
-        Task<ChatPrompt> SimplePrompt(ChatPromptRequest request);
-        IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(ChatPromptRequest request);
+        Task<ChatPrompt> SimplePrompt(SimplePromptRequest request);
+        IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(SimplePromptRequest request);
         Task<ChatPrompt> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         IAsyncEnumerable<ChatResponseStream?> ChatPromptStream(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request);
 
-        Task<ChatPrompt> BooleanQuestion(ChatPromptRequest request);
+        Task<ChatPrompt> BooleanQuestion(SimplePromptRequest request);
     }
 }

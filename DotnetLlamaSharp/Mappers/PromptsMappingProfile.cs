@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using DotnetLlamaSharp.Domain.Models.Primitives.Embeddings;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Models.Common;
@@ -24,16 +23,24 @@ namespace DotnetLlamaSharp.Mappers
             //Domain Object to DTO
             CreateMap<ChatMessage, ChatMessageDto>()
                 .ReverseMap();
+
             CreateMap<ChatPrompt, ChatPromptResponseDto>();
             CreateMap<RagPrompt, RagPromptResponseDto>()
                 .IncludeBase<ChatPrompt, ChatPromptResponseDto>();
 
             //DTO to Domain Object
-            CreateMap<ChatPromptRequestDto, ChatPromptRequest>();
-            CreateMap<RagPromptRequestDto, RagPromptRequest>();
+            CreateMap<SimplePromptRequestDto, SimplePromptRequest>();
+            CreateMap<ChatPromptRequestDto, ChatPromptRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
+            CreateMap<RagPromptRequestDto, RagPromptRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
+            CreateMap<RagChatRequestDto, RagChatRequest>()
+                .IncludeBase<RagPromptRequestDto, RagPromptRequest>();
 
             // Domain to Domain models
-            CreateMap<RagPromptRequest, ChatPromptRequest>();
+            CreateMap<RagPromptRequest, SimplePromptRequest>();
+            CreateMap<RagChatRequest, ChatPromptRequest>()
+                .IncludeBase<RagPromptRequest, SimplePromptRequest>();
             CreateMap<ChatPromptRequest, RagPromptRequest>()
                 .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())

@@ -1,6 +1,6 @@
 ﻿namespace DotnetLlamaSharp.Models.Request
 {
-    public class RagPromptRequestDto : ChatPromptRequestDto
+    public class RagPromptRequestDto : SimplePromptRequestDto
     {
         public List<string> QueryCollections { get; set; } = new List<string>();
         public int CollectionRetrievals { get; set; } = 1;

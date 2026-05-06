@@ -11,6 +11,7 @@ namespace DotnetLlamaSharp.Infrastructure.Settings
         public string DefaultEmbedder { get; set; }
         public int DefaultDimensions { get; set; } = 512;
         public List<string> EmbeddingModels { get; set; }
+        public List<string> JsonModels { get; set; }
         public int RagChatChunkSize { get; set; }
         public Dictionary<string, string> ServerUrls { get; set; }
         public int RagChatMemoryRetrievals { get; set; }
