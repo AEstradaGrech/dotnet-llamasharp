@@ -116,7 +116,7 @@ the retrieved data topic.
             
             var isFirstSession = !await _chatsRepo.CollectionExists(collectionName);
 
-            ChromaChatCollection collection = null;
+            ChromaChatsCollection collection = null;
             if (isFirstSession)    
                 collection = await _chatsRepo.InitCollection(request.AgentName, request.UserName, _settings.DefaultEmbedder, _settings.DefaultDimensions);
             
@@ -181,12 +181,12 @@ Your task is to chat with the user according to the stated instructions if any.
                 filterMetas.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
                 filterMetas.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
 
-                var chunks = await _chatsRepo.QueryCollection(collectionName, sessionChunk.Embedding, 1, filterMetas);
+                var chunks = await _chatsRepo.GetChunks(collectionName, filterMetas,withEmbeddings: false);
                 
                 if (!chunks.Any())
                     throw new InvalidDataException($"No CURRENT chunk has been found for collection: {collectionName} | session chunk: {sessionChunk.Id}");
-                
-                currentChunk = chunks.First().As<ChromaChatChunk>();
+
+                currentChunk = chunks.First();
                 currentChunk.AppendMessage(ChatRole.User.ToString(), request.Prompt);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1, resetDefault: true);
 
@@ -279,7 +279,7 @@ Your task is to chat with the user according to the stated instructions if any.
         public async Task<string> QueryCollections(string text, List<string> names, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
             => getFileRagStringResult(await QueryCollections(names, text, resultsNumber, minDistance, filters));
 
-        private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatCollection collection, List<ChatMessage> overlaps, bool isSessionInit = false)
+        private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatsCollection collection, List<ChatMessage> overlaps, bool isSessionInit = false)
         {
             var embeddings = await _embeddingsService.GenerateEmbeddings(currentChunk.EmbeddedText, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
 
@@ -321,7 +321,7 @@ Your task is to chat with the user according to the stated instructions if any.
 
             nextChunk.Embedding = nextChunkEmbeddings.GeneratedEmbeddings.First().Vector;
 
-            nextChunk = await _chatsRepo.UpsertChunk(collection.Name, nextChunk);
+            nextChunk = await _chatsRepo.InsertChunk(collection.Name, nextChunk);
 
             sessionChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
 

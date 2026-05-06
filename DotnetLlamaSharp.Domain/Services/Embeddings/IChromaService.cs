@@ -15,7 +15,8 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<ChromaFilesCollection> InspectFilesCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false); // Default: all chunks from idx 0
         Task<ChromaChunk> InspectChunk(string collectionName, string id);
         Task<ChromaQuery> QueryCollection(string name, string query, int resultsNumber, Dictionary<string, object> metadataFilters);
-        Task<ChromaChatCollection> GetChatsCollection(string name);
+        Task<ChromaChatsCollection> GetChatsCollection(string name, bool excludeSysmsg = true, string? sessionId = null, int pageSize = 10, int page = 0);
+        Task<ChromaChatsCollection> GetCollectionSessions(string name, int pageSize = 10, int page = 0);
         Task<SysChunksCollection> CreateSystemChunksCollection(string name, string? description);
         Task<ChromaSysChunk> AddSysMessage(string collectionName, ChromaSysChunk chunk, string? version);
         Task<ChromaSysChunk> GetSysMessage(string collectionName, string name, string? version = null);

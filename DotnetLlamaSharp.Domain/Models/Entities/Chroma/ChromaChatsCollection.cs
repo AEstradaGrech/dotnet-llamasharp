@@ -7,12 +7,12 @@ using System.Xml.Linq;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
-    public class ChromaChatCollection : ChromaChunksCollection<ChromaChatChunk> //Chunks son N last chunks de CurrentSessionId
+    public class ChromaChatsCollection : ChromaChunksCollection<ChromaChatChunk> //Chunks son N last chunks de CurrentSessionId
     {
-        public ChromaChatCollection() : base() { }
-        public ChromaChatCollection(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
-        public ChromaChatCollection(string id, string name, string description, Dictionary<string, object> metadata): base(id, name, description, metadata) { }
-        public ChromaChatCollection(string id, string name, string description, Dictionary<string, object> metadata, List<ChromaChatChunk> chunks) : base(id, name, description, metadata, chunks) { }
+        public ChromaChatsCollection() : base() { }
+        public ChromaChatsCollection(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
+        public ChromaChatsCollection(string id, string name, string description, Dictionary<string, object> metadata): base(id, name, description, metadata) { }
+        public ChromaChatsCollection(string id, string name, string description, Dictionary<string, object> metadata, List<ChromaChatChunk> chunks) : base(id, name, description, metadata, chunks) { }
         //Original display names. With whitespaces
         public string AgentName { get; set; }
         public string UserName { get; set; }

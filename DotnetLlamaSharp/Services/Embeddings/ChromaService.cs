@@ -15,14 +15,16 @@ namespace DotnetLlamaSharp.Services.Embeddings
         private readonly IEmbeddingsService _embeddingsService;
         private readonly IChromaChunksRepository _repo;
         private readonly IChromaSysChunksRepository _sysRepo;
-
-        public ChromaService(ILogger<ChromaService> logger, IChromaFilesService ingestionService, IEmbeddingsService embeddingsService, IChromaChunksRepository repo, IChromaSysChunksRepository sysRepo)
+        private readonly IChromaChatsRepository _chatsRepo;
+        public ChromaService(ILogger<ChromaService> logger, IChromaFilesService ingestionService, IEmbeddingsService embeddingsService, 
+            IChromaChunksRepository repo, IChromaSysChunksRepository sysRepo, IChromaChatsRepository chatsRepo)
         {
             _logger = logger;
             _fileMgmtService = ingestionService;
             _embeddingsService = embeddingsService;
             _repo = repo;
             _sysRepo = sysRepo;
+            _chatsRepo = chatsRepo;
         }
 
         public async Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request)
@@ -110,20 +112,32 @@ namespace DotnetLlamaSharp.Services.Embeddings
         public async Task<ChromaSysChunk> DeleteSysMessage(string collectionName, string name, string? version = null)
             => await _sysRepo.DeleteByName(collectionName, name, version);
 
-        public async Task<ChromaChatCollection> GetChatsCollection(string name)
+        public async Task<ChromaChatsCollection> GetChatsCollection(string name, bool excludeSysmsg = true, string? sessionId = null, int pageSize = 10, int page = 0)
         {
-            var collection = await _repo.GetCollection(name);
+            var collection = await _chatsRepo.GetCollection(name);
 
-            //collection.CURRENT_SESSION_ID 
-            // QueryCollection(name, metas = sessionId ) //TODOS LOS CHUNKS DE LA SESSION
-            //  OrderByDesc(chunk.Id)
-            //      for n = req.Results i++:            <-- SI EL TIO CAMBIA DE SESSION, LOS IDS' no incrementan secuencialmente. Pero da igual si lo ordeno por id
-            //          resultChunks.Add(sessionChunk)
+            if (string.IsNullOrEmpty(sessionId))
+                sessionId = collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID;
 
-            return null;
+            if (!collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS.Contains(sessionId))
+                throw new BadHttpRequestException($"{nameof(GetChatsCollection)} >> {name} >> Collection has no session with ID: {sessionId}");
+
+            var filters = new Dictionary<string, object> { [nameof(ChatChunkMetadata.SESSION_ID).ToLower()] = sessionId };
+
+            if (excludeSysmsg)
+                filters.Add(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), false);
+
+            return await _chatsRepo.GetCollectionPage(collection.Name, filters, withEmbeddings: false, pageSize, page);
         }
 
         public async Task<SysChunksCollection> GetSysChunksPage(string collectionName, int pageSize = 10, int page = 0, Dictionary<string, object> filters = null)
             => await _sysRepo.GetCollectionPage(collectionName, filters, withEmbeddings: false, pageSize, page);
+
+        public async Task<ChromaChatsCollection> GetCollectionSessions(string name, int pageSize = 10, int page = 0)
+        {
+            var collection = await _repo.GetCollection(name);
+
+            return await _chatsRepo.GetCollectionPage(collection.Name, new Dictionary<string, object> { [nameof(ChatChunkMetadata.CHAT_INIT).ToLower()] = true }, withEmbeddings: false, page, pageSize);;
+        }
     }
 }

@@ -11,7 +11,7 @@ using Microsoft.SemanticKernel.Connectors.Chroma;
 
 namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 {
-    public class ChromaChatsRepository : ChromaRepository<ChromaChatCollection, ChromaChatChunk>, IChromaChatsRepository
+    public class ChromaChatsRepository : ChromaRepository<ChromaChatsCollection, ChromaChatChunk>, IChromaChatsRepository
     {
 #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         public ChromaChatsRepository(ILogger<ChromaChatsRepository> logger, IOptions<ApiSettings> dbSettings, IChromaClient client) : base(logger, dbSettings, client)
@@ -44,7 +44,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return null;
         }
 
-        public async Task<ChromaChatCollection> InitCollection(string agentName, string userName, string? embeddingModel, int? dimensions, string? description = null)
+        public async Task<ChromaChatsCollection> InitCollection(string agentName, string userName, string? embeddingModel, int? dimensions, string? description = null)
         {
             var validatedName = $"{getValidConstructorNameTag(agentName, isUser: false)}-{getValidConstructorNameTag(userName, isUser: true)}";
 

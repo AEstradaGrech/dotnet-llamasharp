@@ -51,12 +51,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpGet("/collection/{name}/inspect/chunk/{id}")]
         public async Task<IActionResult> InspectChunk(string name, string id)
             => Ok(_mapper.Map<ChromaChunk, ChromaChunkDto>(await _service.InspectChunk(name, id)));
-        [HttpPost("/collection/chats/{name}")]
-        public async Task<IActionResult> GetChatsCollection(string name)
-        {
-            return StatusCode((int)HttpStatusCode.InternalServerError);
-        }
-
+        
         [HttpPost("/collection/query")]
         public async Task<IActionResult> QueryCollection([FromBody] SimilaritySearchRequestDto request)
             => Ok(_mapper.Map<ChromaQuery, ChromaQueryResponseDto>(await _service.QueryCollection(request.Collection, request.Query.Trim(), request.ResultsNumber, request.MetadataFilters)));
@@ -68,6 +63,14 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/collection/system/{name}/page")]
         public async Task<IActionResult> GetSystemChunksPage(string name, [FromBody] ChromaPageRequestDto dto)
             => Ok(_mapper.Map<SysChunksCollection, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.GetSysChunksPage(name, dto.PageSize, dto.Page, dto.Filters)));
+
+        [HttpPost("/collection/chats/{name}/page/{page}/size/{pageSize}/chunks")]
+        public async Task<IActionResult> GetSessionChunkPage(string name, int page, int pageSize, [FromQuery] bool excludeSession = false)
+           => Ok(_mapper.Map<ChromaChatsCollection, ChromaChatsCollectionDto>(await _service.GetChatsCollection(name, excludeSession, null, pageSize, page)));
+
+        [HttpPost("/collection/chats/{name}/{sessionId}/page/{page}/size/{pageSize}/chunks")]
+        public async Task<IActionResult> GetSessionChunksPage(string name, string sessionId, int page, int pageSize, [FromQuery] bool excludeSession = false)
+           => Ok(_mapper.Map<ChromaChatsCollection, ChromaChatSessionDto>(await _service.GetChatsCollection(name, excludeSession, sessionId, pageSize, page)));
 
         [HttpPost("/collection/system/{name}/create/message")]
         public async Task<IActionResult> CreateSysChunksCollection(string name, [FromBody] CreateSysChunkRequestDto dto)

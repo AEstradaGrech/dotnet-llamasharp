@@ -17,7 +17,13 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Dimensions, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.First().Dimensions : 0))
                 .ForMember(dest => dest.Embeddings, opt => opt.MapFrom(src => src.GeneratedEmbeddings.Any() ? src.GeneratedEmbeddings.Select(x => x.Vector) : new List<ReadOnlyMemory<float>>()));
 
+            CreateMap<ChromaQuery, ChromaQueryResponseDto>();
+
             CreateMap<ChromaChunk, ChromaChunkDto>();
+
+            CreateMap<ChromaQueryChunk, ChromaQueryChunkDto>()
+                .ForMember(dest => dest.Embedding, opt => opt.Ignore())
+                .ForMember(dest => dest.Document, opt => opt.MapFrom(src => src.DefaultMetadata.DOCUMENT_NAME));
 
             CreateMap<ChromaFileChunk, ChromaFileChunkDto>()
                 .IncludeBase<ChromaChunk, ChromaChunkDto>()
@@ -26,6 +32,9 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<ChromaSysChunk, ChromaSysChunkDto>()
                 .IncludeBase<ChromaChunk, ChromaChunkDto>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => $"{src.Name}-{src.GetMeta<SysChunkMetadata>().VERSION}"));
+
+            CreateMap<ChromaChatChunk, ChromaChatChunkDto>()
+                .ForMember(dest => dest.IsCurrent, opt => opt.MapFrom(src => src.GetMeta<ChatChunkMetadata>().CURRENT));
 
             CreateMap<ChromaChunksCollection<ChromaChunk>, ChromaChunksCollectionDto<ChromaChunkDto>>()
                 .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().MODEL))
@@ -41,7 +50,12 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().MODEL))
                 .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().DIMENSIONS))
                 .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().TOTAL_CHUNKS));
-            
+
+            CreateMap<ChromaChunksCollection<ChromaChatChunk>, ChromaChunksCollectionDto<ChromaChatChunkDto>>()
+                .ForMember(dest => dest.EmbeddingModel, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().MODEL))
+                .ForMember(dest => dest.EmbeddingDimensions, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().DIMENSIONS))
+                .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.GetMeta<ChromaCollectionMetadata>().TOTAL_CHUNKS));
+
             CreateMap<SysChunksCollection, ChromaChunksCollectionDto<ChromaSysChunkDto>>()
                 .IncludeBase<ChromaChunksCollection<ChromaSysChunk>, ChromaChunksCollectionDto<ChromaSysChunkDto>>();
 
@@ -55,23 +69,29 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.SkippedPages, opt => opt.MapFrom(src => string.IsNullOrEmpty(src.GetMeta<FileCollectionMetadata>().SKIPPED_PAGES) ? new List<string>() : src.GetMeta<FileCollectionMetadata>().SKIPPED_PAGES.Split(",").ToList()))
                 .ForMember(dest => dest.PageCutoffs, opt => opt.MapFrom(src => string.IsNullOrEmpty(src.GetMeta<FileCollectionMetadata>().PAGE_CUTOFFS) ? new List<string>() : src.GetMeta<FileCollectionMetadata>().PAGE_CUTOFFS.Split(",").ToList()));
 
-            
+            CreateMap<ChromaChatsCollection, ChromaChatsCollectionDto>()
+                .IncludeBase<ChromaChunksCollection<ChromaChatChunk>, ChromaChunksCollectionDto<ChromaChatChunkDto>>()
+                .ForMember(dest => dest.CurrentSessionId, opt => opt.MapFrom(src => src.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID))
+                .ForMember(dest => dest.SessionIds, opt => opt.MapFrom(src => src.GetMeta<ChatCollectionMetadata>().SESSION_IDS.Split(",").ToList()));
+
+            CreateMap<ChromaChatsCollection, ChromaChatSessionDto>()
+                .IncludeBase<ChromaChatsCollection, ChromaChatsCollectionDto>()
+                .ForMember(dest => dest.CurrentSessionId, opt => opt.MapFrom(src => src.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID))
+                .ForMember(dest => dest.SessionId, opt => opt.MapFrom(src => src.Chunks.First().GetMeta<ChatChunkMetadata>().SESSION_ID))
+                .ForMember(dest => dest.TotalMessages, opt => opt.MapFrom(src => src.Chunks.First().GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES))
+                .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.Chunks.First().GetMeta<ChatChunkMetadata>().SESSION_CHUNKS));
+
 
             CreateMap<CreateCollectionRequestDto, CreateCollectionRequest>();
 
             CreateMap<EmbedCollectionRequestDto, EmbedCollectionRequest>()
                 .IncludeBase<CreateCollectionRequestDto, CreateCollectionRequest>();
-
-            CreateMap<ChromaQueryChunk, ChromaQueryChunkDto>()
-                .ForMember(dest => dest.Embedding, opt => opt.Ignore())
-                //.ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.DefaultMetadata.DOCUMENT))
-                .ForMember(dest => dest.Document, opt => opt.MapFrom(src => src.DefaultMetadata.DOCUMENT_NAME));
-
-            CreateMap<ChromaQuery, ChromaQueryResponseDto>();
+            
             CreateMap<CreateSysChunkRequestDto, ChromaSysChunk>()
                 .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.Message))
                 .ForMember(dest => dest.Embedding, opt => opt.Ignore())
                 .ForMember(dest => dest.DefaultMetadata, opt => opt.Ignore());
+
         }
     }
 }
