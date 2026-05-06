@@ -13,6 +13,8 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 
         protected override void setDefaultMetadata()
         {
+            base.setDefaultMetadata();
+
             DefaultMetadata = JsonSerializer.Deserialize<FileCollectionMetadata>(JsonSerializer.Serialize(Metadata));
         }
     }

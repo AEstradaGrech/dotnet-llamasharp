@@ -1,5 +1,6 @@
 ﻿using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
@@ -70,7 +71,11 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var metadata = getDefaultCollectionMetadata(description, model, dimensions);
 
-            return await CreateCollection(name, new ChromaChunk("0", description, new ReadOnlyMemory<float>([]), metadata));
+            var dataChunk = new ChromaChunk("0", description, new ReadOnlyMemory<float>([]), metadata);
+            
+            dataChunk.UpdateType(EChunkType.COLLECTION);
+
+            return await CreateCollection(name, dataChunk);
         }
 
         public async Task<TCol> CreateCollection(string name, ChromaChunk data)
@@ -85,6 +90,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             if (collection == null)
                 throw new ArgumentNullException($"An error has occured while creating the chroma collection: {name}");
 
+            data.UpdateType(EChunkType.COLLECTION);
             // Default with name = description = TEXT & chunkOptions | apiDefaults
             var defaultMetadata = getDefaultCollectionMetadata(name, data.DefaultMetadata.MODEL ?? null, data.DefaultMetadata.DIMENSIONS);
 
@@ -93,7 +99,6 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             data.Id = "0";
             data.Embedding = null;
-
             await RequestEmbeddingsUpsert(collection.Id, [data.Id], [data.Text], null, [data.Metadata], isCreate: true);
 
             return await GetCollection(name);
@@ -230,7 +235,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var chunks = await GetChunks(name, filters, withEmbeddings, pageSize, page * pageSize);
 
-            collection.Chunks = chunks.Where(x => x.Id != "0").ToList();
+            collection.Chunks = chunks.Where(chunk => chunk.Id != "0").ToList();
 
             return collection;
         }
@@ -508,6 +513,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         private Dictionary<string, object> getDefaultCollectionMetadata(string description, string? embeddingModel = null, int? dimensions = null)
             => new Dictionary<string, object>
             {
+                { nameof(ChromaMetadata.TYPE).ToLower(), (int)EChunkType.COLLECTION },
                 { nameof(ChromaCollectionMetadata.MODEL).ToLower(), embeddingModel ?? _settings.DefaultEmbedder },
                 { nameof(ChromaCollectionMetadata.DIMENSIONS).ToLower(), dimensions == null || dimensions <= 0 ? _settings.DefaultDimensions : dimensions },
                 { nameof(ChromaCollectionMetadata.TOTAL_CHUNKS).ToLower(), 0 }

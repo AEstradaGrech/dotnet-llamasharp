@@ -1,13 +1,8 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
+﻿using DotnetLlamaSharp.Domain.Models.Enums;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using OllamaSharp.Models.Chat;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
@@ -15,10 +10,11 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         const string roleTag = "- ROLE: ";
         const string messageSeparator = " >>";
-        public ChromaChatChunk() : base() { }
+        public ChromaChatChunk() : base() { Type = EChunkType.CHAT; }
         public ChromaChatChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
         public ChromaChatChunk(string id, string text, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, text, embedding, metadata) { }
 
+        public bool IsSessionChunk => HasMetadata(nameof(ChatChunkMetadata.CHAT_INIT).ToLower()) && GetMeta<ChatChunkMetadata>().CHAT_INIT; 
         public string EmbeddedText(string? agentName = null, string? userName = null)
             => string.IsNullOrEmpty(agentName) && string.IsNullOrEmpty(userName) ?
                 Text.Replace(roleTag, "- ").Replace(messageSeparator, ":") :
@@ -36,10 +32,9 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
             var meta = GetMeta<ChatChunkMetadata>();
 
             Text += $"\n\n{roleTag}{role.ToString()}{messageSeparator} {message.Trim()}";
+            
             AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), meta.TOTAL_MESSAGES + 1, resetDefault:true);
         }
-
-        
 
         public void SetEmpty(bool isCurrent = false)
         {

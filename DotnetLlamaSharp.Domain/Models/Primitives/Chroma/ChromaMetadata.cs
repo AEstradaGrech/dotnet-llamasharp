@@ -11,6 +11,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public string MODEL { get; set; }
         [JsonPropertyName("dimensions")]
         public int DIMENSIONS { get; set; }
+        [JsonPropertyName("type")]
+        public int TYPE { get; set; }
         [JsonPropertyName("document_name")]
         public string DOCUMENT_NAME { get; set; }
 

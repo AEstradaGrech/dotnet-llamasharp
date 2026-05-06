@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
+﻿using DotnetLlamaSharp.Domain.Models.Enums;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,7 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
     public class ChromaChunksCollection<T> : ChromaModel where T : ChromaChunk
     {
-        public ChromaChunksCollection() : base() {}
+        public ChromaChunksCollection() : base() { Type = EChunkType.COLLECTION; }
         public ChromaChunksCollection(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
         public ChromaChunksCollection(string id, string name, string description, Dictionary<string, object> metadata) : base(id, metadata)
         {

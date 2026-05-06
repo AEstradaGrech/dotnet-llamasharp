@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
+﻿using DotnetLlamaSharp.Domain.Models.Enums;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
 
@@ -18,7 +19,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 
         protected override void setDefaultMetadata()
         {
-            DefaultMetadata = JsonSerializer.Deserialize<ChromaMetadata>(JsonSerializer.Serialize(Metadata));;
+            DefaultMetadata = JsonSerializer.Deserialize<ChromaMetadata>(JsonSerializer.Serialize(Metadata));
         }
 
         public T As<T>() where T : ChromaChunk
