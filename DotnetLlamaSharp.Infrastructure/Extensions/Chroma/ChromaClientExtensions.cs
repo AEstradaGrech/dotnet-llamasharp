@@ -119,7 +119,6 @@ namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma
 
             result.EnsureSuccessStatusCode();
 
-            var json = await result.Content.ReadAsStringAsync();
             return await result.Content.ReadFromJsonAsync<DocumentsQueryResultModel>();
         }
     }

@@ -127,41 +127,14 @@ the retrieved data topic.
             ChromaChatChunk currentChunk = null;
             if (isFirstSession || request.IsNewSession)
             {
-                string ragChatTemplate = $@"
-{request.SystemMessage}
+                var initTemplate = await _chromaService.GetSysMessage("system-messages", "rag-chat-init");
 
-Your task is to chat with the user according to the stated instructions if any.
+                if (string.IsNullOrEmpty(initTemplate.Text))
+                    throw new InvalidDataException($"{nameof(RagChatPrompt)} >> collection {collection.Name} >> No system INIT MESSAGE found");
 
-#IMPORTANT: follow this steps in order to generate your response:
-    > STEP 1: Analyze any privided information about your character in terms of personality, psychology and/or attitude and 
-              figure out a character that aligns with the provided information to adapt your response according to that character profile.
-    > STEP 2: Review the CHAT MEMORIES section containing past fragments of conversation to get a better idea of your relationship with the user,
-              the context of the conversation and part of the conversation that might be related to the current topic.
-    > STEP 3: Review the RETRIEVED DATA section containing pieces of information that might br related to the current user prompt (or not). Use the
-              'topic' and 'source' labels of each fragment to determine if the information is within the scope of the current user query and, in case
-               you find it is useful, use it to generate a more rich and accurate response.
-    > STEP 4: Think up a response for the user that aligns with any provided character profile and is consistent with the overall converation and
-              provided sources of data.
-    > STEP 5: Review carefully the RULES section and ENSURE your response is compliant with them and adapt to response
-              as necesary before outputting your final response.
+                string ragChatTemplate = $"{request.SystemMessage.Trim()} {initTemplate.Text}";
 
-#RULES: take into account this rules before outputting your final response:
-    - If you have been assigned a name, you MUST respond to that name.
-    - If you have you have been informe of the user name, address the user using that name
-    - If you have been passed any kind of character profile, role or psychological traits, always ENSURE
-      that you act and respond according to it. Align your behaviour and mood with the provided profile. Never break the character.
-    - USE the provided CHAT MEMORIES (if any) to have a better understanding of the context of the conversation.
-    - USE the provided RETRIEVED DATA (if any) to support your anwers ONLY if their topic is within the scope of the user prompt. Otherwise, ignore that secion.
-
-#CHAT MEMORIES: This is what you recall from previous part of the conversation. This memory fragments will give you a grounded source of truth regarding the conversation:
-
-[[-CHAT_MEMORIES-]]
-
-#RETRIEVED DATA: Use this pieces of information as a grounded source of truth to support your responses regarding specific topics. Ignore them if you find them irrelevant for the current chat turn.
-
-[[-RETRIEVED_DATA-]]
-";
-                sessionChunk.AppendMessage(ChatRole.System, ragChatTemplate); // UserSysMessage + RagChatTemplate
+                sessionChunk.AppendMessage(ChatRole.System, ragChatTemplate); 
 
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 1);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), true);
@@ -193,10 +166,10 @@ Your task is to chat with the user according to the stated instructions if any.
             }
             var messages = currentChunk.TextAsMessages();
 
-            var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault(); //Se guarda RagChatTemplate sin formatear. Se hace replace en cada request y se pasa como sysmesage
+            var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault(); 
             // SYSTEM MESSAGE / RAG stuff
             var memoBuilder = new StringBuilder();
-            if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 2) //Skip Session chunk w/system message template & first session chunk
+            if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 2)
             {
                 var chatMemos = new List<ChromaQueryChunk>();
 
@@ -226,12 +199,12 @@ Your task is to chat with the user according to the stated instructions if any.
 
             systemMessage.Content = systemMessage.Content.Replace("[[-RETRIEVED_DATA-]]", string.IsNullOrEmpty(ragData) ? "(Nothing relevant...)" : ragData);
 
-            request.ChatHistory = [systemMessage]; //PerfilBot + TemplateMsg
+            request.ChatHistory = [systemMessage];
 
             if(currentChunk.Id == sessionChunk.Id)
                 request.ChatHistory.AddRange(messages.Skip(1).Take(messages.Count -1).ToList());
             
-            else request.ChatHistory.AddRange(messages); // currentChunk stuff
+            else request.ChatHistory.AddRange(messages); 
 
             if (request.ChatHistory.Last().Role == ChatRole.User.ToString())
                 request.ChatHistory = request.ChatHistory.SkipLast(1).ToList();

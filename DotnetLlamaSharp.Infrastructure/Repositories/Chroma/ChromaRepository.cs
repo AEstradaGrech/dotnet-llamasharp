@@ -230,7 +230,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             var chunks = await GetChunks(name, filters, withEmbeddings, pageSize, page * pageSize);
 
-            collection.Chunks = chunks;
+            collection.Chunks = chunks.Where(x => x.Id != "0").ToList();
 
             return collection;
         }
@@ -509,7 +509,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             => new Dictionary<string, object>
             {
                 { nameof(ChromaCollectionMetadata.MODEL).ToLower(), embeddingModel ?? _settings.DefaultEmbedder },
-                { nameof(ChromaCollectionMetadata.DIMENSIONS).ToLower(), dimensions <= 0 ? _settings.DefaultDimensions : dimensions },
+                { nameof(ChromaCollectionMetadata.DIMENSIONS).ToLower(), dimensions == null || dimensions <= 0 ? _settings.DefaultDimensions : dimensions },
                 { nameof(ChromaCollectionMetadata.TOTAL_CHUNKS).ToLower(), 0 }
             };
     }
