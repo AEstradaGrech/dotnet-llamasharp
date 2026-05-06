@@ -110,6 +110,17 @@ namespace DotnetLlamaSharp.Controllers
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
+
+        [HttpPost("/chat/boolean/prompt")]
+        public async Task<IActionResult> BooleanPrompt([FromBody] ChatPromptRequestDto request)
+        {
+            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.BooleanQuestion(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request)));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
         /*
          * 
          * {

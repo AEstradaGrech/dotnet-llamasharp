@@ -13,5 +13,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         Task<ChatPrompt> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         IAsyncEnumerable<ChatResponseStream?> ChatPromptStream(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request);
+
+        Task<ChatPrompt> BooleanQuestion(ChatPromptRequest request);
     }
 }

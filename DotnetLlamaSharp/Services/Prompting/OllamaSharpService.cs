@@ -3,13 +3,12 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
-using DotnetLlamaSharp.Models.Common;
-using DotnetLlamaSharp.Models.Request;
-using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Infrastructure.Models.Inference.StructuredOutputs;
 using Microsoft.Extensions.Options;
-using OllamaSharp;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
+using System.Text.Json;
+using System.Text.Json.Schema;
 using MicrosoftAI = Microsoft.Extensions.AI;
 
 namespace DotnetLlamaSharp.Services.Prompting
@@ -122,12 +121,33 @@ namespace DotnetLlamaSharp.Services.Prompting
             };
         }
 
+        private ChatRequest getChatRequestFor<T>(ChatPromptRequest promptRequest) where T : class
+        {
+            var settings = _settings;
+            settings.NumPredict = promptRequest.MaxTokens;
+            settings.Temperature = promptRequest.Temperature;
+
+            var messages = new List<Message>();
+
+            promptRequest.ChatHistory.ForEach(x => messages.Add(new Message(new ChatRole(x.Role), x.Content)));
+  
+            return new ChatRequest
+            {
+                Model = promptRequest.Model,
+                Messages = messages,
+                Stream = false,
+                Options = settings,
+                Format = JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(T))
+            };
+        }
+
         private ChatPromptRequest setRequestForChat(ChatPromptRequest request, bool bWithSysmsgUpdate)
         {
             if (request.ChatHistory.Count == 0)
             {
                 if (string.IsNullOrEmpty(request.SystemMessage))
                     request.SystemMessage = "You are a helpful assistant";
+                
                 request.ChatHistory.Add(new ChatMessage(ChatRole.System.ToString(), request.SystemMessage));
             }
 
@@ -137,6 +157,20 @@ namespace DotnetLlamaSharp.Services.Prompting
             request.ChatHistory.Add(new ChatMessage(ChatRole.User.ToString(), request.Prompt));
 
             return request;
+        }
+
+        public async Task<ChatPrompt> BooleanQuestion(ChatPromptRequest req)
+        {
+            req = setRequestForChat(req, bWithSysmsgUpdate: false);
+            var request = getChatRequestFor<BooleanResponse>(req);
+
+            var response = await _ollamaService.StructuredPrompt<BooleanResponse>(request);
+
+            var stringResponse = response.Answer ? "YES" : "NO";
+
+            req.ChatHistory.Add(new ChatMessage(ChatRole.Assistant.ToString(), stringResponse));
+
+            return new ChatPrompt { Model = req.Model, Input = req.Prompt, Output =  stringResponse, ChatHistory = req.ChatHistory };
         }
     }
 }

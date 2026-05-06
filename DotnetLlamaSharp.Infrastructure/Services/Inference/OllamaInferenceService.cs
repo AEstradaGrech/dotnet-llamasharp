@@ -2,6 +2,8 @@
 using OllamaSharp;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
+using System.Text.Json;
+using System.Text.Json.Schema;
 
 
 namespace DotnetLlamaSharp.Infrastructure.Services.Inference
@@ -55,5 +57,18 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
 
         public async Task<EmbedResponse> GetEmbeddings(EmbedRequest request)
             => await _client.EmbedAsync(request);
+
+        public async Task<T> StructuredPrompt<T>(ChatRequest request) where T : class
+        {
+            request.Format = JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(T));
+            request.Stream = false;
+            var sb = new System.Text.StringBuilder();
+            request.Messages = request.Messages.Skip(1).ToList();
+            await foreach (var part in _client.ChatAsync(request))
+                if (!string.IsNullOrEmpty(part?.Message.Content))
+                    sb.Append(part.Message.Content);
+
+            return JsonSerializer.Deserialize<T>(sb.ToString());
+        }
     }
 }
