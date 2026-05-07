@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Prompting;
@@ -167,6 +168,17 @@ namespace DotnetLlamaSharp.Controllers
 
             if (response != null)
                 return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/test/enum/choice")]
+        public async Task<IActionResult> TestEnumChoices([FromBody] SimplePromptRequestDto request)
+        {
+            var response = await _ollamaService.EnumChoice<EChunkType>(request.Prompt, string.IsNullOrEmpty(request.SystemMessage) ? null : request.SystemMessage);
+
+            if (response != null)
+                return Ok($"{response}");
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
