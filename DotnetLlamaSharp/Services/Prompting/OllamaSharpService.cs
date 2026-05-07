@@ -1,18 +1,14 @@
 ﻿using AutoMapper;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Wordprocessing;
-using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
-using DotnetLlamaSharp.Infrastructure.Models.Inference.StructuredOutputs;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
-using System.Text.Json;
-using System.Text.Json.Schema;
 using MicrosoftAI = Microsoft.Extensions.AI;
 
 namespace DotnetLlamaSharp.Services.Prompting
@@ -21,15 +17,17 @@ namespace DotnetLlamaSharp.Services.Prompting
     public class OllamaSharpService : IOllamaSharpService
     {
         private readonly IOllamaInferenceService _ollamaService;
+        private readonly IPromptCommandsFactory _promptsFactory;
         private readonly IMapper _mapper;
         private readonly MicrosoftAI.IEmbeddingGenerator<string, MicrosoftAI.Embedding<float>> _embeddingsGenerator;
         private readonly RequestOptions _settings;
         private readonly ILogger<OllamaSharpService> _logger;
         private readonly IChromaSysChunksRepository _sysRepo;
         public OllamaSharpService(IOllamaInferenceService ollamaService, MicrosoftAI.IEmbeddingGenerator<string, MicrosoftAI.Embedding<float>> embeddingsGenerator, 
-               IChromaSysChunksRepository sysRepo, IOptions<RequestOptions> settings, IMapper mapper, ILogger<OllamaSharpService> logger)
+               IPromptCommandsFactory promptsFactory, IChromaSysChunksRepository sysRepo, IOptions<RequestOptions> settings, IMapper mapper, ILogger<OllamaSharpService> logger)
         {
             _ollamaService = ollamaService ?? throw new ArgumentNullException($"{nameof(IOllamaInferenceService)}");
+            _promptsFactory = promptsFactory;
             _sysRepo = sysRepo;
             _embeddingsGenerator = embeddingsGenerator;
             _settings = settings.Value ?? new RequestOptions();
@@ -147,12 +145,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)
         {
-            var sysMessageChunk = await _sysRepo.GetByName("system-messages", "bool-resp");
-
-            if (string.IsNullOrEmpty(sysMessageChunk.Text))
-                throw new InvalidDataException($"{nameof(EnumChoice)} >> no system message text has been found for message 'bool-resp'");
-
-            string instructionMessage = string.IsNullOrEmpty(req.SystemMessage) ? sysMessageChunk.Text : $"{req.SystemMessage}\n{sysMessageChunk.Text}";
+            var instructionMessage = await getStructuredPromptInstruction("bool-resp", req.SystemMessage);
 
             var response = await _ollamaService.StructuredPrompt<BooleanResponse>(req.Prompt, instructionMessage, req.Model);
 
@@ -170,27 +163,33 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<TEnum?> EnumChoice<TEnum>(string prompt, string? instruction = null) where TEnum : struct, Enum
         {
-            var values = Enum.GetValues<TEnum>().ToList();
-            var type = Enum.GetUnderlyingType(typeof(TEnum));
+            var command = _promptsFactory.GetEnumChoiceCommand<TEnum>("enum-choice-resp", instruction);
 
-            if (type != typeof(int))
-                throw new InvalidOperationException($"{nameof(EnumChoice)} >> invalid ENUM type");
+            return await command.Prompt(_ollamaService, new PromptCommandRequest { Prompt = prompt, Model = null, Settings = _settings });
+        }
 
-            var sysMessageChunk = await _sysRepo.GetByName("system-messages", "enum-choice-resp");
+        public async Task<string> StringChoice(string prompt, List<string> choices, string? instruction = null)
+        {
+            string instructionMessage = await getStructuredPromptInstruction("string-choice-resp", instruction);
 
-            if (string.IsNullOrEmpty(sysMessageChunk.Text))
-                throw new InvalidDataException($"{nameof(EnumChoice)} >> no system message text has been found for message 'enum-choice-resp'");
+            foreach (var value in choices)
+                instructionMessage += $"\n{value}";
 
-            string instructionMessage = sysMessageChunk.Text;
-
-            foreach (var value in values)
-                instructionMessage += $"\n{(int)Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(TEnum)))} = {value}";
-            
             var systemMessage = string.IsNullOrEmpty(instruction) ? instructionMessage : $"{instruction}\n{instructionMessage}";
 
-            var response = await _ollamaService.StructuredPrompt<IntegerChoiceResponse>(prompt, systemMessage);
+            var response = await _ollamaService.StructuredPrompt<StringChoiceResponse>(prompt, systemMessage);
 
-            return (TEnum)Convert.ChangeType(response.Selected, type);
+            return response.Selected;
+        }
+
+        private async Task<string> getStructuredPromptInstruction(string name, string? systemMessage)
+        {
+            var sysMessageChunk = await _sysRepo.GetByName("system-messages", name);
+
+            if (string.IsNullOrEmpty(sysMessageChunk.Text))
+                throw new InvalidDataException($"{nameof(EnumChoice)} >> no system message text has been found for message: '{name}'");
+
+            return string.IsNullOrEmpty(systemMessage) ? sysMessageChunk.Text : $"{systemMessage}\n{sysMessageChunk.Text}";
         }
     }
 }

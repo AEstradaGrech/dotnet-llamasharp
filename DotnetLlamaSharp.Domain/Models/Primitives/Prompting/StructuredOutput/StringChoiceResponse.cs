@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace DotnetLlamaSharp.Infrastructure.Models.Inference.StructuredOutputs
+namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput
 {
-    public class IntegerChoiceResponse
+    public class StringChoiceResponse
     {
         [JsonPropertyName("selection")]
-        public int Selected { get; set; }
+        public string Selected { get; set;  }
     }
 }

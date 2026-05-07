@@ -17,5 +17,6 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
 
         Task<ChatPrompt> BooleanQuestion(SimplePromptRequest request);
         Task<TEnum?> EnumChoice<TEnum>(string prompt, string? instruction = null) where TEnum : struct, Enum;
+        Task<string> StringChoice(string prompt, List<string> choices, string? instruction = null);
     }
 }
