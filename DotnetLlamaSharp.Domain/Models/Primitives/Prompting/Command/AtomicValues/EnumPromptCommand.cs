@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
@@ -7,9 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
+namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
-    public class EnumPromptCommand<TEnum> : DbPromptCommand<TEnum> where TEnum : struct, Enum
+    public class EnumPromptCommand<TEnum> : ChromaPromptCommand<TEnum> where TEnum : struct, Enum
     {
         public EnumPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null) : base(repo, dbMessageName, guidanceMessage)
         {

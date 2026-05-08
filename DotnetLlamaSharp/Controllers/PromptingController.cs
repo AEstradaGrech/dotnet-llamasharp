@@ -1,6 +1,9 @@
 ﻿using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
@@ -97,25 +100,22 @@ namespace DotnetLlamaSharp.Controllers
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
-        /*
-         * 
-         * {
-  "prompt": "Tell me the last trends in artificial intelligence for videogames",
-  "maxTokens": 600,
-  "temperature": 0.4,
-  "chatHistory": [
-   
-  ],
-  "queryCollections": [
-    "rags",
-    "cybersecurity"
-  ],
-  "includedEmbeddings": 4,
-  "embeddingFilters": {
-    
-  }
-}
-         */
+
+        [HttpPost("/test/scored-choice/prompt")]
+        public async Task<IActionResult> ScoredChoice([FromBody] SimplePromptRequestDto dto)
+        {
+            var request = _mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(dto);
+
+            var response = _mapper.Map<ScoredStringChoice, ScoredChoiceDto>(
+                await _ollamaService.DbPromptCommand<ScoredChoiceCommand, StringChoiceRequest, ScoredStringChoice>(
+                    new StringChoiceRequest { Model = request.Model, Prompt = request.Prompt, Choices = new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" } }, dbInstructionName: "scored-choice-resp", instruction: request.SystemMessage));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
 
         [HttpPost("/rag/qa/prompt")]
         public async Task<IActionResult> SimpleRagPrompt([FromBody] RagPromptRequestDto request)

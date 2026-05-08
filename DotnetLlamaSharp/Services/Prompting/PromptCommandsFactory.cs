@@ -1,4 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 
@@ -11,7 +13,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         public TCommand GetCommand<TCommand, TResult>(string? systemMessage = null) where TCommand : BasePromptCommand<TResult>, new()
             => Activator.CreateInstance(typeof(TCommand), systemMessage) as TCommand;
 
-        public TCommand GetCommand<TCommand, TResult>(string dbMessageName, string? systemMessage = null) where TCommand : DbPromptCommand<TResult>, new()
+        public TCommand GetCommand<TCommand, TResult>(string dbMessageName, string? systemMessage = null) where TCommand : ChromaPromptCommand<TResult>, new()
             => Activator.CreateInstance(typeof(TCommand), _systemRepo, dbMessageName, systemMessage) as TCommand;
 
         public EnumPromptCommand<TEnum> GetEnumChoiceCommand<TEnum>(string dbMessageName, string? systemMessage = null) where TEnum : struct, Enum

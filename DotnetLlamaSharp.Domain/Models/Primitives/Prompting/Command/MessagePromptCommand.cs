@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;

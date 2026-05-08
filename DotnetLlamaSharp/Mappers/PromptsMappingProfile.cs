@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
@@ -46,6 +47,11 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore());
             CreateMap<RagChatRequestDto, RagChatRequest>();
+
+            CreateMap<ScoredStringChoice, ScoredChoiceDto>()
+                .ForMember(dest => dest.Choice, opt => opt.MapFrom(src => src.Selected))
+                .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => src.Score))
+                .ForMember(dest => dest.Comment, opt => opt.MapFrom(src => src.Justification));
         }
     }
 }

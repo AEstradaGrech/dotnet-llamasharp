@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using DocumentFormat.OpenXml.EMMA;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -185,7 +187,27 @@ namespace DotnetLlamaSharp.Services.Prompting
             var command = _promptsFactory.GetCommand<MultiChoiceCommand, List<string>>("multi-choice-resp",instruction);
 
             var response = await command.Prompt(_ollamaService, new MultiChoiceRequest { Prompt = prompt, Choices = choices, MaxSelections = maxChoices, Settings = _settings });
+            
             return response;
         }
+
+        //public async Task<ChatPrompt> ScoredStringChoice(string prompt, List<string> choices, string? model, int maxChoices, string? instruction = null)
+        //{
+        //    var command = _promptsFactory.GetCommand<ScoredChoiceCommand, ScoredStringChoice>("secored-choice-resp", instruction);
+
+        //    var response = await command.Prompt(_ollamaService, new StringChoiceRequest { Prompt = prompt, Choices = choices, Settings = null, Model = model });
+
+        //    return response;
+        //}
+
+        public async Task<TResult> GuidedPromptCommand<TCommand, TRequest, TResult>(TRequest request, string? instruction = null)
+            where TCommand : BasePromptCommand<TResult>, new()
+            where TRequest : PromptCommandRequest
+                => await _promptsFactory.GetCommand<TCommand, TResult>(instruction).Prompt(_ollamaService, request);
+
+        public async Task<TResult> DbPromptCommand<TCommand, TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null)
+            where TCommand : ChromaPromptCommand<TResult>, new()
+            where TRequest : PromptCommandRequest
+             => await _promptsFactory.GetCommand<TCommand, TResult>(dbInstructionName, instruction).Prompt(_ollamaService, request);
     }
 }

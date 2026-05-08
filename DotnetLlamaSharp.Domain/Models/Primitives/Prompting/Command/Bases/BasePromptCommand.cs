@@ -3,12 +3,14 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 using OllamaSharp.Models;
 
 
-namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
+namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
 {
     public abstract class BasePromptCommand<T>
     {
 
         protected readonly string? _systemMessage = null;
+
+        public string? SystemMessage => _systemMessage;
         
         public BasePromptCommand() { }
         public BasePromptCommand(string? systemMessage = null)
