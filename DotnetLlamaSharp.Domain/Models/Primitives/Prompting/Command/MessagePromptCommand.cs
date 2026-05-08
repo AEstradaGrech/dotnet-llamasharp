@@ -9,6 +9,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
     public class MessagePromptCommand : BasePromptCommand<ChatMessage>
     {
+        public MessagePromptCommand() : base() { }
         public MessagePromptCommand(string? systemMessage) : base(systemMessage) { }
 
         public override async Task<ChatMessage> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
@@ -27,7 +28,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         protected override async Task<string> getPromptInstruction() => _systemMessage == null ? string.Empty : _systemMessage;
 
-        private GenerateRequest getGenerateRequest(PromptCommandRequest request)
+        protected GenerateRequest getGenerateRequest(PromptCommandRequest request)
             => new GenerateRequest {
                 Model = request.Model,
                 Prompt = request.Prompt,
@@ -36,7 +37,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                 Options = request.Settings
             };
         
-        private ChatRequest getChatRequest(ChatCommandRequest request)
+        protected ChatRequest getChatRequest(ChatCommandRequest request)
         {
             var messages = new List<Message>();
 
@@ -51,7 +52,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
             };
         }
 
-        private ChatCommandRequest setRequestForChat(ChatCommandRequest request)
+        protected ChatCommandRequest setRequestForChat(ChatCommandRequest request)
         {
             if (request.IncludeSystemMessage && !string.IsNullOrEmpty(_systemMessage))
                 request.ChatHistory.Add(new ChatMessage(ChatRole.System.ToString(), _systemMessage));

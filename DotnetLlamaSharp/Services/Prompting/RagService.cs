@@ -3,6 +3,8 @@ using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
@@ -358,27 +360,36 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<RagPrompt> SimpleSmartQuery(SimplePromptRequest request)
         {
             // A: getCat + multichoice
-            
-            var availableCollections = await _chromaService.GetAllFileCollections();
+            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(new PromptCommandRequest(request.Prompt, null, request.Model));
 
-            var choices = new Dictionary<string, string>();
+            var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
 
-            availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
+            var collectionsCatalogue = await getFileCollectionsRagText();
 
-            var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, null, instruction: request.SystemMessage); //v2: SimpleSmartRagRequest w/JsonModel
+            var evaluationInstruction = $"Your task is to determine whether the provide User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
+
+            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, request.Model, evaluationInstruction);
 
             var ragReq = _mapper.Map<SimplePromptRequest, RagPromptRequest>(request);
 
-            ragReq.SystemMessage = null;
-            ragReq.CollectionRetrievals = 4;
-            
-            selectedChoices.ForEach(selected => ragReq.QueryCollections.Add(selected.Split(" ")[0])); // in case the LLM fails to output only the collection name from the formatted catalogue values.
-            // B: analyze UserIntentCommand + A
-            // C: analyze + isRelated? ScoredBool + A
-            // BTW <- LameChain test workflow base (analyze) + branch (isRelated) Y/N = _trueCmd else _falseCmd
+            if (isRelatedIntent.Answer && isRelatedIntent.Score >= 0.3)
+            {
+                var availableCollections = await _chromaService.GetAllFileCollections();
 
-            // for choice in multichoice:
-            //  ragReq.QueryCollections.Add(choice)
+                var choices = new Dictionary<string, string>();
+
+                availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
+
+                var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR NONE if there are no collections relevant for the user query.";
+
+                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, null, instruction: selectorGuidance);
+
+                ragReq.SystemMessage = null;
+
+                ragReq.CollectionRetrievals = 4;
+
+                selectedChoices.ForEach(selected => ragReq.QueryCollections.Add(selected.Split(" ")[0])); // in case the LLM fails to output only the collection name from the formatted catalogue values.  
+            }
             
             return await SimpleRagQuery(ragReq);
         }
@@ -389,7 +400,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var collections = await _chromaService.GetAllFileCollections();
 
-            collections.ForEach(collection => getFileCollectionRagText(collection, itemSplitMark));
+            collections.ForEach(collection => sb.Append(getFileCollectionRagText(collection, itemSplitMark)));
 
             return sb.ToString().Trim();
         }
@@ -399,7 +410,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             var sb = new StringBuilder();
 
             sb.Append(string.IsNullOrEmpty(itemSplitMark) ? "" : itemSplitMark)
-                  .Append("\n- COLLECTION NAME =  ")
+                  .Append("\n\n- COLLECTION NAME =  ")
                   .Append(collection.Name)
                   .Append(string.IsNullOrEmpty(collection.Description) ? "" : $" - {collection.Description}\n")
                   .Append("> TOPICS: ")
