@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
@@ -11,5 +8,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public string PAGES { get; set; } = "";
         [JsonPropertyName("file_extension")]
         public string FILE_EXTENSION { get; set; }
+        [JsonPropertyName("topic")]
+        public string TOPICS { get; set; }
     }
 }

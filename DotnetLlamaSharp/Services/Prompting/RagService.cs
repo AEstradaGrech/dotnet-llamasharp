@@ -6,6 +6,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
+using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
@@ -19,13 +20,14 @@ namespace DotnetLlamaSharp.Services.Prompting
     {
         private readonly IOllamaSharpService _chatService;
         private readonly IChromaService _chromaService;
+        private readonly IPromptCommandsService _ollamaCommands;
         private readonly IEmbeddingsService _embeddingsService;
         private readonly IChromaChatsRepository _chatsRepo;
         private readonly ILogger<RagService> _logger;
         private readonly IMapper _mapper;
         private readonly ApiSettings _settings;
 
-        public RagService(IOllamaSharpService chatService, IChromaService chromaService, IChromaChatsRepository chatsRepo,
+        public RagService(IOllamaSharpService chatService, IChromaService chromaService, IChromaChatsRepository chatsRepo, IPromptCommandsService ollamaCommands,
             IEmbeddingsService embeddingsService, ILogger<RagService> logger, IMapper mapper, IOptions<ApiSettings> settings)
         {
             _chatService = chatService;
@@ -35,6 +37,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             _chatsRepo = chatsRepo;
             _settings = settings.Value;
             _embeddingsService = embeddingsService;
+            _ollamaCommands = ollamaCommands;
         }
 
         public async Task<RagPrompt> SimpleRagQuery(RagPromptRequest request)
@@ -45,7 +48,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             if (request.QueryCollections.Count > 0)
                 collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
 
-            var baseIntruction = request.SystemMessage.Trim();
+            var baseIntruction = string.IsNullOrEmpty(request.SystemMessage) ? "" : request.SystemMessage.Trim();
 
             var systemChunk = await _chromaService.GetSysMessage("system-messages", "rag-query");
             var systemMessage = @$"
@@ -60,16 +63,19 @@ namespace DotnetLlamaSharp.Services.Prompting
             chatRequest.SystemMessage = systemMessage;
       
             var response = await _chatService.SimplePrompt(chatRequest);
-            
+
+            if (!string.IsNullOrEmpty(response.Output))
+                response.ChatHistory.Add(new ChatMessage(ChatRole.Assistant.ToString(), response.Output));
+
             return new RagPrompt
             {
                 Model = response.Model,
-                EmbeddingModel = chromaQuery != null ? chromaQuery.EmbeddingModel : null,
+                EmbeddingModel = "--",
                 Input = request.Prompt,
                 Output = response.Output,
                 IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value).ToList(),
                 ChatHistory = response.ChatHistory,
-                InputEmbedding = chromaQuery != null ? chromaQuery.QueryEmbedding : null
+                InputEmbedding = null
             };
         }
 
@@ -320,7 +326,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             return sb.ToString().Trim();
         }
 
-        public async Task<RagPrompt> YesNoQuestion(RagPromptRequest request)
+        public async Task<RagPrompt> ScoredBinaryQuestion(RagPromptRequest request)
         {
             return null;
             //var systemMessage = $"{request.SystemMessage.Trim()}";
@@ -347,6 +353,59 @@ namespace DotnetLlamaSharp.Services.Prompting
             //    ChatHistory = response.ChatHistory,
             //    InputEmbedding = chromaQuery != null ? chromaQuery.QueryEmbedding : null
             //};
+        }
+
+        public async Task<RagPrompt> SimpleSmartQuery(SimplePromptRequest request)
+        {
+            // A: getCat + multichoice
+            
+            var availableCollections = await _chromaService.GetAllFileCollections();
+
+            var choices = new Dictionary<string, string>();
+
+            availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
+
+            var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, null, instruction: request.SystemMessage); //v2: SimpleSmartRagRequest w/JsonModel
+
+            var ragReq = _mapper.Map<SimplePromptRequest, RagPromptRequest>(request);
+
+            ragReq.SystemMessage = null;
+            ragReq.CollectionRetrievals = 4;
+            
+            selectedChoices.ForEach(selected => ragReq.QueryCollections.Add(selected.Split(" ")[0])); // in case the LLM fails to output only the collection name from the formatted catalogue values.
+            // B: analyze UserIntentCommand + A
+            // C: analyze + isRelated? ScoredBool + A
+            // BTW <- LameChain test workflow base (analyze) + branch (isRelated) Y/N = _trueCmd else _falseCmd
+
+            // for choice in multichoice:
+            //  ragReq.QueryCollections.Add(choice)
+            
+            return await SimpleRagQuery(ragReq);
+        }
+
+        private async Task<string> getFileCollectionsRagText(string itemSplitMark = null)
+        {
+            var sb = new StringBuilder();
+
+            var collections = await _chromaService.GetAllFileCollections();
+
+            collections.ForEach(collection => getFileCollectionRagText(collection, itemSplitMark));
+
+            return sb.ToString().Trim();
+        }
+
+        private string getFileCollectionRagText(ChromaFilesCollection collection, string itemSplitMark = null)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append(string.IsNullOrEmpty(itemSplitMark) ? "" : itemSplitMark)
+                  .Append("\n- COLLECTION NAME =  ")
+                  .Append(collection.Name)
+                  .Append(string.IsNullOrEmpty(collection.Description) ? "" : $" - {collection.Description}\n")
+                  .Append("> TOPICS: ")
+                  .Append(collection.GetMeta<FileCollectionMetadata>().TOPICS);
+
+            return sb.ToString();
         }
     }
 }

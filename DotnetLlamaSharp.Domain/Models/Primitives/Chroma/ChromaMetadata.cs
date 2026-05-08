@@ -15,6 +15,5 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public int TYPE { get; set; }
         [JsonPropertyName("document_name")]
         public string DOCUMENT_NAME { get; set; }
-
     }
 }

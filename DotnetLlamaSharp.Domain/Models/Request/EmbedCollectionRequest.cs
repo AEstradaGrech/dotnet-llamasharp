@@ -13,6 +13,7 @@ namespace DotnetLlamaSharp.Domain.Models.Request
         public int InitialSkip { get; set; } = 0;
         public int PageCutoff { get; set; } = 0;
         public int MinTextToChunk { get; set; } = 0;
+        public List<string> TopicTags { get; set; } = new List<string>();
         public Dictionary<string, object> Metadata { get; set; }
     }
 }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
@@ -21,6 +18,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         public string PAGE_CUTOFFS { get; set; } = "";
         [JsonPropertyName("pages")]
         public string PAGES { get; set; } = "";
-
+        [JsonPropertyName("topics")]
+        public string TOPICS { get; set; } = "";
     }
 }

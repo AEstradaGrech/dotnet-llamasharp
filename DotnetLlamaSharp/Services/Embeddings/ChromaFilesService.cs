@@ -1,8 +1,4 @@
-﻿using DocumentFormat.OpenXml.EMMA;
-using DocumentFormat.OpenXml.Office2016.Excel;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
-using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -13,7 +9,6 @@ using DotnetLlamaSharp.Infrastructure.Exceptions;
 using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Connectors.Chroma;
 using System.Net;
 using System.Text;
 
@@ -104,15 +99,12 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 var chunkPages = new List<DocumentPage>();
                 int currentChunkSize = 0;
                 var newChunks = new List<ChromaChunk>();
-                // await _repo.CreateCollection(request.Name) <- Añade CollectionChunk (ID=0) w/description & metas.totalChunks <-ChunkUpsert tiene que actualizar INCLUYE COL_CHUNK_SIZE & CHUNKED_FILE NAMES
                 for (int i = 0; i < selectedPages.Count(); i++)
                 {
                     var page = selectedPages[i];
 
                     if (page.Length <= request.ChunkSize)
                     {
-                        //Accummulate
-
                         if(currentChunkSize + page.Length >= request.ChunkSize)
                         {
                             chunkPages.Add(page);
@@ -128,7 +120,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     }
                     else
                     {
-                        // ProcessCurrent with accumulated
                         var chromaChunks = splitAndChunk(page, request.FileName, request.ChunkSize);
 
                         if (chunkPages.Count > 0)
@@ -154,11 +145,12 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                 _logger.LogInformation($"Generated {newChunks.Count} new chunks from selected document pages");
 
+                var fileTopics = getTopicTagString(request.TopicTags);
+
                 request.Metadata.Add(nameof(FileChunkMetadata.MODEL).ToLower(), request.EmbeddingModel ?? _settings.DefaultEmbedder);
                 request.Metadata.Add(nameof(FileChunkMetadata.DIMENSIONS).ToLower(), request.Dimensions);
                 request.Metadata.Add(nameof(FileChunkMetadata.FILE_EXTENSION).ToLower(), request.FileExtension);
-                //BatchInsert
-
+                request.Metadata.Add(nameof(FileChunkMetadata.TOPICS).ToLower(), fileTopics);
 
                 int batchSize = 50;
                 var chunkBatches = (int)Math.Ceiling((decimal)(newChunks.Count() / batchSize));
@@ -183,6 +175,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 setCollectionMetadata(nameof(FileCollectionMetadata.CHUNK_OVERLAPS).ToLower(), $"{request.ChunkOverlap}", $"{collection.GetMeta<FileCollectionMetadata>().CHUNK_OVERLAPS}", request);
                 setCollectionMetadata(nameof(FileCollectionMetadata.SKIPPED_PAGES).ToLower(), $"{request.InitialSkip}", $"{collection.GetMeta<FileCollectionMetadata>().SKIPPED_PAGES}", request);
                 setCollectionMetadata(nameof(FileCollectionMetadata.PAGE_CUTOFFS).ToLower(), $"{request.PageCutoff}", $"{collection.GetMeta<FileCollectionMetadata>().PAGE_CUTOFFS}", request);
+                setCollectionMetadata(nameof(FileCollectionMetadata.TOPICS).ToLower(), fileTopics, $"{collection.GetMeta<FileCollectionMetadata>().TOPICS}", request);
                 request.Metadata.Add(nameof(FileCollectionMetadata.PAGES).ToLower(), $"{document.Pages.Count}");
 
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
@@ -467,6 +460,29 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 chunks.Add(new ChromaChunk { Text = chunkBuilder.ToString().Trim(), Metadata = metadata });
             }
             return chunks;
+        }
+
+        private string getTopicTagString(List<string> tags)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            tags.ForEach(tag => sb.Append(tag).Append(","));
+
+            var result = sb.ToString();
+
+            return result.Substring(0, result.Length -1);
+        }
+
+        public async Task<List<ChromaFilesCollection>> GetAllCollections()
+        {
+            var catalogue = await _repo.GetDbCollections();
+
+            var results = new List<ChromaFilesCollection>();
+            
+            await foreach(var name in catalogue)
+                results.Add(await _repo.GetCollection(name));
+
+            return results;
         }
     }
 }

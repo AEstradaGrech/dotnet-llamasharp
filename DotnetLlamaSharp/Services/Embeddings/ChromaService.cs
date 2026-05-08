@@ -139,5 +139,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             return await _chatsRepo.GetCollectionPage(collection.Name, new Dictionary<string, object> { [nameof(ChatChunkMetadata.CHAT_INIT).ToLower()] = true }, withEmbeddings: false, page, pageSize);;
         }
+
+        public async Task<List<ChromaFilesCollection>> GetAllFileCollections()
+            => await _fileMgmtService.GetAllCollections();
     }
 }

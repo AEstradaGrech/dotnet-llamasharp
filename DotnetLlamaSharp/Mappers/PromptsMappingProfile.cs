@@ -39,6 +39,13 @@ namespace DotnetLlamaSharp.Mappers
                 .IncludeBase<RagPromptRequestDto, RagPromptRequest>();
 
             // Domain to Domain models
+            CreateMap<SimplePromptRequest, RagPromptRequest>()
+                .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
+                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
+                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
+                .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
+
+
             CreateMap<RagPromptRequest, SimplePromptRequest>();
             CreateMap<RagChatRequest, ChatPromptRequest>()
                 .IncludeBase<RagPromptRequest, SimplePromptRequest>();

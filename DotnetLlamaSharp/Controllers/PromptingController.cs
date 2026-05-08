@@ -96,7 +96,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/rag/qa/y-n/prompt")]
         public async Task<IActionResult> YesNoQuestion([FromBody] RagPromptRequestDto request)
         {
-            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.YesNoQuestion(_mapper.Map<RagPromptRequestDto, RagPromptRequest>(request)));
+            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.ScoredBinaryQuestion(_mapper.Map<RagPromptRequestDto, RagPromptRequest>(request)));
 
             if (response != null)
                 return Ok(response);
@@ -155,6 +155,17 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> NumericPrompt([FromBody] SimplePromptRequestDto dto)
         {
             var response =  await _ollamaCommands.NumericResult(dto.Prompt, dto.Model, dto.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/rag/qa/smart/prompt")]
+        public async Task<IActionResult> SimpleRagPrompt([FromBody] SimplePromptRequestDto request)
+        {
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(request)));
 
             if (response != null)
                 return Ok(response);
