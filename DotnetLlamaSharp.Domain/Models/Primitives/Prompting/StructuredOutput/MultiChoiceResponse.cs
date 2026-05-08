@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput
 {
-    public class StringChoiceResponse
+    public class MultiChoiceResponse
     {
         [JsonPropertyName("selected")]
-        public string Selected { get; set;  }
+        public List<string> Selected { get; set; }
     }
 }

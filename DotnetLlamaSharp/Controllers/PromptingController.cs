@@ -19,31 +19,6 @@ namespace DotnetLlamaSharp.Controllers
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PromptingController> _logger = logger;
 
-        //[HttpGet("/test-stream")]
-        //public async Task TestStream()
-        //{
-        //    Response.StatusCode = (int)HttpStatusCode.OK;
-        //    Response.ContentType = "text/event-stream";
-        //    var stream = _ollamaService.ChatPromptStream(new ChatPromptRequestDto { Model = "llama3.1:8b", Prompt = "Hi", SystemMessage = "You are Josef K., main character of The Process, by Kafka" });
-        //    await foreach (var chunk in stream.WithCancellation(HttpContext.RequestAborted))
-        //    {
-        //        if (chunk == null) continue;
-        //        _logger.LogInformation(chunk.Message.Content);
-        //        var bytes = System.Text.Encoding.UTF8.GetBytes(chunk.Message.Content ?? string.Empty);
-        //        await Response.Body.WriteAsync(bytes, 0, bytes.Length, HttpContext.RequestAborted);
-        //        await Response.Body.FlushAsync(HttpContext.RequestAborted);
-        //    }
-        //}
-        //[HttpGet("/test-embeddings")]
-        //public async Task<IActionResult> TestEmbeddings()
-        //{
-        //    var result = await _ollamaService.GenerateEmbeddings("Mi barba tiene tres pelos");
-
-        //    if (result != null)
-        //        return Ok(result);
-
-        //    return StatusCode((int)HttpStatusCode.InternalServerError);
-        //}
         [HttpPost("/simple/prompt")]
         public async Task<IActionResult> SimplePrompt([FromBody]SimplePromptRequestDto request)
         {
@@ -153,14 +128,6 @@ namespace DotnetLlamaSharp.Controllers
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
-        // tiene persistencia en chroma y recupera info sobre chat con embeddings
-        // ademas, si se pasan collections para checkear, funciona como RAG
-        // si no existe collection: crea collection para AgentName-UserName (chunk-0) y crea session-chunk (chat_init) y lo asigna como current en col-chunk
-        // y le asigna meta 'current' = true. CURRENT NUNCA TIENE EMBEDDING
-        // cada prompt lee text de current chunk y lo actualiza on response
-        // Cuando Text.Len >= _settings.X --> GENERA EMBEDDINNG, lo guarda, actualiza meta 'current' = false y crea un nuevo current chunk
-        // CADA PROMPT HACE VECTOR QUERY CON CURRENT.TEXT SI TOTAL_CHUNKS > 1 (o meta 'current' = false)
-        // v2 --> MEMORIES (summarizations) cada X chunks genero sumary y lo guardo -> se hace vector query con current_chunk y chunks where meta 'memo' = true [PARA QUE??!]
         [HttpPost("/rag/chat/prompt")]
         public async Task<IActionResult> RagChatPrompt([FromBody] RagChatRequestDto request)
         {
@@ -168,17 +135,6 @@ namespace DotnetLlamaSharp.Controllers
 
             if (response != null)
                 return Ok(response);
-
-            return StatusCode((int)HttpStatusCode.InternalServerError);
-        }
-
-        [HttpPost("/test/enum/choice")]
-        public async Task<IActionResult> TestEnumChoices([FromBody] SimplePromptRequestDto request)
-        {
-            var response = await _ollamaService.EnumChoice<EChunkType>(request.Prompt, string.IsNullOrEmpty(request.SystemMessage) ? null : request.SystemMessage);
-
-            if (response != null)
-                return Ok($"{response}");
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }

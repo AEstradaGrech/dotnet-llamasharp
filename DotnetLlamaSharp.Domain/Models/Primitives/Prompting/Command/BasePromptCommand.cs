@@ -10,6 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         protected readonly string? _systemMessage = null;
         
+        public BasePromptCommand() { }
         public BasePromptCommand(string? systemMessage = null)
         {
             _systemMessage = systemMessage;

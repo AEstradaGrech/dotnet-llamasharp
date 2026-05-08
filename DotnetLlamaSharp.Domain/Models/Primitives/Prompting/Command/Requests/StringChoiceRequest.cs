@@ -4,7 +4,7 @@ using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests
 {
-    public class StringChoicesRequest : PromptCommandRequest
+    public class StringChoiceRequest : PromptCommandRequest
     {
         public List<string> Choices { get; set; }
     }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -53,9 +54,9 @@ namespace DotnetLlamaSharp.Services.Prompting
                 new ChatMessage(ChatRole.User.ToString(), request.Prompt)
             };
 
-            var response = await _ollamaService.SimplePrompt(getGenerateRequest(request, isStream: false));
+            var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage);
 
-            messages.Add(_mapper.Map<Message, ChatMessage>(response));
+            var response = await command.Prompt(_ollamaService, new PromptCommandRequest { Model = request.Model, Prompt = request.Prompt, Settings = _settings });
 
             return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = messages };
         }
@@ -70,10 +71,12 @@ namespace DotnetLlamaSharp.Services.Prompting
             var sb = new System.Text.StringBuilder();
 
             setRequestForChat(request, bWithSysmsgUpdate);
-            
-            var response = await _ollamaService.ChatPrompt(getChatRequest(request, isStream: false));
 
-            request.ChatHistory.Add(_mapper.Map<Message, ChatMessage>(response));
+            var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage);
+
+            var response = await command.Prompt(_ollamaService, new ChatCommandRequest { Model = request.Model, Prompt = request.Prompt, Settings = _settings, ChatHistory = request.ChatHistory });
+
+            request.ChatHistory.Add(new ChatMessage(response.Role.ToString(), response.Content));
 
             return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
         }
@@ -145,14 +148,14 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)
         {
-            var instructionMessage = await getStructuredPromptInstruction("bool-resp", req.SystemMessage);
+            var command = _promptsFactory.GetBoolPromptCommand("bool-resp");
 
-            var response = await _ollamaService.StructuredPrompt<BooleanResponse>(req.Prompt, instructionMessage, req.Model);
-
+            var response = await command.Prompt(_ollamaService, new PromptCommandRequest { Model = req.Model, Prompt = req.Prompt, Settings = _settings });
+            
             if (response == null)
                 throw new ArgumentNullException($"{nameof(OllamaSharpService)} >> {nameof(BooleanQuestion)} >> An error has ocurred while requesting the structured output, try again");
             
-            var stringResponse = response.Answer ? "YES" : "NO";
+            var stringResponse = response ? "YES" : "NO";
 
             var messages = new List<ChatMessage> { new ChatMessage(ChatRole.System.ToString(), req.SystemMessage), new ChatMessage(ChatRole.User.ToString(), req.Prompt)};
 
@@ -168,28 +171,21 @@ namespace DotnetLlamaSharp.Services.Prompting
             return await command.Prompt(_ollamaService, new PromptCommandRequest { Prompt = prompt, Model = null, Settings = _settings });
         }
 
-        public async Task<string> StringChoice(string prompt, List<string> choices, string? instruction = null)
+        public async Task<string> StringChoice(string prompt, List<string> choices, string? model = null, string? instruction = null)
         {
-            string instructionMessage = await getStructuredPromptInstruction("string-choice-resp", instruction);
+            var command = _promptsFactory.GetCommand<StringChoiceCommand, string>("string-choice-resp", instruction);
 
-            foreach (var value in choices)
-                instructionMessage += $"\n{value}";
+            var response = await command.Prompt(_ollamaService, new StringChoiceRequest { Prompt = prompt, Choices = choices, Settings = null, Model = model });
 
-            var systemMessage = string.IsNullOrEmpty(instruction) ? instructionMessage : $"{instruction}\n{instructionMessage}";
-
-            var response = await _ollamaService.StructuredPrompt<StringChoiceResponse>(prompt, systemMessage);
-
-            return response.Selected;
+            return response;
         }
 
-        private async Task<string> getStructuredPromptInstruction(string name, string? systemMessage)
+        public async Task<List<string>> MultiChoice(string prompt, List<string> choices, int maxChoices, string? instruction = null)
         {
-            var sysMessageChunk = await _sysRepo.GetByName("system-messages", name);
+            var command = _promptsFactory.GetCommand<MultiChoiceCommand, List<string>>("multi-choice-resp",instruction);
 
-            if (string.IsNullOrEmpty(sysMessageChunk.Text))
-                throw new InvalidDataException($"{nameof(EnumChoice)} >> no system message text has been found for message: '{name}'");
-
-            return string.IsNullOrEmpty(systemMessage) ? sysMessageChunk.Text : $"{systemMessage}\n{sysMessageChunk.Text}";
+            var response = await command.Prompt(_ollamaService, new MultiChoiceRequest { Prompt = prompt, Choices = choices, MaxSelections = maxChoices, Settings = _settings });
+            return response;
         }
     }
 }

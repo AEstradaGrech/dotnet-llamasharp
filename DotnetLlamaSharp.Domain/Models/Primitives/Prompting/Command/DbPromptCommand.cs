@@ -9,6 +9,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     {
         private readonly IChromaSysChunksRepository _repo;
         protected readonly string _messageName;
+        public DbPromptCommand() : base(){ }
         public DbPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null) : base(guidanceMessage) 
         { 
             _repo = repo;

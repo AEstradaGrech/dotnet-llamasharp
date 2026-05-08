@@ -16,8 +16,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         public override async Task<bool> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            var message = await getPromptInstruction();
-
             var response = await ollama.StructuredPrompt<BooleanResponse>(request.Prompt, await getPromptInstruction(), request.Model);
 
             return response.Answer;
