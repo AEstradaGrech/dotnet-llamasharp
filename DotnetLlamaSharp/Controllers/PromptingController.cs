@@ -5,6 +5,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;
@@ -15,9 +16,11 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PromptingController(IOllamaSharpService ollamaService, IRagService ragService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
+    public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IPromptCommandsService commandService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
     {
         private readonly IOllamaSharpService _ollamaService = ollamaService;
+        private readonly IOllamaStreamService _streamService = streamService;
+        private readonly IPromptCommandsService _ollamaCommands = commandService;
         private readonly IRagService _ragService = ragService;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PromptingController> _logger = logger;
@@ -41,7 +44,7 @@ namespace DotnetLlamaSharp.Controllers
 
             // Get the streaming enumerable from the service.
             // returns the _client.GenerateAsync(...) enumerable directly so the controller can iterate the stream.
-            var stream = _ollamaService.SimplePromptStream(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request));
+            var stream = _streamService.SimplePromptStream(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request));
 
             try
             {
@@ -101,14 +104,14 @@ namespace DotnetLlamaSharp.Controllers
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
-        [HttpPost("/test/scored-choice/prompt")]
+        [HttpPost("/commands/scored-choice/prompt")]
         public async Task<IActionResult> ScoredChoice([FromBody] SimplePromptRequestDto dto)
         {
             var request = _mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(dto);
 
             var response = _mapper.Map<ScoredStringChoice, ScoredChoiceDto>(
-                await _ollamaService.DbPromptCommand<ScoredChoiceCommand, StringChoiceRequest, ScoredStringChoice>(
-                    new StringChoiceRequest { Model = request.Model, Prompt = request.Prompt, Choices = new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" } }, dbInstructionName: "scored-choice-resp", instruction: request.SystemMessage));
+                await _ollamaCommands.DbPromptCommand<ScoredChoiceCommand, StringChoiceRequest, ScoredStringChoice>(
+                    new StringChoiceRequest(new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" }, dto.Prompt, null, request.Model) , dbInstructionName: "scored-choice-resp", instruction: request.SystemMessage));
 
             if (response != null)
                 return Ok(response);
@@ -116,6 +119,38 @@ namespace DotnetLlamaSharp.Controllers
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
+        [HttpPost("/commands/boolean/prompt")]
+        public async Task<IActionResult> BooleanPrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            var response = await _ollamaCommands.BooleanChoice(dto.Prompt, dto.Model, dto.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/yn/prompt")]
+        public async Task<IActionResult> StringyBoolPrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            var response = await _ollamaCommands.StringBoolChoice(dto.Prompt, dto.Model, dto.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/numeric/prompt")]
+        public async Task<IActionResult> NumericPrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            var response =  await _ollamaCommands.NumericResult(dto.Prompt, dto.Model, dto.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
 
         [HttpPost("/rag/qa/prompt")]
         public async Task<IActionResult> SimpleRagPrompt([FromBody] RagPromptRequestDto request)

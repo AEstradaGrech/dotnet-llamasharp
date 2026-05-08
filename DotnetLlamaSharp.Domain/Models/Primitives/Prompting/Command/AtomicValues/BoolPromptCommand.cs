@@ -10,6 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 {
     public class BoolPromptCommand : ChromaPromptCommand<bool>
     {
+        public BoolPromptCommand() :base() { }
         //Todo esto se pasa desde la factory, que si tiene DI
         public BoolPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null) : base(repo, dbMessageName, guidanceMessage)
         {

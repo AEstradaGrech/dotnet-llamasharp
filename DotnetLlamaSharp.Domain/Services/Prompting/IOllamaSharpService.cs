@@ -12,18 +12,16 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
     public interface IOllamaSharpService
     {
         Task<ChatPrompt> SimplePrompt(SimplePromptRequest request);
-        IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(SimplePromptRequest request);
         Task<ChatPrompt> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
-        IAsyncEnumerable<ChatResponseStream?> ChatPromptStream(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request);
 
-        Task<ChatPrompt> BooleanQuestion(SimplePromptRequest request);
-        Task<TEnum?> EnumChoice<TEnum>(string prompt, string? instruction = null) where TEnum : struct, Enum;
-        Task<string> StringChoice(string prompt, List<string> choices, string? model, string? instruction = null);
-        Task<List<string>> MultiChoice(string prompt, List<string> choices, int maxChoices, string? instruction = null);
+        //Task<ChatPrompt> BooleanQuestion(SimplePromptRequest request);
+        //Task<TEnum?> EnumChoice<TEnum>(string prompt, string? instruction = null) where TEnum : struct, Enum;
+        //Task<string> StringChoice(string prompt, List<string> choices, string? model, string? instruction = null);
+        //Task<List<string>> MultiChoice(string prompt, List<string> choices, int maxChoices, string? instruction = null);
 
 
-        Task<TResult> GuidedPromptCommand<TCommand, TRequest, TResult>(TRequest request, string? instruction = null) where TCommand : BasePromptCommand<TResult>, new() where TRequest : PromptCommandRequest;
-        Task<TResult> DbPromptCommand<TCommand, TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null) where TCommand : ChromaPromptCommand<TResult> , new() where TRequest : PromptCommandRequest;
+        //Task<TResult> GuidedPromptCommand<TCommand, TRequest, TResult>(TRequest request, string? instruction = null) where TCommand : BasePromptCommand<TResult>, new() where TRequest : PromptCommandRequest;
+        //Task<TResult> DbPromptCommand<TCommand, TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null) where TCommand : ChromaPromptCommand<TResult> , new() where TRequest : PromptCommandRequest;
     }
 }

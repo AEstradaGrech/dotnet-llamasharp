@@ -1,5 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
@@ -12,7 +13,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         public override async Task<ChatMessage> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            var message = request .GetType() == typeof(ChatCommandRequest) ?
+            bool isChat = request.GetType() == typeof(ChatCommandRequest);
+
+            if (isChat)
+                request = setRequestForChat((ChatCommandRequest)request);
+                
+            var message =  isChat ?
                 await ollama.ChatPrompt(getChatRequest((ChatCommandRequest)request)) :
                 await ollama.SimplePrompt(getGenerateRequest(request));
 
@@ -43,6 +49,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                 Stream = false,
                 Options = request.Settings
             };
+        }
+
+        private ChatCommandRequest setRequestForChat(ChatCommandRequest request)
+        {
+            if (request.IncludeSystemMessage && !string.IsNullOrEmpty(_systemMessage))
+                request.ChatHistory.Add(new ChatMessage(ChatRole.System.ToString(), _systemMessage));
+
+            request.ChatHistory.Add(new ChatMessage(ChatRole.User.ToString(), request.Prompt));
+
+            return request;
         }
     }
 }

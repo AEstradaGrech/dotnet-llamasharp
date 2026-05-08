@@ -322,30 +322,31 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<RagPrompt> YesNoQuestion(RagPromptRequest request)
         {
-            var systemMessage = $"{request.SystemMessage.Trim()}";
-            ChromaQuery chromaQuery = null;
-            var collectionQueries = new Dictionary<string, List<ChromaQueryChunk>>();
+            return null;
+            //var systemMessage = $"{request.SystemMessage.Trim()}";
+            //ChromaQuery chromaQuery = null;
+            //var collectionQueries = new Dictionary<string, List<ChromaQueryChunk>>();
 
-            if (request.QueryCollections.Count > 0)
-            {
-                collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
-                systemMessage += $"{getFileRagStringResult(collectionQueries)}";
-            }
+            //if (request.QueryCollections.Count > 0)
+            //{
+            //    collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
+            //    systemMessage += $"{getFileRagStringResult(collectionQueries)}";
+            //}
 
-            request.SystemMessage = systemMessage;
+            //request.SystemMessage = systemMessage;
 
-            var response = await _chatService.BooleanQuestion(_mapper.Map<RagPromptRequest, SimplePromptRequest>(request));
+            //var response = await _chatService.BooleanQuestion(_mapper.Map<RagPromptRequest, SimplePromptRequest>(request));
 
-            return new RagPrompt
-            {
-                Model = response.Model,
-                EmbeddingModel = chromaQuery != null ? chromaQuery.EmbeddingModel : null,
-                Input = request.Prompt,
-                Output = response.Output,
-                IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value).ToList(),
-                ChatHistory = response.ChatHistory,
-                InputEmbedding = chromaQuery != null ? chromaQuery.QueryEmbedding : null
-            };
+            //return new RagPrompt
+            //{
+            //    Model = response.Model,
+            //    EmbeddingModel = chromaQuery != null ? chromaQuery.EmbeddingModel : null,
+            //    Input = request.Prompt,
+            //    Output = response.Output,
+            //    IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value).ToList(),
+            //    ChatHistory = response.ChatHistory,
+            //    InputEmbedding = chromaQuery != null ? chromaQuery.QueryEmbedding : null
+            //};
         }
     }
 }

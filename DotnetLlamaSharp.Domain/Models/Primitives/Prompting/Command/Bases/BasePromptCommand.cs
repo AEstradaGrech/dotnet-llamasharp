@@ -8,7 +8,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
     public abstract class BasePromptCommand<T>
     {
 
-        protected readonly string? _systemMessage = null;
+        protected string? _systemMessage = null;
 
         public string? SystemMessage => _systemMessage;
         

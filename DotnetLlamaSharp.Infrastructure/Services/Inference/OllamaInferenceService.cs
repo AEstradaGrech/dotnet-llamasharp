@@ -65,15 +65,15 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
         public async Task<EmbedResponse> GetEmbeddings(EmbedRequest request)
             => await _client.EmbedAsync(request);
 
-        public async Task<T> StructuredPrompt<T>(string finalMessage, string? systemGuidance = null, string? jsonModel = null) where T : class
+        public async Task<T> StructuredPrompt<T>(string prompt, string? systemGuidance = null, string? jsonModel = null) where T : class
         {
-            if (string.IsNullOrEmpty(finalMessage) && string.IsNullOrEmpty(systemGuidance))
+            if (string.IsNullOrEmpty(prompt) && string.IsNullOrEmpty(systemGuidance))
                 throw new InvalidDataException($"{nameof(OllamaInferenceService)} >> {nameof(StructuredPrompt)} >> no messages to send");
 
             var request = new ChatRequest
             {
                 Model = string.IsNullOrEmpty(jsonModel) ? _apiSettings.JsonModels[0] : _apiSettings.JsonModels.Contains(jsonModel) ? jsonModel : _apiSettings.JsonModels[0],
-                Messages = !string.IsNullOrEmpty(systemGuidance) ? [new Message { Role = ChatRole.System, Content = systemGuidance }, new Message { Role = ChatRole.User, Content = finalMessage}] : [new Message { Role = ChatRole.User, Content = finalMessage }],
+                Messages = !string.IsNullOrEmpty(systemGuidance) ? [new Message { Role = ChatRole.System, Content = systemGuidance }, new Message { Role = ChatRole.User, Content = prompt}] : [new Message { Role = ChatRole.User, Content = prompt }],
                 Format = JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(T)),
                 Stream = false
             };
