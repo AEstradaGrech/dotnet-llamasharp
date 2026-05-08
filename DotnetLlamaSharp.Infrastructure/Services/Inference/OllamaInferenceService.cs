@@ -1,11 +1,9 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using DotnetLlamaSharp.Domain.Services.Inference;
+﻿using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using OllamaSharp;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
-using System.Net.Security;
 using System.Text.Json;
 using System.Text.Json.Schema;
 

@@ -110,8 +110,7 @@ namespace DotnetLlamaSharp.Controllers
             var request = _mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(dto);
 
             var response = _mapper.Map<ScoredStringChoice, ScoredChoiceDto>(
-                await _ollamaCommands.DbPromptCommand<ScoredChoiceCommand, StringChoiceRequest, ScoredStringChoice>(
-                    new StringChoiceRequest(new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" }, dto.Prompt, null, request.Model) , dbInstructionName: "scored-choice-resp", instruction: request.SystemMessage));
+                await _ollamaCommands.ScoredChoice(new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" }, dto.Prompt, request.Model, request.SystemMessage));
 
             if (response != null)
                 return Ok(response);
@@ -123,6 +122,17 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> BooleanPrompt([FromBody] SimplePromptRequestDto dto)
         {
             var response = await _ollamaCommands.BooleanChoice(dto.Prompt, dto.Model, dto.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/scored-boolean/prompt")]
+        public async Task<IActionResult> ScoredBooleanPrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            var response = await _ollamaCommands.ScoredBool(dto.Prompt, dto.Model, dto.SystemMessage);
 
             if (response != null)
                 return Ok(response);

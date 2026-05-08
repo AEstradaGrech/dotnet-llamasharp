@@ -1,6 +1,9 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
+﻿using DocumentFormat.OpenXml.Office2016.Excel;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using Microsoft.Extensions.Options;
@@ -71,5 +74,14 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return await command.Prompt(_ollama, new PromptCommandRequest(prompt, _settings, model));
         }
+
+        public async Task<ScoredBoolResponse> ScoredBool(string prompt, string? model = null, string? instruction = null)
+            => await DbPromptCommand<ScoredBoolCommand, PromptCommandRequest, ScoredBoolResponse>(
+                new PromptCommandRequest(prompt, _settings, model), dbInstructionName: "scored-bool-resp", instruction: instruction);
+
+        public async Task<ScoredStringChoice> ScoredChoice(List<string> choices, string prompt, string? model = null, string? instruction = null)
+            => await DbPromptCommand<ScoredChoiceCommand, StringChoiceRequest, ScoredStringChoice>(
+                new StringChoiceRequest(choices, prompt, _settings, model), dbInstructionName: "scored-choice-resp", instruction: instruction);
+        
     }
 }

@@ -11,6 +11,6 @@ namespace DotnetLlamaSharp.Domain.Services.Inference
         IAsyncEnumerable<ChatResponseStream?> ChatPromptStream(ChatRequest request);
         Task<EmbedResponse> GetEmbeddings(EmbedRequest request);
 
-        Task<T> StructuredPrompt<T>(string finalMessage, string? systemGuidance = null, string? jsonModel = null) where T : class;
+        Task<T> StructuredPrompt<T>(string prompt, string? systemGuidance = null, string? jsonModel = null) where T : class;
     }
 }
