@@ -9,33 +9,40 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
     {
 
         protected string? _systemMessage = null;
-
+        protected CommandSettings _settings = null;
         public string? SystemMessage => _systemMessage;
         
-        public BasePromptCommand() { }
-        public BasePromptCommand(string? systemMessage = null)
+        public BasePromptCommand() { _settings = new CommandSettings(); }
+        public BasePromptCommand(string? systemMessage = null, CommandSettings? settings = null) : this()
         {
+            _settings = settings ?? new CommandSettings();
             _systemMessage = systemMessage;
         }
 
         public abstract Task<T> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request);
-        public async Task<T> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request, int retries = 0)
-        {
-            for(int i=0; i<retries+1; i++)
-            {
-                try
-                {
-                    return await Prompt(ollama, request);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-
-            return default(T);
-           
-        }
         protected abstract Task<string> getPromptInstruction();
+        protected async Task<GenerateRequest> getGenerateRequest(PromptCommandRequest request)
+            => new GenerateRequest
+            {
+                Model = request.Model,
+                Prompt = request.Prompt,
+                System = await getPromptInstruction(),
+                Stream = false,
+                Options = requestSettings()
+            };
+        protected RequestOptions requestSettings()
+            => new RequestOptions {
+                NumCtx = _settings.ContextLength,
+                NumPredict = _settings.MaxTokens,
+                Temperature = _settings.Temperature,
+                TopP = _settings.TopP,
+                TopK = _settings.TopK,
+                RepeatPenalty = _settings.RepeatPenalty,
+                RepeatLastN = _settings.RepeatLastN,
+                MiroStat = _settings.MiroStat,
+                MiroStatEta = _settings.MiroStatEta,
+                MiroStatTau = _settings.MiroStatTau,
+            };
+        
     }
 }

@@ -64,6 +64,33 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return false;
         }
 
+        public async Task<List<TCol>> CollectionsOf(EChunkType type)
+        {
+            var results = new List<TCol>();
+            await foreach(var name in _dbClient.ListCollectionsAsync())
+            {
+                var collection = await GetCollection(name);
+
+                if (collection.GetMeta<ChromaCollectionMetadata>().CHUNK_TYPE == (int)type)
+                    results.Add(collection);
+            }
+
+            return results;
+        }
+
+        public async Task<List<TCol>> CollectionsOf(List<EChunkType> types)
+        {
+            var results = new List<TCol>();
+            await foreach (var name in _dbClient.ListCollectionsAsync())
+            {
+                var collection = await GetCollection(name);
+
+                if (types.Contains((EChunkType)collection.GetMeta<ChromaCollectionMetadata>().CHUNK_TYPE))
+                    results.Add(collection);
+            }
+
+            return results;
+        }
         public async Task<TCol> CreateCollection(string name, string description, string? model = null, int? dimensions = null)
         {
             if (string.IsNullOrEmpty(model))
@@ -104,7 +131,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return await GetCollection(name);
         }
 
-        public async Task<List<ChromaQueryChunk>> QueryCollection(string name, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, Dictionary<string, object> filters = null)
+        public virtual async Task<List<ChromaQueryChunk>> QueryCollection(string name, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, Dictionary<string, object> filters = null)
         {
             var collection = await GetCollection(name);
 

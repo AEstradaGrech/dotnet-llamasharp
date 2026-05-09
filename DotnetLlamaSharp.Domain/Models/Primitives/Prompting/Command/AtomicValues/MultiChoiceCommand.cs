@@ -12,7 +12,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
     public class MultiChoiceCommand : ChromaPromptCommand<List<string>>
     {
         public MultiChoiceCommand() : base() { }
-        public MultiChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null) : base(repo, dbMessageName, guidanceMessage)
+        public MultiChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings)
         {
         }
 

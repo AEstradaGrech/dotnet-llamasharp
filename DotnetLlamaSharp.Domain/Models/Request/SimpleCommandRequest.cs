@@ -2,8 +2,8 @@
 
 namespace DotnetLlamaSharp.Domain.Models.Request
 {
-    public class SimplePromptRequest : BasePromptRequest
+    public class SimpleCommandRequest : BasePromptRequest
     {
-        public PromptSettings Settings { get; set; }
+        public CommandSettings Settings { get; set; }
     }
 }

@@ -1,7 +1,4 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Repositories.Chroma
 {
@@ -11,5 +8,6 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
         Task<ChromaChatChunk> GetCurrentSessionChunk(string collection);
         Task<List<ChromaChatChunk>> GetSessionChunks(string collectionName, string sessionId, bool isDescendingOrder = false, int? results = null);
         Task<List<ChromaChatChunk>> GetCollectionSessions(string collectionName);
+        Task<List<ChromaQueryChunk>> QueryCollection(string collection, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, bool withSessions = false, Dictionary<string, object> filters = null);
     }
 }

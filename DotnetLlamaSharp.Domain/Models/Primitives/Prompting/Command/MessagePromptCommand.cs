@@ -10,7 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     public class MessagePromptCommand : BasePromptCommand<ChatMessage>
     {
         public MessagePromptCommand() : base() { }
-        public MessagePromptCommand(string? systemMessage) : base(systemMessage) { }
+        public MessagePromptCommand(string? systemMessage, CommandSettings? settings) : base(systemMessage, settings) { }
 
         public override async Task<ChatMessage> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
@@ -21,22 +21,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                 
             var message =  isChat ?
                 await ollama.ChatPrompt(getChatRequest((ChatCommandRequest)request)) :
-                await ollama.SimplePrompt(getGenerateRequest(request));
+                await ollama.SimplePrompt(await getGenerateRequest(request));
 
             return new ChatMessage(message.Role.ToString(), message.Content);
         }
 
         protected override async Task<string> getPromptInstruction() => _systemMessage == null ? string.Empty : _systemMessage;
 
-        protected GenerateRequest getGenerateRequest(PromptCommandRequest request)
-            => new GenerateRequest {
-                Model = request.Model,
-                Prompt = request.Prompt,
-                System = _systemMessage,
-                Stream = false,
-                Options = request.Settings
-            };
-        
         protected ChatRequest getChatRequest(ChatCommandRequest request)
         {
             var messages = new List<Message>();

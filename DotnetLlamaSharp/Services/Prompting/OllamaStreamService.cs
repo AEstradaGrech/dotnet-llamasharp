@@ -2,6 +2,7 @@
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
+using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
@@ -12,10 +13,12 @@ namespace DotnetLlamaSharp.Services.Prompting
     {
         private readonly IOllamaInferenceService _ollamaService;
         private readonly RequestOptions _settings;
-        public OllamaStreamService(IOllamaInferenceService ollamaService, IOptions<RequestOptions> settings)
+        private readonly ApiSettings _apiSettings;
+        public OllamaStreamService(IOllamaInferenceService ollamaService, IOptions<RequestOptions> settings, IOptions<ApiSettings> apiSettings)
         {
             _ollamaService = ollamaService;
             _settings = settings.Value;
+            _apiSettings = apiSettings.Value;
         }
         public IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(SimplePromptRequest request)
            => _ollamaService.SimplePromptStream(getGenerateRequest(request, isStream: true));
@@ -30,11 +33,11 @@ namespace DotnetLlamaSharp.Services.Prompting
         private GenerateRequest getGenerateRequest(SimplePromptRequest promptRequest, bool isStream = false)
         {
             var settings = _settings;
-            settings.NumPredict = promptRequest.MaxTokens;
-            settings.Temperature = promptRequest.Temperature;
+            settings.NumPredict = promptRequest.Settings.MaxTokens;
+            settings.Temperature = promptRequest.Settings.Temperature;
             return new GenerateRequest
             {
-                Model = promptRequest.Model,
+                Model = promptRequest.Settings.Model ?? _apiSettings.DefaultModel,
                 Prompt = promptRequest.Prompt,
                 System = promptRequest.SystemMessage,
                 Stream = isStream,
@@ -45,8 +48,8 @@ namespace DotnetLlamaSharp.Services.Prompting
         private ChatRequest getChatRequest(ChatPromptRequest promptRequest, bool isStream = false)
         {
             var settings = _settings;
-            settings.NumPredict = promptRequest.MaxTokens;
-            settings.Temperature = promptRequest.Temperature;
+            settings.NumPredict = promptRequest.Settings.MaxTokens;
+            settings.Temperature = promptRequest.Settings.Temperature;
 
             var messages = new List<Message>();
 
@@ -54,7 +57,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return new ChatRequest
             {
-                Model = promptRequest.Model,
+                Model = promptRequest.Settings.Model ?? _apiSettings.DefaultModel,
                 Messages = messages,
                 Stream = isStream,
                 Options = settings

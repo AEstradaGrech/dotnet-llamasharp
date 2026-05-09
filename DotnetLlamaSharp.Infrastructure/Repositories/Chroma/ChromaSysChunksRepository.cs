@@ -1,4 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Infrastructure.Settings;
@@ -23,6 +24,8 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 throw new InvalidOperationException($"Collection embedding length is 0. Embedding is required to perform collection queries (chroma requires an embedding despite the metadata)");
 
             var collectionChunk = DefaultChunk();
+            
+            collectionChunk.AddMetadata(nameof(ChromaCollectionMetadata.CHUNK_TYPE).ToLower(), EChunkType.SYSTEM);
 
             return await CreateCollection(name, collectionChunk);
         }

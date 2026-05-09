@@ -16,7 +16,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     public class GuidedStructuredPrompt<TJson> : BasePromptCommand<TJson> where TJson : class
     {
         public GuidedStructuredPrompt() : base() { }
-        public GuidedStructuredPrompt(string? systemMessage = null) : base(systemMessage){ }
+        public GuidedStructuredPrompt(string? systemMessage = null, CommandSettings? settings = null) : base(systemMessage, settings){ }
         public override async Task<TJson> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
             => await ollama.StructuredPrompt<TJson>(request.Prompt, await getPromptInstruction(), request.Model);
 

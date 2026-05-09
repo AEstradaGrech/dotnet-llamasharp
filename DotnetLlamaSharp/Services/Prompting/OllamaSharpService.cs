@@ -49,9 +49,9 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage);
 
-            var response = await command.Prompt(_ollamaService, new PromptCommandRequest { Model = request.Model, Prompt = request.Prompt, Settings = _settings });
+            var response = await command.Prompt(_ollamaService, new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt, Settings = _settings });
 
-            return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = messages };
+            return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = messages };
         }
 
         // call to '/api/chat' endpoint to handle user-assistant chat turns
@@ -61,11 +61,11 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage);
 
-            var response = await command.Prompt(_ollamaService, new ChatCommandRequest { Model = request.Model, Prompt = request.Prompt, Settings = _settings, ChatHistory = request.ChatHistory, IncludeSystemMessage = bWithSysmsgUpdate });
+            var response = await command.Prompt(_ollamaService, new ChatCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt, Settings = _settings, ChatHistory = request.ChatHistory, IncludeSystemMessage = bWithSysmsgUpdate });
 
             request.ChatHistory.Add(new ChatMessage(response.Role.ToString(), response.Content));
 
-            return new ChatPrompt { Model = request.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
+            return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
         }
 
         public async Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request)

@@ -30,7 +30,18 @@ namespace DotnetLlamaSharp.Mappers
                 .IncludeBase<ChatPrompt, ChatPromptResponseDto>();
 
             //DTO to Domain Object
+            CreateMap<PromptSettingsDto, PromptSettings>();
+            CreateMap<PromptSettingsDto, CommandSettings>();
+
+            CreateMap<PromptSettings, PromptSettingsDto>()
+                .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
+                .ForMember(dest => dest.IsTwoStepValidation, opt => opt.Ignore());
+
+            CreateMap<CommandSettings, PromptSettingsDto>();
+            
             CreateMap<SimplePromptRequestDto, SimplePromptRequest>();
+            CreateMap<SimplePromptRequestDto, SimpleCommandRequest>();
+
             CreateMap<ChatPromptRequestDto, ChatPromptRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
             CreateMap<RagPromptRequestDto, RagPromptRequest>()

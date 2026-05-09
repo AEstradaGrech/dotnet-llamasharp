@@ -1,5 +1,11 @@
-﻿using DotnetLlamaSharp.Domain.Services.Inference;
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
+using DotnetLlamaSharp.Domain.Services.Inference;
+using DotnetLlamaSharp.Domain.Services.Prompting;
+using DotnetLlamaSharp.Infrastructure.Exceptions;
 using DotnetLlamaSharp.Infrastructure.Settings;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OllamaSharp;
 using OllamaSharp.Models;
@@ -13,13 +19,17 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
     public class OllamaInferenceService : IOllamaInferenceService
     {
         private readonly IOllamaApiClient _client;
+        private readonly IPromptCommandsFactory _ollamaCommands;
         private readonly ApiSettings _apiSettings;
         private readonly RequestOptions _settings;
-        public OllamaInferenceService(IOllamaApiClient client, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> settings)
+        private readonly ILogger<OllamaInferenceService> _logger;
+        public OllamaInferenceService(IOllamaApiClient client, IPromptCommandsFactory factory, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> settings, ILogger<OllamaInferenceService> logger)
         {
             _client = client;
+            _ollamaCommands = factory;
             _apiSettings = apiSettings.Value;
             _settings = settings.Value;
+            _logger = logger;
         }
        
         public async Task<Message> SimplePrompt(GenerateRequest request)
@@ -49,7 +59,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
         public IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(GenerateRequest request)
         {
             request.Stream = true;
-
+            
             return _client.GenerateAsync(request);
         }
 
@@ -63,11 +73,12 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
         public async Task<EmbedResponse> GetEmbeddings(EmbedRequest request)
             => await _client.EmbedAsync(request);
 
-        public async Task<T> StructuredPrompt<T>(string prompt, string? systemGuidance = null, string? jsonModel = null) where T : class
+        public async Task<T> StructuredPrompt<T>(string prompt, string? systemGuidance = null, string? jsonModel = null/*validations = 0*/) where T : class
         {
             if (string.IsNullOrEmpty(prompt) && string.IsNullOrEmpty(systemGuidance))
                 throw new InvalidDataException($"{nameof(OllamaInferenceService)} >> {nameof(StructuredPrompt)} >> no messages to send");
 
+            var options = new RequestOptions { TopK = _apiSettings.JsonOutputTopK, TopP = _apiSettings.JsonOutputTopP, Temperature = _apiSettings.JsonOutputTemp };
             var request = new ChatRequest
             {
                 Model = string.IsNullOrEmpty(jsonModel) ? _apiSettings.JsonModels[0] : _apiSettings.JsonModels.Contains(jsonModel) ? jsonModel : _apiSettings.JsonModels[0],
@@ -81,6 +92,70 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
             await foreach (var part in _client.ChatAsync(request))
                 if (!string.IsNullOrEmpty(part?.Message.Content))
                     sb.Append(part.Message.Content);
+
+            // if(validations > 0)
+            //  validator = _factory.GetPromptValidator("prompt-validator", new ValidatePromptRequest(Prompt, Output, Expected) <- review & rewrite to T
+            //              Opcion B: two-step validation <- dentro de command hago ScoredBool, pregunto por resultado y si false paso reason a rewriter y si no return Serialize<T>(result)
+            //bool validation = await validator.Prompt(input, output, expected); <- SCORED_BOOL
+
+            //if not is valid throw response.Reason
+            return JsonSerializer.Deserialize<T>(sb.ToString());
+        }
+
+        public async Task<T> StructuredPrompt<T>(GenerateRequest request, int validations = 0) where T : class
+        {
+            var sb = new System.Text.StringBuilder();
+
+            for (int i = 0; i < validations + 1; i++)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(request.Prompt))
+                        throw new InvalidDataException($"{nameof(OllamaInferenceService)} >> {nameof(StructuredPrompt)} >> no messages to send");
+
+                    request.Format = JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(T));
+                    request.Stream = false;
+
+                    await foreach (var part in _client.GenerateAsync(request))
+                        if (!string.IsNullOrEmpty(part?.Response))
+                            sb.Append(part.Response);
+                    //                                                                                                                                                   [el tipado se conserva por los COMMANDS]
+                    //var response = _refineOutput(response, EVALIDATION_TYPE = BOOL_AND_REPEAT | REWRITE_ONLY | BOOL_AND_REWRITE | FULL (A+B+A(b)) // BTW <- LameChain .Prompt(inputCmd).Refine(EValidation.Full).Etc().Etc() <- RefineStep<TPrev> (o algo asi)
+                    //  lanza las excepciones o lo devuelve el modelo revisado
+                    if (validations > 0)
+                    {
+                        if (i == validations)
+                            throw new PromptRetryException($"{nameof(StructuredPrompt)} >> JSON OUTPUT VALIDATIONS LIMIT REACHED", retries: validations);
+
+                        //A - Y/N & repeat
+                        //B - Review & Rewrite (or leave as it is)
+                        //C - A + B
+                        //D - A + B + A(b)
+                        var command = _ollamaCommands.GetCommand<JsonOutputValidationCommand<T>, ScoredBoolResponse>(dbMessageName:"json-output-validator");
+                        
+                        var validation = command.Prompt(this, new JsonValidationRequest<T> { Prompt = request.Prompt, RawOutput = sb.ToString()}).Result;
+
+                        if (!validation.Answer)
+                            throw new StructuredOutputException(validation.Justification, validation.Score);
+
+                        else break;
+                    }
+                }
+                catch(StructuredOutputException ex)
+                {
+                    _logger.LogWarning(ex.Message);
+
+                    if (i == validations)
+                        throw new PromptRetryException($"{nameof(StructuredPrompt)} >> JSON OUTPUT VALIDATIONS LIMIT REACHED", retries: validations);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"{nameof(StructuredPrompt)} >> An error has occured while getting the Structured Output response >> EXCEPTION: {ex.ToString()}");
+
+                    if (ex.GetType() == typeof(PromptRetryException))
+                        throw ex;
+                }
+            }
 
             return JsonSerializer.Deserialize<T>(sb.ToString());
         }

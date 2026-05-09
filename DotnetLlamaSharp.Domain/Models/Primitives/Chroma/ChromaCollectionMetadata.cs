@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {
@@ -9,5 +6,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
     {
         [JsonPropertyName("total_chunks")]
         public int TOTAL_CHUNKS { get; set; }
+        [JsonPropertyName("chunk_type")]
+        public int CHUNK_TYPE { get; set; }
     }
 }

@@ -12,7 +12,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 {
     public class EnumPromptCommand<TEnum> : ChromaPromptCommand<TEnum> where TEnum : struct, Enum
     {
-        public EnumPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null) : base(repo, dbMessageName, guidanceMessage)
+        public EnumPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings)
         {
         }
 

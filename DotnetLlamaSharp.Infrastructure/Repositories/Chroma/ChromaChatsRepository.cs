@@ -1,5 +1,6 @@
 ﻿using DocumentFormat.OpenXml.Office2016.Excel;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
@@ -52,10 +53,19 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.AGENT_NAME).ToLower(), agentName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);
+            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.CHUNK_TYPE).ToLower(), EChunkType.CHAT);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.DOCUMENT_NAME).ToLower(), validatedName, resetDefault: true);
             collectionChunk.Text = description ?? $"Ollama Rag Chat >> {agentName} - {userName} >> {DateTime.Now}";
 
             return await CreateCollection(validatedName, collectionChunk);
+        }
+
+        public async Task<List<ChromaQueryChunk>> QueryCollection(string collection, ReadOnlyMemory<float> queryEmbedding, int resultsNumber, bool withSessions = false, Dictionary<string, object> filters = null)
+        {
+            if (!withSessions && !filters.ContainsKey(nameof(ChatChunkMetadata).ToLower()))
+                filters.Add(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), false);
+
+            return await QueryCollection(collection, queryEmbedding, resultsNumber, filters);
         }
 
         private string getValidConstructorNameTag(string nameTag, bool isUser)

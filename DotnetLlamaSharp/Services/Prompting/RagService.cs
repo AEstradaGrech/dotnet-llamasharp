@@ -14,7 +14,6 @@ using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models.Chat;
 using System.Text;
-using System.Text.Json;
 
 namespace DotnetLlamaSharp.Services.Prompting
 {
@@ -45,7 +44,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<RagPrompt> SimpleRagQuery(RagPromptRequest request)
         {
             ChromaQuery chromaQuery = null;
-            var collectionQueries = new Dictionary<string, List<ChromaQueryChunk>>();
+            var collectionQueries = new Dictionary<string, ChromaQuery>();
             
             if (request.QueryCollections.Count > 0)
                 collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
@@ -69,15 +68,17 @@ namespace DotnetLlamaSharp.Services.Prompting
             if (!string.IsNullOrEmpty(response.Output))
                 response.ChatHistory.Add(new ChatMessage(ChatRole.Assistant.ToString(), response.Output));
 
+            string embeddingModels = string.Empty;
+            collectionQueries.Keys.ToList().ForEach(name => embeddingModels += $"{collectionQueries[name].EmbeddingModel},");
             return new RagPrompt
             {
                 Model = response.Model,
-                EmbeddingModel = "--",
+                EmbeddingModel = embeddingModels.Substring(0, embeddingModels.Length -1),
                 Input = request.Prompt,
                 Output = response.Output,
-                IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value).ToList(),
+                IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value.Chunks).ToList(),
                 ChatHistory = response.ChatHistory,
-                InputEmbedding = null
+                InputEmbedding = collectionQueries.Count() > 0 ? collectionQueries.First().Value.QueryEmbedding : null
             };
         }
 
@@ -86,11 +87,11 @@ namespace DotnetLlamaSharp.Services.Prompting
             if (string.IsNullOrEmpty(request.Prompt))
                 throw new BadHttpRequestException("No prompt found. Type something to start chatting");
 
-            if (string.IsNullOrEmpty(request.Model))
-                request.Model = _settings.DefaultModel;
+            if (string.IsNullOrEmpty(request.Settings.Model))
+                request.Settings.Model = _settings.DefaultModel;
 
             if (string.IsNullOrEmpty(request.AgentName))
-                request.AgentName = request.Model;
+                request.AgentName = request.Settings.Model;
 
             if (string.IsNullOrEmpty(request.AgentName.Trim()))
                 throw new BadHttpRequestException($"No Agent Name has been set neither a llm model has been found to use in its place");
@@ -135,7 +136,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 1);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), true);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
-                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.LLM_MODEL).ToLower(), request.Model, resetDefault: true);
+                sessionChunk.AddMetadata(nameof(ChatChunkMetadata.LLM_MODEL).ToLower(), request.Settings.Model, resetDefault: true);
 
                 currentChunk = await generateNextChunk(sessionChunk, sessionChunk, collection, [new ChatMessage(ChatRole.User.ToString(), request.Prompt)], isSessionInit: true);
 
@@ -226,24 +227,25 @@ namespace DotnetLlamaSharp.Services.Prompting
             return response;
         }
 
-        public async Task<Dictionary<string, List<ChromaQueryChunk>>> QueryCollections(List<string> names, string text, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
+        public async Task<Dictionary<string, ChromaQuery>> QueryCollections(List<string> names, string text, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
         {
             if (minDistance == 0)
                 minDistance = null;
 
-            var results = new Dictionary<string, List<ChromaQueryChunk>>();
+            var results = new Dictionary<string, ChromaQuery>();
             ChromaQuery queryResult = null;
             foreach (var name in names)
             {
-                results.Add(name, new List<ChromaQueryChunk>());
+                // File.CHAT_INIT.DEFAULT = false = OK
+                filters.Add(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), false); //exclude session chunks (char profile system message)
+                // CHATS OR FILES
+                //filters.Add(nameof(ChatChunkMetadata.TYPE).ToLower(), (int)EChunkType.CHAT); // exclude collections (just in case; Collections have no embedding / no match)
                 queryResult = await _chromaService.QueryCollection(name, text, resultsNumber, filters);
 
-                foreach (var chunk in queryResult.Chunks)
-                {
-                    if (minDistance != null && chunk.Distance > minDistance) break;
+                if (minDistance != null)
+                    queryResult.Chunks = queryResult.Chunks.Where(chunk => chunk.Distance <= minDistance).ToList();
 
-                    results[name].Add(chunk);
-                }
+                results.Add(name, queryResult);
             }
 
             return results;
@@ -308,12 +310,12 @@ namespace DotnetLlamaSharp.Services.Prompting
             return nextChunk;
         }
 
-        private string getFileRagStringResult(Dictionary<string, List<ChromaQueryChunk>> collectionQueries)
+        private string getFileRagStringResult(Dictionary<string, ChromaQuery> collectionQueries)
         {
             var sb = new StringBuilder().Append("### RETRIEVED DATA:\n");
 
             collectionQueries.Keys.ToList()
-                .ForEach(key => collectionQueries[key]
+                .ForEach(key => collectionQueries[key].Chunks
                     .OrderBy(chunk => chunk.Distance)
                     .ToList()
                     .ForEach(chunk =>
@@ -360,7 +362,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<RagPrompt> SimpleSmartQuery(SimplePromptRequest request)
         {
             // A: getCat + multichoice
-            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(new PromptCommandRequest(request.Prompt, null, request.Model));
+            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(new PromptCommandRequest(request.Prompt, null, request.Settings.Model));
 
             var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
 
@@ -368,7 +370,11 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var evaluationInstruction = $"Your task is to determine whether the provide User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
 
-            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, request.Model, evaluationInstruction);
+            var cmdRequest = _mapper.Map<SimplePromptRequest, SimpleCommandRequest>(request);
+
+            cmdRequest.Settings.CommandValidations = 1;
+
+            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, cmdRequest.Settings);
 
             var ragReq = _mapper.Map<SimplePromptRequest, RagPromptRequest>(request);
 
@@ -382,7 +388,9 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR NONE if there are no collections relevant for the user query.";
 
-                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, null, instruction: selectorGuidance);
+                cmdRequest.Settings.CommandValidations = 1;
+
+                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, instruction: selectorGuidance, cmdRequest.Settings);
 
                 ragReq.SystemMessage = null;
 

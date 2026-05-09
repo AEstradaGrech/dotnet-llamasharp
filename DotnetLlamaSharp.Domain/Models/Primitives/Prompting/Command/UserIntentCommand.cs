@@ -2,16 +2,12 @@
 using DotnetLlamaSharp.Domain.Services.Inference;
 using OllamaSharp.Models.Chat;
 
-
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
     public class UserIntentCommand : MessagePromptCommand
     {
         public UserIntentCommand() : base() {}
-
-        public UserIntentCommand(string? systemMessage = null) : base(systemMessage)
-        {
-        }
+        public UserIntentCommand(string? systemMessage = null, CommandSettings? settings = null) : base(systemMessage, settings) {}
 
         public override async Task<ChatMessage> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {

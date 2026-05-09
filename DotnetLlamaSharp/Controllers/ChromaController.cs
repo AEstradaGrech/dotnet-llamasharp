@@ -12,6 +12,7 @@ using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using System.Text.Json;
 
 namespace DotnetLlamaSharp.Controllers
 {
@@ -99,6 +100,42 @@ namespace DotnetLlamaSharp.Controllers
         [HttpGet("/documents/load/word/{docName}")]
         public async Task<IActionResult> LoadWordDocument(string docName)
             => Ok(_mapper.Map<Document, DocumentDto>(await _wordLoader.LoadDocument(docName)));
+
+        [HttpGet("/serialized/text")]
+        public async Task<IActionResult> GetJsonString()
+            => Ok(JsonSerializer.Serialize(@"
+You are going to be provided a USER PROMPT, a JSON RESPONSE for that prompt and a EXPECTED OUTPUT SCHEMA for that response.
+Your task is to validate the provided JSON RESPONSE and determine if it is compliant with the user request and the expected response according to the provided EXPECTED OUTPUT SCHEMA.
+
+You must output your response in JSON format according to this fields:
+
+- Answer: boolean value to indicate 'VALID' or 'NOT VALID' according to the result of your deliberation.
+- Justification: a brief text (not more than 10 words) summarizing the reason of your boolean answer.
+- Confidence: a float value ranging from 0.0 to 1.0 to indicate how sure you are about your answer.
+
+# IMPORTANT: follow this steps in order to generate your response:
+
+> STEP 1: Analyze the user request and try understand the intent to get an idea of what is the user expecting to receive.
+> STEP 2: Analyze the provided EXPECTED OUTPUT SCHEMA to get a clear idea of what is the expected result in terms of format.
+> STEP 3: Analyze the provided JSON RESPONSE that you must review and reason if it is valid in terms of content and consistent with the user intent.
+> STEP 4: Use your conclussions of the previous steps to generate your response according to the requested JSON schema.
+
+# RULES: take into account this rules when generating your final response:
+
+- Ensure your output is compliant with the requested schema for your validation. 
+- Ensure that the format of the JSON RESPONSE is valid to be serialized to a C# class.
+
+
+# USER PROMPT: <<PROMPT>>
+
+# JSON RESPONSE:
+
+<<RESPONSE>>
+
+# EXPECTED OUTPUT SCHEMA:
+
+<<SCHEMA>>
+"));
     }
 
 }

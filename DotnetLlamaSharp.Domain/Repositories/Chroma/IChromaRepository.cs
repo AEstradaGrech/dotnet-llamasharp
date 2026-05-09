@@ -1,5 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
-using Microsoft.SemanticKernel.Connectors.Chroma;
+using DotnetLlamaSharp.Domain.Models.Enums;
+
 
 namespace DotnetLlamaSharp.Domain.Repositories.Chroma
 {
@@ -8,6 +9,8 @@ namespace DotnetLlamaSharp.Domain.Repositories.Chroma
     {
         Task<IAsyncEnumerable<string>> GetDbCollections();
         Task<bool> CollectionExists(string name);
+        Task<List<TCol>> CollectionsOf(EChunkType type);
+        Task<List<TCol>> CollectionsOf(List<EChunkType> types);
         Task<TCol> InspectCollection(string name, List<string> chunkIds, bool includeEmbeddings = false);
         Task<TCol> GetCollection(string collection);
         Task<TCol> GetCollectionPage(string collection, Dictionary<string, object>? filters = null, bool withEmbeddings = true, int pageSize = 10, int page = 0);

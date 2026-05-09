@@ -1,4 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -81,6 +82,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     request.Dimensions = collection.GetMeta<FileCollectionMetadata>().DIMENSIONS;
                 }
 
+                else collection.AddMetadata(nameof(ChromaCollectionMetadata.CHUNK_TYPE).ToLower(), EChunkType.FILE);
+                
                 _logger.LogInformation($"Beginning data ingestion process for collection: {request.Name} for document: {request.FileName}");
 
                 if (request.PageCutoff >= document.Pages.Count())
@@ -474,15 +477,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
         }
 
         public async Task<List<ChromaFilesCollection>> GetAllCollections()
-        {
-            var catalogue = await _repo.GetDbCollections();
-
-            var results = new List<ChromaFilesCollection>();
-            
-            await foreach(var name in catalogue)
-                results.Add(await _repo.GetCollection(name));
-
-            return results;
-        }
+            => await _repo.CollectionsOf(EChunkType.FILE);
     }
 }

@@ -12,9 +12,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
     public class StringChoiceCommand : ChromaPromptCommand<string>
     {
         public StringChoiceCommand() { }
-        public StringChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null) : base(repo, dbMessageName, guidanceMessage)
-        {
-        }
+        public StringChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(repo, dbMessageName, guidanceMessage, settings) {}
 
         public override async Task<string> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {

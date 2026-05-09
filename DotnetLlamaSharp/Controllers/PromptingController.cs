@@ -107,10 +107,10 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/commands/scored-choice/prompt")]
         public async Task<IActionResult> ScoredChoice([FromBody] SimplePromptRequestDto dto)
         {
-            var request = _mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(dto);
+            var request = _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto);
 
             var response = _mapper.Map<ScoredStringChoice, ScoredChoiceDto>(
-                await _ollamaCommands.ScoredChoice(new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" }, dto.Prompt, request.Model, request.SystemMessage));
+                await _ollamaCommands.ScoredChoice(new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" }, dto.Prompt, request.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings));
 
             if (response != null)
                 return Ok(response);
@@ -121,7 +121,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/commands/boolean/prompt")]
         public async Task<IActionResult> BooleanPrompt([FromBody] SimplePromptRequestDto dto)
         {
-            var response = await _ollamaCommands.BooleanChoice(dto.Prompt, dto.Model, dto.SystemMessage);
+            var response = await _ollamaCommands.BooleanChoice(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -132,7 +132,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/commands/scored-boolean/prompt")]
         public async Task<IActionResult> ScoredBooleanPrompt([FromBody] SimplePromptRequestDto dto)
         {
-            var response = await _ollamaCommands.ScoredBool(dto.Prompt, dto.Model, dto.SystemMessage);
+            var response = await _ollamaCommands.ScoredBool(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -143,7 +143,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/commands/yn/prompt")]
         public async Task<IActionResult> StringyBoolPrompt([FromBody] SimplePromptRequestDto dto)
         {
-            var response = await _ollamaCommands.StringBoolChoice(dto.Prompt, dto.Model, dto.SystemMessage);
+            var response = await _ollamaCommands.StringBoolChoice(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -154,16 +154,13 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/commands/numeric/prompt")]
         public async Task<IActionResult> NumericPrompt([FromBody] SimplePromptRequestDto dto)
         {
-            var response =  await _ollamaCommands.NumericResult(dto.Prompt, dto.Model, dto.SystemMessage);
+            var response =  await _ollamaCommands.NumericResult(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
-            if (response != null)
-                return Ok(response);
-
-            return StatusCode((int)HttpStatusCode.InternalServerError);
+            return Ok(response);
         }
 
         [HttpPost("/rag/qa/smart/prompt")]
-        public async Task<IActionResult> SimpleRagPrompt([FromBody] SimplePromptRequestDto request)
+        public async Task<IActionResult> SimpleSmartPrompt([FromBody] SimplePromptRequestDto request)
         {
             var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(request)));
 

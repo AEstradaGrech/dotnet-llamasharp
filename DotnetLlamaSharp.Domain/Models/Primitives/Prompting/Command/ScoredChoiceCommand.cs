@@ -13,9 +13,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     public class ScoredChoiceCommand : ChromaPromptCommand<ScoredStringChoice>
     {
         public ScoredChoiceCommand() { }
-        public ScoredChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null) : base(repo, dbMessageName, guidanceMessage)
-        {
-        }
+        public ScoredChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(repo, dbMessageName, guidanceMessage, settings) {}
 
         public override async Task<ScoredStringChoice> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
