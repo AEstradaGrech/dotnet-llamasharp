@@ -124,21 +124,19 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                     //  lanza las excepciones o lo devuelve el modelo revisado
                     if (validations > 0)
                     {
-                        if (i == validations)
-                            throw new PromptRetryException($"{nameof(StructuredPrompt)} >> JSON OUTPUT VALIDATIONS LIMIT REACHED", retries: validations);
-
                         //A - Y/N & repeat
                         //B - Review & Rewrite (or leave as it is)
                         //C - A + B
                         //D - A + B + A(b)
-                        var command = _ollamaCommands.GetCommand<JsonOutputValidationCommand<T>, ScoredBoolResponse>(dbMessageName:"json-output-validator");
-                        
-                        var validation = command.Prompt(this, new JsonValidationRequest<T> { Prompt = request.Prompt, RawOutput = sb.ToString()}).Result;
+                        //var command = _ollamaCommands.GetCommand<JsonOutputValidationCommand<T>, ScoredBoolResponse>(dbMessageName:"json-output-validator");
+                        var command = _ollamaCommands.GetCommand<JsonOutputReviewCommand<T>, T>(dbMessageName: "json-ouput-review");
 
-                        if (!validation.Answer)
-                            throw new StructuredOutputException(validation.Justification, validation.Score);
+                        return command.PromptSync(this, new JsonValidationRequest<T> { Prompt = $"> instruction: {request.System}\n> input: {request.Prompt}", RawOutput = sb.ToString()}).Result;
 
-                        else break;
+                        //if (!validation.Answer)
+                        //    throw new StructuredOutputException(validation.Justification, validation.Score);
+
+                        //else break;
                     }
                 }
                 catch(StructuredOutputException ex)

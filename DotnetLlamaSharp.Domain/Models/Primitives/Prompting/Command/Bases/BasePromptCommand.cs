@@ -12,7 +12,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         protected CommandSettings _settings = null;
         public string? SystemMessage => _systemMessage;
         
-        public BasePromptCommand() { _settings = new CommandSettings(); }
+        public BasePromptCommand() { _settings = new CommandSettings(maxTokens: 600, temperature: 0f, topP: .1f, topK: 10); }
         public BasePromptCommand(string? systemMessage = null, CommandSettings? settings = null) : this()
         {
             _settings = settings ?? new CommandSettings();
@@ -20,6 +20,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         }
 
         public abstract Task<T> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request);
+        public virtual Task<T> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request) { throw new NotImplementedException("This method is meant to be overriden whenever required"); }
         protected abstract Task<string> getPromptInstruction();
         protected async Task<GenerateRequest> getGenerateRequest(PromptCommandRequest request)
             => new GenerateRequest
