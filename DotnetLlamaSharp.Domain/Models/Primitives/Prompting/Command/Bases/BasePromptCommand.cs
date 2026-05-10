@@ -22,12 +22,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         public abstract Task<T> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request);
         public virtual Task<T> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request) { throw new NotImplementedException("This method is meant to be overriden whenever required"); }
         protected abstract Task<string> getPromptInstruction();
-        protected async Task<GenerateRequest> getGenerateRequest(PromptCommandRequest request)
+        protected async Task<GenerateRequest> getGenerateRequest(PromptCommandRequest request, bool withInstruction = true)
             => new GenerateRequest
             {
                 Model = request.Model,
                 Prompt = request.Prompt,
-                System = await getPromptInstruction(),
+                System = withInstruction ? await getPromptInstruction() : string.Empty,
                 Stream = false,
                 Options = requestSettings()
             };

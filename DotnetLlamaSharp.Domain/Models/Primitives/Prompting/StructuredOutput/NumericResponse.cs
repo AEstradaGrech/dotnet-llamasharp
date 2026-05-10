@@ -4,7 +4,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput
 {
     public class NumericResponse
     {
-        [JsonPropertyName("result")]
+        [JsonPropertyName("numeric_result")]
         public float? Result { get; set; }
     }
 }

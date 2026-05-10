@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
+﻿using DotnetLlamaSharp.Domain.Models.Enums;
+
+namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {
     public class CommandSettings : PromptSettings
     {
@@ -9,6 +11,6 @@
         public CommandSettings(int maxTokens, float temperature, float topP, string? model = null) : base(maxTokens, temperature, topP, model) { }
         public CommandSettings(int maxTokens, float temperature, float topP, int topK, string? model = null) : base(maxTokens, temperature, topP, topK, model) { }
         public int CommandValidations { get; set; } = 0;
-        public bool IsTwoStepValidation { get; set; } = false;
+        public EPromptValidation ValidationType { get; set; }
     }
 }

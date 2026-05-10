@@ -9,7 +9,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
     /// <typeparam name="T"></typeparam>
     public abstract class ChromaPromptCommand<T> : BasePromptCommand<T>
     {
-        private readonly IChromaSysChunksRepository _repo;
+        protected readonly IChromaSysChunksRepository _repo;
         protected readonly string _messageName;
         protected readonly string _defaultMessage = string.Empty;
         public ChromaPromptCommand() : base(){ }
@@ -33,7 +33,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
             }
             catch (Exception ex)
             {
-                var defaultMessage = getDefaultInstruction();
+                // default hardcoded message + any guidance message from constructor
+                var defaultMessage = $"{getDefaultInstruction()}{(string.IsNullOrEmpty(_systemMessage) ? "" : $"\n{_systemMessage}")}";
 
                 if (string.IsNullOrEmpty(defaultMessage))
                     throw ex;

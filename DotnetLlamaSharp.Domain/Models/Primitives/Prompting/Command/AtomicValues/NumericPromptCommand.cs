@@ -13,9 +13,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
         public override async Task<float?> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            var promptRequest = await getGenerateRequest(request); //pa todos
-            //var response = await ollama.StructuredPrompt<NumericResponse>(getGenerateRequest(requestSettings()), validations: _validations);
-            var response = await ollama.StructuredPrompt<NumericResponse>(await getGenerateRequest(request), _settings.CommandValidations);
+            var response = await ollama.StructuredPrompt<NumericResponse>(await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType);
 
             return response.Result;
         }

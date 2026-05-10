@@ -24,7 +24,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             var cmdRequest = await getGenerateRequest(request);
 
-            cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", request.Prompt).Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TReviewed)).ToJsonString());
+            cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", $"- instruction: {promptRequest.SystemMessage}\n- input:{request.Prompt}").Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TReviewed)).ToJsonString());
 
             return await ollama.StructuredPrompt<TReviewed>(cmdRequest);
         }
@@ -38,7 +38,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             var cmdRequest = getGenerateRequest(request).Result;
 
-            cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", request.Prompt).Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TReviewed)).ToJsonString());
+            cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", $"- instruction: {promptRequest.SystemMessage}\n- input:{request.Prompt}").Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TReviewed)).ToJsonString());
 
             return ollama.StructuredPrompt<TReviewed>(cmdRequest);
         }
@@ -61,7 +61,9 @@ or the original version if you consider it is fine.
 - Ensure your output is compliant with the requested schema for your validation. 
 - Ensure that the format of the JSON RESPONSE is valid to be serialized to a C# class.
 
-# USER PROMPT: <<PROMPT>>
+# USER PROMPT: 
+
+<<PROMPT>>
 
 # JSON RESPONSE:
 

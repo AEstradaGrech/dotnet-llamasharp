@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.Models.Common
+﻿using DotnetLlamaSharp.Models.Common.Enums;
+
+namespace DotnetLlamaSharp.Models.Common
 {
     public class PromptSettingsDto
     {
@@ -52,6 +54,6 @@
         public int? RepeatLastN { get; set; } = null;
 
         public int CommandValidations { get; set; } = 0;
-        public bool IsTwoStepValidation { get; set; } = false;
+        public PromptValidation ValidationType { get; set; }
     }
 }

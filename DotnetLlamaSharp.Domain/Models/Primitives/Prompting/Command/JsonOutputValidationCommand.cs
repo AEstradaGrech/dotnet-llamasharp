@@ -25,12 +25,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             var cmdRequest = await getGenerateRequest(request);
 
-            cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", request.Prompt).Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TModel)).ToJsonString());
+            cmdRequest.System = cmdRequest.System
+                .Replace("<<PROMPT>>", $"- instruction: {promptRequest.SystemMessage}\n- input:{request.Prompt}")
+                .Replace("<<RESPONSE>>", promptRequest.RawOutput)
+                .Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TModel)).ToJsonString());
  
             return await ollama.StructuredPrompt<ScoredBoolResponse>(cmdRequest);
         }
         public override Task<ScoredBoolResponse> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
+            var x = $"{nameof(JsonOutputValidationCommand<TModel>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TModel>)}";
             if (request.GetType() != typeof(JsonValidationRequest<TModel>))
                 throw new InvalidOperationException($"{nameof(JsonOutputValidationCommand<TModel>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TModel>)}");
 
@@ -38,7 +42,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             var cmdRequest = getGenerateRequest(request).Result;
 
-            cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", request.Prompt).Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TModel)).ToJsonString());
+            cmdRequest.System = cmdRequest.System
+                .Replace("<<PROMPT>>", $"- instruction: {promptRequest.SystemMessage}\n- input:{request.Prompt}")
+                .Replace("<<RESPONSE>>", promptRequest.RawOutput)
+                .Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TModel)).ToJsonString());
 
             return ollama.StructuredPrompt<ScoredBoolResponse>(cmdRequest);
         }
@@ -65,7 +72,9 @@ You must output your response in JSON format according to this fields:
 - Ensure your output is compliant with the requested schema for your validation. 
 - Ensure that the format of the JSON RESPONSE is valid to be serialized to a C# class.
 
-# USER PROMPT: <<PROMPT>>
+# USER PROMPT: 
+
+<<PROMPT>>
 
 # JSON RESPONSE:
 

@@ -35,7 +35,7 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<PromptSettings, PromptSettingsDto>()
                 .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
-                .ForMember(dest => dest.IsTwoStepValidation, opt => opt.Ignore());
+                .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
 
             CreateMap<CommandSettings, PromptSettingsDto>();
             

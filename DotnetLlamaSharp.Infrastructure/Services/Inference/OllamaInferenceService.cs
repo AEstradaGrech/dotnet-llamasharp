@@ -1,4 +1,6 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+﻿using DocumentFormat.OpenXml.Office2010.CustomUI;
+using DotnetLlamaSharp.Domain.Models.Enums;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Services.Inference;
@@ -93,16 +95,10 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                 if (!string.IsNullOrEmpty(part?.Message.Content))
                     sb.Append(part.Message.Content);
 
-            // if(validations > 0)
-            //  validator = _factory.GetPromptValidator("prompt-validator", new ValidatePromptRequest(Prompt, Output, Expected) <- review & rewrite to T
-            //              Opcion B: two-step validation <- dentro de command hago ScoredBool, pregunto por resultado y si false paso reason a rewriter y si no return Serialize<T>(result)
-            //bool validation = await validator.Prompt(input, output, expected); <- SCORED_BOOL
-
-            //if not is valid throw response.Reason
             return JsonSerializer.Deserialize<T>(sb.ToString());
         }
 
-        public async Task<T> StructuredPrompt<T>(GenerateRequest request, int validations = 0) where T : class
+        public async Task<T> StructuredPrompt<T>(GenerateRequest request, int validations = 0, EPromptValidation type = EPromptValidation.REVIEW_ONLY) where T : class
         {
             var sb = new System.Text.StringBuilder();
 
@@ -119,24 +115,12 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                     await foreach (var part in _client.GenerateAsync(request))
                         if (!string.IsNullOrEmpty(part?.Response))
                             sb.Append(part.Response);
-                    //                                                                                                                                                   [el tipado se conserva por los COMMANDS]
-                    //var response = _refineOutput(response, EVALIDATION_TYPE = BOOL_AND_REPEAT | REWRITE_ONLY | BOOL_AND_REWRITE | FULL (A+B+A(b)) // BTW <- LameChain .Prompt(inputCmd).Refine(EValidation.Full).Etc().Etc() <- RefineStep<TPrev> (o algo asi)
-                    //  lanza las excepciones o lo devuelve el modelo revisado
+                  
                     if (validations > 0)
                     {
-                        //A - Y/N & repeat
-                        //B - Review & Rewrite (or leave as it is)
-                        //C - A + B
-                        //D - A + B + A(b)
-                        //var command = _ollamaCommands.GetCommand<JsonOutputValidationCommand<T>, ScoredBoolResponse>(dbMessageName:"json-output-validator");
-                        var command = _ollamaCommands.GetCommand<JsonOutputReviewCommand<T>, T>(dbMessageName: "json-ouput-review");
+                        var command = _ollamaCommands.GetCommand<JsonOutputRefinerCommand<T>, T>(dbMessageName: "json-refine");
 
-                        return command.PromptSync(this, new JsonValidationRequest<T> { Prompt = $"> instruction: {request.System}\n> input: {request.Prompt}", RawOutput = sb.ToString()}).Result;
-
-                        //if (!validation.Answer)
-                        //    throw new StructuredOutputException(validation.Justification, validation.Score);
-
-                        //else break;
+                        return command.PromptSync(this, new JsonRefineRequest<T> { Prompt = request.Prompt, SystemMessage = request.System, ValidationType = type,  RawOutput = sb.ToString(), Settings = request.Options }).Result;
                     }
                 }
                 catch(StructuredOutputException ex)
@@ -152,6 +136,9 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
 
                     if (ex.GetType() == typeof(PromptRetryException))
                         throw ex;
+
+                    if (i == validations)
+                        throw new PromptRetryException($"{nameof(StructuredPrompt)} >> JSON OUTPUT VALIDATIONS LIMIT REACHED", retries: validations);
                 }
             }
 
