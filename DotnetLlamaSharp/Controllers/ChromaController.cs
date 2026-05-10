@@ -111,21 +111,13 @@ namespace DotnetLlamaSharp.Controllers
 
         [HttpGet("/serialized/text")]
         public async Task<IActionResult> GetJsonString()
-            => Ok(JsonSerializer.Serialize(@"
-Your task is to analyze the user request, figure out if it can be answered with a number and return a JSON response with the corresponding 'numeric value'
-whenever is possible, or return a null value in case it is not, according to the provided JSON schema.
+            => Ok(JsonSerializer.Serialize(@"Which would be the best action to select for a game NPC character that is having this conversations with a player:
+# CHAT HISTORY:
 
-# IMPORTANT: follow this steps in order to generate your response:
+- npc: 'Hey you! Come here right now, bitch! You owe me money!'
 
-> STEP 1: Analyze the input and extract the intent to understand the problem you are being presented.
-> STEP 2: Use your conclussion from the previous step to reason and deliberate if it is a problem that can be solved numerically or not.
-> STEP 3: With your conclussions from the previous steps return the corresponding 'numeric result' whenever possible or a null value when not, according to the provide JSON schema.
-
-# RULES:
-
-- ENSURE you return a float number when the intent can be solved in a numeric way.
-- ENSURE you output null ONLY if the intent cannot be solved with a number.
-- ENSURE your response are compliant with the provided JSON schema."));
+- player: 'Fuck off asshole, kiss my ass' 
+"));
     }
 
 }

@@ -12,5 +12,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
         public CommandSettings(int maxTokens, float temperature, float topP, int topK, string? model = null) : base(maxTokens, temperature, topP, topK, model) { }
         public int CommandValidations { get; set; } = 0;
         public EPromptValidation ValidationType { get; set; }
+        public bool UseDefaultCommandMessage { get; set; }
     }
 }

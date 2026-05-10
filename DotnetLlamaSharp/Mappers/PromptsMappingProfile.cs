@@ -34,6 +34,7 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<PromptSettingsDto, CommandSettings>();
 
             CreateMap<PromptSettings, PromptSettingsDto>()
+                .ForMember(dest => dest.UseDefaultCommandMessage, opt => opt.Ignore())
                 .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
                 .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
 

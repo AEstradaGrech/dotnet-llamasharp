@@ -3,8 +3,15 @@
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
 {
     /// <summary>
-    /// All ChromaPromptCommands must have a db message name. Atomic Values are DbPromptCommands so they require Chroma messages for now
-    /// v2 -> Atomic Values with hardcoded string message in case there is no sysmessage or dbInstructionMessage
+    /// All ChromaPromptCommands must have a db message name. Atomic Values are DbPromptCommands that 
+    /// may read an instruction message from Chroma or use a default hardcoded message. 
+    /// The also accept some extra guidance instruction from the http request that is stored as _systemMessage
+    /// So they can be used:
+    ///     - with guidance message only
+    ///     - default hardcoded only
+    ///     - default hardcoded + guidance
+    ///     - chroma stored only
+    ///     - chroma stored + guidance
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public abstract class ChromaPromptCommand<T> : BasePromptCommand<T>
@@ -24,16 +31,30 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         {
             try
             {
-                var sysMessageChunk = await _repo.GetByName("system-messages", _messageName);
+                //if prefer default instruction, try get instruction
+                string systemMessage = string.Empty;
 
-                if (string.IsNullOrEmpty(sysMessageChunk.Text))
-                    throw new InvalidDataException($"{nameof(ChromaPromptCommand<T>)} >> no system message text has been found for message: '{_messageName}'");
+                if(_settings.UseDefaultCommandMessage)
+                    systemMessage = getDefaultInstruction();
+                // else try db msg
+                if(string.IsNullOrEmpty(systemMessage))
+                {
+                    var sysMessageChunk = await _repo.GetByName("system-messages", _messageName);
 
-                return string.IsNullOrEmpty(_systemMessage) ? sysMessageChunk.Text : $"{_systemMessage}\n{sysMessageChunk.Text}";
+                    if (string.IsNullOrEmpty(sysMessageChunk.Text))
+                        throw new InvalidDataException($"{nameof(ChromaPromptCommand<T>)} >> no system message text has been found for message: '{_messageName}'");
+
+                    systemMessage = sysMessageChunk.Text;
+                }
+                // if no db message and/or !defaultInstruction throw ex & try defaultInstruction (if db fail) + _system (request guidance msg)
+                if (string.IsNullOrEmpty(systemMessage))
+                    throw new InvalidDataException($"{nameof(ChromaPromptCommand<T>)} >> NO SYSTEM MESSAGE FOUND >> TRYING DEFAULT MESSAGES");
+
+                return string.IsNullOrEmpty(_systemMessage) ? systemMessage : $"{_systemMessage}\n{systemMessage}";
             }
             catch (Exception ex)
             {
-                // default hardcoded message + any guidance message from constructor
+                // default hardcoded message (if any) + any guidance message from constructor
                 var defaultMessage = $"{getDefaultInstruction()}{(string.IsNullOrEmpty(_systemMessage) ? "" : $"\n{_systemMessage}")}";
 
                 if (string.IsNullOrEmpty(defaultMessage))

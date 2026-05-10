@@ -2,6 +2,7 @@
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -97,6 +98,19 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> YesNoQuestion([FromBody] RagPromptRequestDto request)
         {
             var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.ScoredBinaryQuestion(_mapper.Map<RagPromptRequestDto, RagPromptRequest>(request)));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/single-choice/prompt")]
+        public async Task<IActionResult> SingleChoice([FromBody] SimplePromptRequestDto dto)
+        {
+            var request = _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto);
+
+            var response = await _ollamaCommands.StringChoice(dto.Prompt, new List<string> { "FIGHT", "JOIN", "TRADE", "RUNAWAY" }, request.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);

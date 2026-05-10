@@ -78,7 +78,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         private Task<TRefined> reviewResponse(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
         {
-            var command = new JsonOutputReviewCommand<TRefined>(repo, "json-validate", guidanceMessage, _settings);
+            var command = new JsonOutputReviewCommand<TRefined>(repo, "json-review", guidanceMessage, _settings);
 
             return command.PromptSync(ollama, toValidationRequest<TRefined>(request));
         }

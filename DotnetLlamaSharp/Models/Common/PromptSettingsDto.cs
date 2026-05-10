@@ -55,5 +55,6 @@ namespace DotnetLlamaSharp.Models.Common
 
         public int CommandValidations { get; set; } = 0;
         public PromptValidation ValidationType { get; set; }
+        public bool UseDefaultCommandMessage { get; set; }
     }
 }

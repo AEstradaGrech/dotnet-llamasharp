@@ -118,7 +118,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                   
                     if (validations > 0)
                     {
-                        var command = _ollamaCommands.GetCommand<JsonOutputRefinerCommand<T>, T>(dbMessageName: "json-refine");
+                        var command = _ollamaCommands.GetCommand<JsonOutputRefinerCommand<T>, T>(systemMessage: null); //has no default | db message. Orchestrates commands with default | db message
 
                         return command.PromptSync(this, new JsonRefineRequest<T> { Prompt = request.Prompt, SystemMessage = request.System, ValidationType = type,  RawOutput = sb.ToString(), Settings = request.Options }).Result;
                     }
