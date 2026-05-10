@@ -16,8 +16,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
         {
             var message = await getPromptInstruction();
 
-            if (request.GetType() != typeof(StringChoiceRequest))
-                throw new InvalidOperationException($"{nameof(StringChoiceCommand)} >> request is not of TYPE {nameof(StringChoiceRequest)}");
+            validateInputRequest<StringChoiceRequest>(request);
 
             foreach (var choice in ((StringChoiceRequest)request).Choices)
                 message += $"\n- {choice}";

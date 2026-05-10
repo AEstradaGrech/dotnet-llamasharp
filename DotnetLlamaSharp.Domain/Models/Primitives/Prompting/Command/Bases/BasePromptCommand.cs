@@ -22,6 +22,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         public abstract Task<T> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request);
         public virtual Task<T> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request) { throw new NotImplementedException("This method is meant to be overriden whenever required"); }
         protected abstract Task<string> getPromptInstruction();
+        protected void validateInputRequest<TReq>(PromptCommandRequest request) where TReq : PromptCommandRequest
+        {
+            if (request.GetType() != typeof(JsonRefineRequest<TReq>))
+                throw new InvalidOperationException($"{nameof(BasePromptCommand<T>)} >> request of type {request.GetType().Name} is not of type {typeof(TReq)}");
+        }
         protected async Task<GenerateRequest> getGenerateRequest(PromptCommandRequest request, bool withInstruction = true)
             => new GenerateRequest
             {

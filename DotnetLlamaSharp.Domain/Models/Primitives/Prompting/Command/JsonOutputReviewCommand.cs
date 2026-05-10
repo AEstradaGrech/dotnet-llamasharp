@@ -17,8 +17,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         public override async Task<TReviewed> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            if (request.GetType() != typeof(JsonValidationRequest<TReviewed>))
-                throw new InvalidOperationException($"{nameof(JsonOutputReviewCommand<TReviewed>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TReviewed>)}");
+            validateInputRequest<JsonValidationRequest<TReviewed>>(request);
 
             var promptRequest = (JsonValidationRequest<TReviewed>)request;
 
@@ -31,8 +30,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         public override Task<TReviewed> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            if (request.GetType() != typeof(JsonValidationRequest<TReviewed>))
-                throw new InvalidOperationException($"{nameof(JsonOutputReviewCommand<TReviewed>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TReviewed>)}");
+            validateInputRequest<JsonValidationRequest<TReviewed>>(request);
 
             var promptRequest = (JsonValidationRequest<TReviewed>)request;
 

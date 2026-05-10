@@ -63,6 +63,10 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
 
             CreateMap<CommandSettings, PromptSettings>();
+            CreateMap<SmartQueryRequest, SmartRagSettings>()
+                .ForMember(dest => dest.MaxExamples, opt => opt.MapFrom(src => src.MaxFewShotExamples))
+                .ForMember(dest => dest.WithQueryAugmentation, opt => opt.Ignore())
+                .ForMember(dest => dest.WithRagExpansion, opt => opt.Ignore());
 
             CreateMap<SimplePromptRequest, SimpleCommandRequest>().ReverseMap();
 

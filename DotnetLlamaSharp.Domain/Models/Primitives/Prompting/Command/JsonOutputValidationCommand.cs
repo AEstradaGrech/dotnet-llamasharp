@@ -18,8 +18,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         public override async Task<ScoredBoolResponse> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            if(request.GetType() != typeof(JsonValidationRequest<TModel>))
-                throw new InvalidOperationException($"{nameof(JsonOutputValidationCommand<TModel>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TModel>)}");
+            validateInputRequest<JsonValidationRequest<TModel>>(request);
 
             var promptRequest = (JsonValidationRequest<TModel>)request;
 

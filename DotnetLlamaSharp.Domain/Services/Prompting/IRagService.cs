@@ -9,8 +9,8 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
     {
         // Q&A
         Task<RagPrompt> ScoredBinaryQuestion(RagPromptRequest request);
-        Task<RagPrompt> SimpleRagQuery(RagPromptRequest request);
-        Task<RagPrompt> SimpleSmartQuery(SimplePromptRequest request);
+        Task<RagPrompt> SimpleRagQuery(RagPromptRequest request, SmartRagSettings smartSettings = null);
+        Task<RagPrompt> SimpleSmartQuery(SmartQueryRequest request);
         // Chat Turns with rag
         Task<ChatPrompt> RagChatPrompt(RagChatRequest request);
 

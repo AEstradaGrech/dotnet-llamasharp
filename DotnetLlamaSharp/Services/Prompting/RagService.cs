@@ -12,6 +12,7 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
+using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
 using System.Text;
 
@@ -26,28 +27,73 @@ namespace DotnetLlamaSharp.Services.Prompting
         private readonly IChromaChatsRepository _chatsRepo;
         private readonly ILogger<RagService> _logger;
         private readonly IMapper _mapper;
-        private readonly ApiSettings _settings;
-
+        private readonly ApiSettings _apiSettings;
+        private readonly RequestOptions _settings;
         public RagService(IOllamaSharpService chatService, IChromaService chromaService, IChromaChatsRepository chatsRepo, IPromptCommandsService ollamaCommands,
-            IEmbeddingsService embeddingsService, ILogger<RagService> logger, IMapper mapper, IOptions<ApiSettings> settings)
+            IEmbeddingsService embeddingsService, ILogger<RagService> logger, IMapper mapper, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> settings)
         {
             _chatService = chatService;
             _chromaService = chromaService;
             _logger = logger;
             _mapper = mapper;
             _chatsRepo = chatsRepo;
-            _settings = settings.Value;
+            _apiSettings = apiSettings.Value;
             _embeddingsService = embeddingsService;
             _ollamaCommands = ollamaCommands;
+            _settings = settings.Value;
         }
 
-        public async Task<RagPrompt> SimpleRagQuery(RagPromptRequest request)
+        public async Task<RagPrompt> SimpleRagQuery(RagPromptRequest request, SmartRagSettings? smartSettings = null)
         {
             ChromaQuery chromaQuery = null;
             var collectionQueries = new Dictionary<string, ChromaQuery>();
-            
+
             if (request.QueryCollections.Count > 0)
-                collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
+            {
+                var queryPrompt = request.Prompt;
+
+                if (smartSettings != null)
+                {
+                    if(smartSettings.WithRagExpansion)
+                    {
+                        var expansionReq = new RagExpansionRequest
+                        {
+                            Prompt = request.Prompt,
+                            Results = smartSettings.RagExpansions,
+                            Model = request.Settings.Model,
+                            UsePrevAsExample = smartSettings.WithFewShotExpansion,
+                            MaxExamples = smartSettings.MaxExamples,
+                            Settings = _settings,
+                        };
+
+                        var expansion = await _ollamaCommands.DbPromptCommand<RagExpansionCommand, RagExpansionRequest, ChatMessage>(expansionReq, dbInstructionName: "", null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
+
+
+                        if (!string.IsNullOrEmpty(expansion.Content))
+                            queryPrompt += $"\n{expansion.Content}";
+                    }
+
+                    if(smartSettings.WithQueryAugmentation)
+                    {
+                        var expansionReq = new RagExpansionRequest
+                        {
+                            Prompt = request.Prompt,
+                            Results = smartSettings.QueryAugments,
+                            Model = request.Settings.Model,
+                            UsePrevAsExample = smartSettings.WithFewShotExpansion,
+                            MaxExamples = smartSettings.MaxExamples,
+                            Settings = _settings,
+                        };
+
+                        var expansion = await _ollamaCommands.DbPromptCommand<QueryAugmentationCommand, RagExpansionRequest, ChatMessage>(expansionReq, dbInstructionName: "", null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
+
+                        if (!string.IsNullOrEmpty(expansion.Content))
+                            queryPrompt += $"\n{expansion.Content}";   
+                    }
+                }
+
+                collectionQueries = await QueryCollections(request.QueryCollections, queryPrompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
+            }
 
             var baseIntruction = string.IsNullOrEmpty(request.SystemMessage) ? "" : request.SystemMessage.Trim();
 
@@ -82,47 +128,56 @@ namespace DotnetLlamaSharp.Services.Prompting
             };
         }
 
-        public async Task<RagPrompt> SimpleSmartQuery(SimplePromptRequest request)
+        public async Task<RagPrompt> SimpleSmartQuery(SmartQueryRequest request)
         {
-            // A: getCat + multichoice
             var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(new PromptCommandRequest(request.Prompt, null, request.Settings.Model));
 
             var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
 
             var collectionsCatalogue = await getFileCollectionsRagText();
 
+            if (request.WithChatCollections)
+                collectionsCatalogue += await getChatCollectionsRagText();
+
             var evaluationInstruction = $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
 
             var cmdRequest = _mapper.Map<SimplePromptRequest, SimpleCommandRequest>(request);
 
-            cmdRequest.Settings.CommandValidations = 1;
+            cmdRequest.Settings.CommandValidations = Math.Max(0, request.CommandValidations);
 
             var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, cmdRequest.Settings);
 
             var ragReq = _mapper.Map<SimplePromptRequest, RagPromptRequest>(request);
 
-            if (isRelatedIntent.Answer && isRelatedIntent.Score >= 0.3)
+            if (isRelatedIntent.Answer && isRelatedIntent.Score >= request.IntentConfidenceThreshold)
             {
-                var availableCollections = await _chromaService.GetAllFileCollections();
-
                 var choices = new Dictionary<string, string>();
+
+                var availableCollections = await _chromaService.GetAllFileCollections();
 
                 availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
 
+                if(request.WithChatCollections)
+                {
+                    var availableChats = await _chromaService.GetAllChatCollections();
+
+                    availableChats.ForEach(collection => choices.Add(getChatCollectionRagText(collection), collection.Name));
+                }
+
                 var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query.";
 
-                cmdRequest.Settings.CommandValidations = 1;
+                cmdRequest.Settings.CommandValidations = Math.Max(0, request.CommandValidations);
 
-                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, instruction: selectorGuidance, cmdRequest.Settings);
+                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: request.MaxCollectionChoices, instruction: selectorGuidance, cmdRequest.Settings);
 
                 ragReq.SystemMessage = null;
 
-                ragReq.CollectionRetrievals = 4;
+                ragReq.CollectionRetrievals = Math.Max(0, request.CollectionRetrievals);
 
                 selectedChoices.ForEach(selected => ragReq.QueryCollections.Add(selected.Split(" ")[0])); // in case the LLM fails to output only the collection name from the formatted catalogue values.  
             }
 
-            return await SimpleRagQuery(ragReq);
+            return await SimpleRagQuery(ragReq, _mapper.Map<SmartQueryRequest, SmartRagSettings>(request));
         }
 
         public async Task<ChatPrompt> RagChatPrompt(RagChatRequest request)
@@ -131,7 +186,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                 throw new BadHttpRequestException("No prompt found. Type something to start chatting");
 
             if (string.IsNullOrEmpty(request.Settings.Model))
-                request.Settings.Model = _settings.DefaultModel;
+                request.Settings.Model = _apiSettings.DefaultModel;
 
             if (string.IsNullOrEmpty(request.AgentName))
                 request.AgentName = request.Settings.Model;
@@ -140,7 +195,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                 throw new BadHttpRequestException($"No Agent Name has been set neither a llm model has been found to use in its place");
 
             if (string.IsNullOrEmpty(request.UserName.Trim()))
-                request.UserName = _settings.DefaultUserName;
+                request.UserName = _apiSettings.DefaultUserName;
 
             if (string.IsNullOrEmpty(request.UserName))
                 throw new BadHttpRequestException("No user name has been found in the request and appsetings");
@@ -156,7 +211,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             ChromaChatsCollection collection = null;
             if (isFirstSession)    
-                collection = await _chatsRepo.InitCollection(request.AgentName, request.UserName, _settings.DefaultEmbedder, _settings.DefaultDimensions);
+                collection = await _chatsRepo.InitCollection(request.AgentName, request.UserName, _apiSettings.DefaultEmbedder, _apiSettings.DefaultDimensions);
             
             else collection = await _chatsRepo.GetCollection(collectionName);
 
@@ -220,9 +275,9 @@ namespace DotnetLlamaSharp.Services.Prompting
                 memoFilters.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), false);
                 memoFilters.Add(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), false);
 
-                var sessionEmbeddings = await _chatsRepo.QueryCollection(collection.Name, currentEmbedding.GeneratedEmbeddings.FirstOrDefault().Vector, _settings.RagChatMemoryRetrievals, memoFilters);
+                var sessionEmbeddings = await _chatsRepo.QueryCollection(collection.Name, currentEmbedding.GeneratedEmbeddings.FirstOrDefault().Vector, _apiSettings.RagChatMemoryRetrievals, memoFilters);
 
-                chatMemos = _settings.RagChatMemoMinDistance <= 0 ? sessionEmbeddings : sessionEmbeddings.Where(x => x.Distance <= _settings.RagChatMemoMinDistance).ToList();
+                chatMemos = _apiSettings.RagChatMemoMinDistance <= 0 ? sessionEmbeddings : sessionEmbeddings.Where(x => x.Distance <= _apiSettings.RagChatMemoMinDistance).ToList();
 
                 for (int i = 0; i < chatMemos.Count; i++)
                     memoBuilder.Append($"\n\n- CHAT MEMORY FRAGMENT #{i}:\n")
@@ -260,7 +315,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             sessionChunk = await _chatsRepo.UpsertChunk(collection.Name, sessionChunk);
             
-            if (currentChunk.Text.Length >= _settings.RagChatChunkSize)
+            if (currentChunk.Text.Length >= _apiSettings.RagChatChunkSize)
             {
                 var overlaps = new List<ChatMessage> { new ChatMessage(ChatRole.User.ToString(), response.Input) };
                 overlaps.Add(new ChatMessage(ChatRole.Assistant.ToString(), response.Output));
@@ -411,6 +466,16 @@ namespace DotnetLlamaSharp.Services.Prompting
             return sb.ToString().Trim();
         }
 
+        private async Task<string> getChatCollectionsRagText()
+        {
+            var sb = new StringBuilder();
+
+            var collections = await _chromaService.GetAllChatCollections();
+
+            collections.ForEach(collection => sb.Append(getChatCollectionRagText(collection)));
+
+            return sb.ToString();
+        }
         private string getFileCollectionRagText(ChromaFilesCollection collection, string itemSplitMark = null)
         {
             var sb = new StringBuilder();
@@ -421,6 +486,16 @@ namespace DotnetLlamaSharp.Services.Prompting
                   .Append(string.IsNullOrEmpty(collection.Description) ? "" : $" - {collection.Description}\n")
                   .Append("> TOPICS: ")
                   .Append(collection.GetMeta<FileCollectionMetadata>().TOPICS);
+
+            return sb.ToString();
+        }
+        private string getChatCollectionRagText(ChromaChatsCollection collection)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append("\n\n- COLLECTION NAME =  ")
+              .Append(collection.Name)
+              .Append($" - {collection.Description}\n");
 
             return sb.ToString();
         }

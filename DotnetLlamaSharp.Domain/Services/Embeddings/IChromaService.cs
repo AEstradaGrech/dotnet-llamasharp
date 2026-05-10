@@ -26,5 +26,6 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
 
         Task<SysChunksCollection> GetSysChunksPage(string collectionName, int pageSize = 10, int page = 0, Dictionary<string, object> filters = null);
         Task<List<ChromaFilesCollection>> GetAllFileCollections();
+        Task<List<ChromaChatsCollection>> GetAllChatCollections();
     }
 }

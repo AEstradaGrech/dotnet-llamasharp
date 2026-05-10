@@ -14,8 +14,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
         public override async Task<List<string>> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            if (request.GetType() != typeof(MultiChoiceRequest))
-                throw new InvalidOperationException($"{nameof(MultiChoiceRequest)} >> request is not of TYPE {nameof(MultiChoiceRequest)}");
+            validateInputRequest<MultiChoiceRequest>(request);
 
             var multiChoiceReq = (MultiChoiceRequest) request;
 
