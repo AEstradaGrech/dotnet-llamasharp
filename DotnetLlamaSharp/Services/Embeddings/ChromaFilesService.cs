@@ -76,13 +76,13 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 if(isUpdate)
                 {
                     if (collection.GetMeta<FileCollectionMetadata>().FILES.Contains(request.FileName))
-                        throw new HttpException(HttpStatusCode.BadRequest, $"Collection {request.Name} already contains file {request.FileName}");
+                        throw new HttpException(HttpStatusCode.BadRequest, $"Collection: {request.Name} already contains file {request.FileName}");
 
                     request.EmbeddingModel = collection.GetMeta<FileCollectionMetadata>().MODEL;
                     request.Dimensions = collection.GetMeta<FileCollectionMetadata>().DIMENSIONS;
                 }
 
-                else collection.AddMetadata(nameof(ChromaCollectionMetadata.CHUNK_TYPE).ToLower(), EChunkType.FILE);
+                else request.Metadata.Add(nameof(ChromaCollectionMetadata.CHUNK_TYPE).ToLower(), (int)EChunkType.FILE);
                 
                 _logger.LogInformation($"Beginning data ingestion process for collection: {request.Name} for document: {request.FileName}");
 
@@ -185,9 +185,15 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 
                 return await _repo.UpdateCollectionData(request.Name, request.Metadata, isOverride: true);
             }
+            catch(HttpException fileEx)
+            {
+                _logger.LogInformation($"{nameof(CreateCollectionFromFile)} >> {request.Name} >> {fileEx.Message}");
+                throw fileEx;
+            }
             catch(Exception ex)
             {
-                await _repo.DeleteCollection(request.Name);
+                if(ex.GetType() != typeof(HttpException))
+                    await _repo.DeleteCollection(request.Name);
 
                 throw ex;
                 //throw new HttpException($"An error has occured while creating the collection {request.Name} >> {ex.GetType().Name}: {ex.Message}");

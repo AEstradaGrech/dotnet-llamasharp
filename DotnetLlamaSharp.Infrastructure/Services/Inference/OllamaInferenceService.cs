@@ -118,7 +118,8 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                   
                     if (validations > 0)
                     {
-                        var command = _ollamaCommands.GetCommand<JsonOutputRefinerCommand<T>, T>(systemMessage: null); //has no default | db message. Orchestrates commands with default | db message
+                        //has no default | db message. Orchestrates commands with default | db message. uses the ChromaCommands FactoryMethod to get a ChromaRepo for the child commands
+                        var command = _ollamaCommands.GetCommand<JsonOutputRefinerCommand<T>, T>(dbMessageName:null);
 
                         return command.PromptSync(this, new JsonRefineRequest<T> { Prompt = request.Prompt, SystemMessage = request.System, ValidationType = type,  RawOutput = sb.ToString(), Settings = request.Options }).Result;
                     }

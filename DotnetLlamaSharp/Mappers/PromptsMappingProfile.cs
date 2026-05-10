@@ -57,6 +57,14 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
 
+            CreateMap<PromptSettings, CommandSettings>()
+                .ForMember(dest => dest.UseDefaultCommandMessage, opt => opt.Ignore())
+                .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
+                .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
+
+            CreateMap<CommandSettings, PromptSettings>();
+
+            CreateMap<SimplePromptRequest, SimpleCommandRequest>().ReverseMap();
 
             CreateMap<RagPromptRequest, SimplePromptRequest>();
             CreateMap<RagChatRequest, ChatPromptRequest>()

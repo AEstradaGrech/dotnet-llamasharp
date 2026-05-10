@@ -91,7 +91,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var collectionsCatalogue = await getFileCollectionsRagText();
 
-            var evaluationInstruction = $"Your task is to determine whether the provide User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
+            var evaluationInstruction = $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
 
             var cmdRequest = _mapper.Map<SimplePromptRequest, SimpleCommandRequest>(request);
 
@@ -109,7 +109,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
 
-                var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR NONE if there are no collections relevant for the user query.";
+                var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query.";
 
                 cmdRequest.Settings.CommandValidations = 1;
 
@@ -279,10 +279,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             ChromaQuery queryResult = null;
             foreach (var name in names)
             {
-                // File.CHAT_INIT.DEFAULT = false = OK
-                filters.Add(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), false); //exclude session chunks (char profile system message)
-                // CHATS OR FILES
-                //filters.Add(nameof(ChatChunkMetadata.TYPE).ToLower(), (int)EChunkType.CHAT); // exclude collections (just in case; Collections have no embedding / no match)
+               //TODO: Add chat sessions & handle CHAT_INIT false (returns 0 embeddings for chunks without the tag
                 queryResult = await _chromaService.QueryCollection(name, text, resultsNumber, filters);
 
                 if (minDistance != null)

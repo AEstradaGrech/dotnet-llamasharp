@@ -111,13 +111,7 @@ namespace DotnetLlamaSharp.Controllers
 
         [HttpGet("/serialized/text")]
         public async Task<IActionResult> GetJsonString()
-            => Ok(JsonSerializer.Serialize(@"Which would be the best action to select for a game NPC character that is having this conversations with a player:
-# CHAT HISTORY:
-
-- npc: 'Hey you! Come here right now, bitch! You owe me money!'
-
-- player: 'Fuck off asshole, kiss my ass' 
-"));
+            => Ok(JsonSerializer.Serialize(@""));
     }
 
 }

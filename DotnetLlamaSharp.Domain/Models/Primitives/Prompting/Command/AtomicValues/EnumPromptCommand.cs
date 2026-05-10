@@ -21,21 +21,22 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
             if (type != typeof(int))
                 throw new InvalidOperationException($"{nameof(EnumPromptCommand<TEnum>)} >> invalid ENUM type");
 
-            string systemMessage = await getPromptInstruction();
+            var promptRequest = await getGenerateRequest(request);
 
             foreach (var value in values)
-                systemMessage += $"\n{(int)Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(TEnum)))} = {value}";
+                promptRequest.System += $"\n{(int)Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(TEnum)))} = {value}";
 
-            var response = await ollama.StructuredPrompt<IntegerChoiceResponse>(request.Prompt, systemMessage);
+            var response = await ollama.StructuredPrompt<IntegerChoiceResponse>(promptRequest, _settings.CommandValidations, _settings.ValidationType);
 
-            return (TEnum)Convert.ChangeType(response.Selected, type);
+            return (TEnum)Convert.ChangeType(response.Result, type);
         }
 
         protected override string getDefaultInstruction()
-            => @"Analyze the provided list of choices and select the integer value / key that matches the best with the user request.
-Select ONLY the NUMERIC KEY of the provided Key-Value-Pair list OR NONE if there are no relevant choices for the user intent.
+            => @"Analyze the provided list of choices and select the integer value / key that matches the best with the user request or the DEFAULT key if the user query is not related to any choice category.
+Select ONLY the NUMERIC KEY of the provided Key-Value-Pair list the DEFAULT key value if there are no relevant choices for the user intent.
 Output your selected choice according to the provided JSON schema.
 
-> CHOICES:";
+> CHOICES:
+";
     }
 }

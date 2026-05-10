@@ -10,31 +10,34 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
     public class MultiChoiceCommand : ChromaPromptCommand<List<string>>
     {
         public MultiChoiceCommand() : base() { }
-        public MultiChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings)
-        {
-        }
+        public MultiChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings) { }
 
         public override async Task<List<string>> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            var message = await getPromptInstruction();
-
             if (request.GetType() != typeof(MultiChoiceRequest))
                 throw new InvalidOperationException($"{nameof(MultiChoiceRequest)} >> request is not of TYPE {nameof(MultiChoiceRequest)}");
 
             var multiChoiceReq = (MultiChoiceRequest) request;
 
-            if (multiChoiceReq.MaxSelections >= multiChoiceReq.Choices.Count)
+            if (multiChoiceReq.MaxSelections <= 0)
+                multiChoiceReq.MaxSelections = 1;
+
+            if (!multiChoiceReq.Choices.Any())
                 throw new InvalidDataException($"{nameof(MultiChoiceCommand)} >> The requested number of selected choices is greater or equal to the available choices");
 
-            foreach (var choice in multiChoiceReq.Choices)
-                message += $"\n- {choice}";
+            var promptReq = await getGenerateRequest(multiChoiceReq);
 
-            var response = await ollama.StructuredPrompt<MultiChoiceResponse>(request.Prompt, message.Replace("<<MAX_SEL>>",$"{multiChoiceReq.MaxSelections}"), request.Model);
+            foreach (var choice in multiChoiceReq.Choices)
+                promptReq.System += $"\n- {choice}";
+
+            promptReq.System = promptReq.System.Replace("<<MAX_SEL>>", $"{multiChoiceReq.MaxSelections}");
+
+            var response = await ollama.StructuredPrompt<MultiChoiceResponse>(promptReq, _settings.CommandValidations, _settings.ValidationType);
 
             return response.Selected;
         }
 
         protected override string getDefaultInstruction()
-            => "Analyze the provided list of choices and select up to <<MAX_SEL>> options that matches the best with the user request, or none if the user intent is unrelated to any available choice. Output a list of strings containing your selected values (if any) according to the provided JSON schema.\n> CHOICES:";
+            => "Analyze the provided list of choices and select up to (but not necessarily) <<MAX_SEL>> options that matches the best with the user request, or an empty list if the user intent is unrelated to any available choice. Output a list of strings containing your selected values (if any) according to the provided JSON schema.\n> CHOICES:";
     }
 }

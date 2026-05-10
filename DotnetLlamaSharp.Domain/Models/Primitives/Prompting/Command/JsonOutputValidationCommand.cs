@@ -34,7 +34,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
         }
         public override Task<ScoredBoolResponse> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            var x = $"{nameof(JsonOutputValidationCommand<TModel>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TModel>)}";
             if (request.GetType() != typeof(JsonValidationRequest<TModel>))
                 throw new InvalidOperationException($"{nameof(JsonOutputValidationCommand<TModel>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TModel>)}");
 

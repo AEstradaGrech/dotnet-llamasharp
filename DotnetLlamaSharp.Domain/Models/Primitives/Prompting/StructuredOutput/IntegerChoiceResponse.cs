@@ -7,7 +7,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput
 {
     public class IntegerChoiceResponse
     {
-        [JsonPropertyName("selection")]
-        public int Selected { get; set; }
+        [JsonPropertyName("numeric_result")]
+        public int Result { get; set; }
     }
 }
