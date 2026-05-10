@@ -112,6 +112,37 @@ namespace DotnetLlamaSharp.Services.Embeddings
         public async Task<ChromaSysChunk> DeleteSysMessage(string collectionName, string name, string? version = null)
             => await _sysRepo.DeleteByName(collectionName, name, version);
 
+        public async Task<ChromaSysChunk> DeleteSysMessageById(string collectionName, string id)
+        {
+            var message = await _sysRepo.GetChunkById(collectionName, id);
+
+            if (!await _sysRepo.DeleteChunk(collectionName, id))
+                throw new InvalidOperationException($"{nameof(DeleteSysMessageById)} >> {collectionName} >> An unknown error has occured while deleting system chunk {id}");
+
+            return message;
+        }
+
+        public async Task<ChromaSysChunk> PatchSysMessage(string collectionName, string id, string newText, Dictionary<string, object>? metas = null)
+        {
+            if (string.IsNullOrEmpty(newText))
+                throw new BadHttpRequestException($"{nameof(PatchSysMessage)} >> {collectionName} >> No text to update has been sent in the request");
+
+            var message = await _sysRepo.GetChunkById(collectionName, id);
+
+            if (message == null)
+                throw new FileNotFoundException($"{nameof(PatchSysMessage)} >> {collectionName} >> No system chunk has been found with ID: {id}");
+
+            var embeddings = await _embeddingsService.GenerateEmbeddings(newText, message.DefaultMetadata.DIMENSIONS, message.DefaultMetadata.MODEL);
+
+            if (!embeddings.GeneratedEmbeddings.Any())
+                throw new InvalidDataException($"{nameof(PatchSysMessage)} >> {collectionName} - chunk: {id} >> An error has occured while generating the new text embeddings >> NO GENERATED EMBEDDINGS");
+
+            message.Text = newText;
+            message.Embedding = embeddings.GeneratedEmbeddings.First().Vector;
+
+            return await _sysRepo.UpsertChunk(collectionName, message, metas);
+        }
+
         public async Task<ChromaChatsCollection> GetChatsCollection(string name, bool excludeSysmsg = true, string? sessionId = null, int pageSize = 10, int page = 0)
         {
             var collection = await _chatsRepo.GetCollection(name);

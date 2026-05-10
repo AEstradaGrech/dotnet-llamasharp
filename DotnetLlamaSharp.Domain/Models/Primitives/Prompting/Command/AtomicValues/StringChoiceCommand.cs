@@ -3,9 +3,6 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
@@ -29,5 +26,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             return response.Selected;
         }
+
+        protected override string getDefaultInstruction()
+            => "Analyze the provided list of choices and select the value that matches the best with the user request. Output your selected choice according to the provided JSON schema.\n> CHOICES:";
     }
 }

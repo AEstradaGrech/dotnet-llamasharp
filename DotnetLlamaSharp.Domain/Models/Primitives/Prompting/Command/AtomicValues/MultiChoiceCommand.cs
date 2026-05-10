@@ -3,9 +3,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
@@ -35,5 +33,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             return response.Selected;
         }
+
+        protected override string getDefaultInstruction()
+            => "Analyze the provided list of choices and select up to <<MAX_SEL>> options that matches the best with the user request, or none if the user intent is unrelated to any available choice. Output a list of strings containing your selected values (if any) according to the provided JSON schema.\n> CHOICES:";
     }
 }

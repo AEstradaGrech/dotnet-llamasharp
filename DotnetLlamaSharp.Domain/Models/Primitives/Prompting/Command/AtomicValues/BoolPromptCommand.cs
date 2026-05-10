@@ -3,7 +3,6 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using OllamaSharp.Models;
 
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
@@ -22,5 +21,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             return response.Answer;
         }
+
+        protected override string getDefaultInstruction()
+            => "Analyze the user question, reason your response and output a boolean to indicate YES / NO according to the provided JSON schema.";
     }
 }

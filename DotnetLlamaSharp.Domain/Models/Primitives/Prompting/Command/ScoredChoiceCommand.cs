@@ -28,5 +28,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             return await ollama.StructuredPrompt<ScoredStringChoice>(request.Prompt, message, request.Model);
         }
+
+        protected override string getDefaultInstruction()
+            => @"Analyze the provided list of choices and select the value that matches the best with the user request. 
+Your task is not only to select the best choice but reason why to add a 'confidence score' to your response and a 'justification' comment of 15-20 words long explaining your choice selection and confidence score. 
+Output your response according to the provided JSON schema.
+
+> CHOICES:";
+        /*Analyze the provided list of choices and select the value that matches the best with the user request. Your task is not only to select the best choice but reason why to add a 'confidence score' to your response and a 'justification' comment of 15-20 words long explaining your choice selection and confidence score. Output your response according to the provided JSON schema.\n> CHOICES:*/
     }
 }

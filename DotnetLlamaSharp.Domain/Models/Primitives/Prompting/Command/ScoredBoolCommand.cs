@@ -15,5 +15,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         public override async Task<ScoredBoolResponse> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
             => await ollama.StructuredPrompt<ScoredBoolResponse>(request.Prompt, await getPromptInstruction(), request.Model);
+
+        protected override string getDefaultInstruction()
+            => @"Analyze the user request and reason a coherent response that can be sythetized in a boolean response to indicate 'YES' or 'NO' according to the provided JSON schema. 
+Also, add a 'confidence' score to your response ranging from 0.0 to 1.0 to indicate how sure you are about your answer, and a 'justification' comment of 10-15 words long explaining your answer. Output your response according to the provided JSON schema.";
     }
 }

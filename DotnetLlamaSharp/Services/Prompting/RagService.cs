@@ -82,6 +82,49 @@ namespace DotnetLlamaSharp.Services.Prompting
             };
         }
 
+        public async Task<RagPrompt> SimpleSmartQuery(SimplePromptRequest request)
+        {
+            // A: getCat + multichoice
+            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(new PromptCommandRequest(request.Prompt, null, request.Settings.Model));
+
+            var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
+
+            var collectionsCatalogue = await getFileCollectionsRagText();
+
+            var evaluationInstruction = $"Your task is to determine whether the provide User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
+
+            var cmdRequest = _mapper.Map<SimplePromptRequest, SimpleCommandRequest>(request);
+
+            cmdRequest.Settings.CommandValidations = 1;
+
+            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, cmdRequest.Settings);
+
+            var ragReq = _mapper.Map<SimplePromptRequest, RagPromptRequest>(request);
+
+            if (isRelatedIntent.Answer && isRelatedIntent.Score >= 0.3)
+            {
+                var availableCollections = await _chromaService.GetAllFileCollections();
+
+                var choices = new Dictionary<string, string>();
+
+                availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
+
+                var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR NONE if there are no collections relevant for the user query.";
+
+                cmdRequest.Settings.CommandValidations = 1;
+
+                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, instruction: selectorGuidance, cmdRequest.Settings);
+
+                ragReq.SystemMessage = null;
+
+                ragReq.CollectionRetrievals = 4;
+
+                selectedChoices.ForEach(selected => ragReq.QueryCollections.Add(selected.Split(" ")[0])); // in case the LLM fails to output only the collection name from the formatted catalogue values.  
+            }
+
+            return await SimpleRagQuery(ragReq);
+        }
+
         public async Task<ChatPrompt> RagChatPrompt(RagChatRequest request)
         {
             if (string.IsNullOrEmpty(request.Prompt))
@@ -359,48 +402,6 @@ namespace DotnetLlamaSharp.Services.Prompting
             //};
         }
 
-        public async Task<RagPrompt> SimpleSmartQuery(SimplePromptRequest request)
-        {
-            // A: getCat + multichoice
-            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(new PromptCommandRequest(request.Prompt, null, request.Settings.Model));
-
-            var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
-
-            var collectionsCatalogue = await getFileCollectionsRagText();
-
-            var evaluationInstruction = $"Your task is to determine whether the provide User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
-
-            var cmdRequest = _mapper.Map<SimplePromptRequest, SimpleCommandRequest>(request);
-
-            cmdRequest.Settings.CommandValidations = 1;
-
-            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, cmdRequest.Settings);
-
-            var ragReq = _mapper.Map<SimplePromptRequest, RagPromptRequest>(request);
-
-            if (isRelatedIntent.Answer && isRelatedIntent.Score >= 0.3)
-            {
-                var availableCollections = await _chromaService.GetAllFileCollections();
-
-                var choices = new Dictionary<string, string>();
-
-                availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
-
-                var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR NONE if there are no collections relevant for the user query.";
-
-                cmdRequest.Settings.CommandValidations = 1;
-
-                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: 2, instruction: selectorGuidance, cmdRequest.Settings);
-
-                ragReq.SystemMessage = null;
-
-                ragReq.CollectionRetrievals = 4;
-
-                selectedChoices.ForEach(selected => ragReq.QueryCollections.Add(selected.Split(" ")[0])); // in case the LLM fails to output only the collection name from the formatted catalogue values.  
-            }
-            
-            return await SimpleRagQuery(ragReq);
-        }
 
         private async Task<string> getFileCollectionsRagText(string itemSplitMark = null)
         {

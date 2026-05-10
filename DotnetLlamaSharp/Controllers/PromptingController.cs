@@ -159,6 +159,14 @@ namespace DotnetLlamaSharp.Controllers
             return Ok(response);
         }
 
+        [HttpPost("/commands/enum/prompt")]
+        public async Task<IActionResult> EnumPrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            var response = await _ollamaCommands.EnumChoice<EChunkType>(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+
+            return Ok(response);
+        }
+
         [HttpPost("/rag/qa/smart/prompt")]
         public async Task<IActionResult> SimpleSmartPrompt([FromBody] SimplePromptRequestDto request)
         {

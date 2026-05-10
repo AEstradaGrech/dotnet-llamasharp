@@ -74,16 +74,24 @@ namespace DotnetLlamaSharp.Controllers
            => Ok(_mapper.Map<ChromaChatsCollection, ChromaChatSessionDto>(await _service.GetChatsCollection(name, excludeSession, sessionId, pageSize, page)));
 
         [HttpPost("/collection/system/{name}/create/message")]
-        public async Task<IActionResult> CreateSysChunksCollection(string name, [FromBody] CreateSysChunkRequestDto dto)
+        public async Task<IActionResult> CreateSysChunk(string name, [FromBody] CreateSysChunkRequestDto dto)
             => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.AddSysMessage(name, _mapper.Map<CreateSysChunkRequestDto,ChromaSysChunk>(dto), dto.Version)));
 
+        [HttpPatch("/collection/system/{collection}/message/{id}")]
+        public async Task<IActionResult> PatchSysChunk (string collection, string id, [FromBody] PatchSysChunkRequestDto dto)
+            => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.PatchSysMessage(collection, id, dto.NewText, dto.Metadata)));
+        
         [HttpGet("/collection/system/{collection}/message/{name}")]
         public async Task<IActionResult> GetSystemChunk(string collection, string name, [FromQuery] string? version)
             => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.GetSysMessage(collection, name, version)));
 
-        [HttpDelete("/collection/system/{collection}/delete/{name}")]
+        [HttpDelete("/collection/system/{collection}/message/{name}")]
         public async Task<IActionResult> DeleteSystemChunk(string collection, string name, [FromQuery] string? version)
             => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.DeleteSysMessage(collection, name, version)));
+
+        [HttpDelete("/collection/system/{collection}/message/id/{id}")]
+        public async Task<IActionResult> DeleteSystemChunkById(string collection, string id)
+            => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.DeleteSysMessageById(collection, id)));
 
         [HttpGet("/documents/load/{docName}")]
         public async Task<IActionResult> LoadDocument(string docName)
@@ -104,38 +112,20 @@ namespace DotnetLlamaSharp.Controllers
         [HttpGet("/serialized/text")]
         public async Task<IActionResult> GetJsonString()
             => Ok(JsonSerializer.Serialize(@"
-You are going to be provided a USER PROMPT, a JSON RESPONSE for that prompt and a EXPECTED OUTPUT SCHEMA for that response.
-Your task is to validate the provided JSON RESPONSE and determine if it is compliant with the user request and the expected response according to the provided EXPECTED OUTPUT SCHEMA.
-
-You must output your response in JSON format according to this fields:
-
-- Answer: boolean value to indicate 'VALID' or 'NOT VALID' according to the result of your deliberation.
-- Justification: a brief text (not more than 10 words) summarizing the reason of your boolean answer.
-- Confidence: a float value ranging from 0.0 to 1.0 to indicate how sure you are about your answer.
+Your task is to analyze the user request, figure out if it can be answered with a number and return a JSON response with the corresponding 'numeric value'
+whenever is possible, or return a null value in case it is not, according to the provided JSON schema.
 
 # IMPORTANT: follow this steps in order to generate your response:
 
-> STEP 1: Analyze the user request and try understand the intent to get an idea of what is the user expecting to receive.
-> STEP 2: Analyze the provided EXPECTED OUTPUT SCHEMA to get a clear idea of what is the expected result in terms of format.
-> STEP 3: Analyze the provided JSON RESPONSE that you must review and reason if it is valid in terms of content and consistent with the user intent.
-> STEP 4: Use your conclussions of the previous steps to generate your response according to the requested JSON schema.
+> STEP 1: Analyze the input and extract the intent to understand the problem you are being presented.
+> STEP 2: Use your conclussion from the previous step to reason and deliberate if it is a problem that can be solved numerically or not.
+> STEP 3: With your conclussions from the previous steps return the corresponding 'numeric result' whenever possible or a null value when not, according to the provide JSON schema.
 
-# RULES: take into account this rules when generating your final response:
+# RULES:
 
-- Ensure your output is compliant with the requested schema for your validation. 
-- Ensure that the format of the JSON RESPONSE is valid to be serialized to a C# class.
-
-
-# USER PROMPT: <<PROMPT>>
-
-# JSON RESPONSE:
-
-<<RESPONSE>>
-
-# EXPECTED OUTPUT SCHEMA:
-
-<<SCHEMA>>
-"));
+- ENSURE you return a float number when the intent can be solved in a numeric way.
+- ENSURE you output null ONLY if the intent cannot be solved with a number.
+- ENSURE your response are compliant with the provided JSON schema."));
     }
 
 }

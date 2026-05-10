@@ -17,5 +17,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             return response.Result;
         }
+
+        protected override string getDefaultInstruction()
+            => "Analyze the user request and output your 'numeric result' according to the provided JSON schema, ONLY in case it can be answered with a number. If the question can't be answered with a number, output a null value according to the JSON schema.";
+        /*Analyze the user request and, in case it can be answered with a number, output your numeric response according to the provided JSON schema. If the question can't be answered with a number, output null according to the JSON schema*/
     }
 }

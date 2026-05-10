@@ -3,10 +3,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using OllamaSharp.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
@@ -33,5 +30,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             return (TEnum)Convert.ChangeType(response.Selected, type);
         }
+
+        protected override string getDefaultInstruction()
+            => @"Analyze the provided list of choices and select the integer value / key that matches the best with the user request.
+Select ONLY the NUMERIC KEY of the provided Key-Value-Pair list OR NONE if there are no relevant choices for the user intent.
+Output your selected choice according to the provided JSON schema.
+
+> CHOICES:";
     }
 }
