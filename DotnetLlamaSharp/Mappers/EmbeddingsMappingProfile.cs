@@ -1,5 +1,7 @@
 ﻿
 using AutoMapper;
+using Dotnet.Chroma.Repositories.Models;
+using Dotnet.Chroma.Repositories.Models.Metadata;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Embeddings;

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Dotnet.Chroma.Repositories.Models;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
@@ -229,7 +230,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 sessionChunk.AppendMessage(ChatRole.System, ragChatTemplate);
 
-                sessionChunk.UpdateType(EChunkType.SESSION);
+                sessionChunk.UpdateType((int)EChunkType.SESSION);
 
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), 1);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CHAT_INIT).ToLower(), true);
@@ -377,7 +378,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var nextChunk = _chatsRepo.DefaultChunk(currentChunk.Metadata);
             nextChunk.SetEmpty(isCurrent: true);
-            nextChunk.UpdateType(EChunkType.CHAT);
+            nextChunk.UpdateType((int)EChunkType.CHAT);
             //Both the last chunk and the first one (sessionChunk) track the total session chunks
             nextChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
 

@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
+﻿using Dotnet.Chroma.Repositories.Models;
+using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma

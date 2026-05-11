@@ -1,11 +1,8 @@
-﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Dotnet.Chroma.Repositories.Models;
+using Dotnet.Chroma.Repositories.Models.Interfaces;
+
 
 namespace DotnetLlamaSharp.Domain.Repositories.Chroma
 {
-    public interface IChromaChunksRepository : IChromaRepository<ChromaChunksCollection<ChromaChunk>, ChromaChunk>
-    {
-    }
+    public interface IChromaChunksRepository : IChromaRepository<ChromaChunksCollection<ChromaChunk>, ChromaChunk> {}
 }

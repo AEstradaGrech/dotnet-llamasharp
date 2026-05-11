@@ -1,4 +1,6 @@
-﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+﻿using Dotnet.Chroma.Repositories.Models;
+using Dotnet.Chroma.Repositories.Models.Interfaces;
+using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 
 namespace DotnetLlamaSharp.Domain.Repositories.Chroma
 {

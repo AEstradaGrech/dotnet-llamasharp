@@ -1,7 +1,4 @@
-﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Dotnet.Chroma.Repositories.Models;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {

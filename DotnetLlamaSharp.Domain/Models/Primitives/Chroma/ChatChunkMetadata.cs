@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Dotnet.Chroma.Repositories.Models.Metadata;
 using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma

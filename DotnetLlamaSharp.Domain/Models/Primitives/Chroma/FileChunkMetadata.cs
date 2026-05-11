@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using Dotnet.Chroma.Repositories.Models.Metadata;
+using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
 {

@@ -74,19 +74,7 @@ namespace DotnetLlamaSharp.Extensions
                ServiceLifetime.Transient => services.AddTransient<IDocumentLoader<WordLoaderService>, WordLoaderService>(),
                _ => services
            };
-#pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        public static IServiceCollection AddChromaClient(this IServiceCollection services, IConfiguration configuration, ServiceLifetime lifetime = ServiceLifetime.Scoped)
-            => lifetime switch {
-                ServiceLifetime.Transient => services.AddTransient<IChromaClient, ChromaClient>(sp => {
-                    var settings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
-                    return new ChromaClient(settings.EndpointByKey("chroma"));
-                }),
-                ServiceLifetime.Scoped => services.AddScoped<IChromaClient, ChromaClient>(sp => {
-                    var settings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
-                    return new ChromaClient(settings.EndpointByKey("chroma"));
-                }),
-                _ => services
-            };
+
         private static IApplicationBuilder ConfigureGlobalErrorHandler(this IApplicationBuilder app)
         {
             app.UseExceptionHandler(appError =>

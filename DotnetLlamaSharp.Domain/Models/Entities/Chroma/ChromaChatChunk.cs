@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Enums;
+﻿using Dotnet.Chroma.Repositories.Models;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using OllamaSharp.Models.Chat;
@@ -10,7 +11,7 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
     {
         const string roleTag = "- ROLE: ";
         const string messageSeparator = " >>";
-        public ChromaChatChunk() : base() { Type = EChunkType.CHAT; }
+        public ChromaChatChunk() : base() { Type = (int)EChunkType.CHAT; }
         public ChromaChatChunk(string id, Dictionary<string, object> metadata) : base(id, metadata) { }
         public ChromaChatChunk(string id, string text, ReadOnlyMemory<float> embedding, Dictionary<string, object> metadata) : base(id, text, embedding, metadata) { }
 

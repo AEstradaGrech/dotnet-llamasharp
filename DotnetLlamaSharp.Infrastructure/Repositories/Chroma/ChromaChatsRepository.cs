@@ -1,9 +1,9 @@
-﻿using DocumentFormat.OpenXml.Office2016.Excel;
+﻿using Dotnet.Chroma.Repositories;
+using Dotnet.Chroma.Repositories.Models;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
-using DotnetLlamaSharp.Infrastructure.Exceptions;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,9 +15,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
     public class ChromaChatsRepository : ChromaRepository<ChromaChatsCollection, ChromaChatChunk>, IChromaChatsRepository
     {
 #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        public ChromaChatsRepository(ILogger<ChromaChatsRepository> logger, IOptions<ApiSettings> dbSettings, IChromaClient client) : base(logger, dbSettings, client)
-        {
-        }
+        public ChromaChatsRepository(ILogger<ChromaChatsRepository> logger, IOptions<ChromaSettings> dbSettings, IChromaClient client) : base(client, dbSettings) { }
 
         public Task<List<ChromaChatChunk>> GetCollectionSessions(string collectionName)
         {
@@ -49,7 +47,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             var validatedName = $"{getValidConstructorNameTag(agentName, isUser: false)}-{getValidConstructorNameTag(userName, isUser: true)}";
 
-            ChromaChunk collectionChunk = DefaultChunk(embeddingModel ?? _settings.DefaultEmbedder, dimensions ?? _settings.DefaultDimensions);
+            ChromaChunk collectionChunk = DefaultChunk(embeddingModel ?? _settings.EmbeddingModel, dimensions ?? _settings.EmbeddingsDimension);
 
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.AGENT_NAME).ToLower(), agentName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);

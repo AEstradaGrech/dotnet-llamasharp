@@ -1,3 +1,4 @@
+using Dotnet.Chroma.Repositories.Extensions;
 using DotnetLlamaSharp.Extensions;
 using DotnetLlamaSharp.Mappers;
 using Microsoft.Extensions.DependencyModel;
@@ -47,6 +48,7 @@ try
         .AddConfigurations(builder.Configuration)
         .AddOllamaSharpApiClient(builder.Configuration)
         .AddOllamaEmbeddingsGenerator(builder.Configuration)
+        .AddChromaConfiguration(builder.Configuration)
         .AddChromaClient(builder.Configuration)
         .AddPdfDocumentLoader()
         .AddWordDocumentLoader()
