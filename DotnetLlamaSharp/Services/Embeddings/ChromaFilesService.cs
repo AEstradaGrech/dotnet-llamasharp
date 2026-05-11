@@ -246,6 +246,10 @@ namespace DotnetLlamaSharp.Services.Embeddings
         private async Task<int> embeddAndStoreChunks(List<ChromaChunk> chunks, EmbedCollectionRequest request)
         {
             _logger.LogInformation($"Embedding batch >> EMBEDDING MODEL: {_settings.DefaultEmbedder} >> DIMENSIONS: {request.Dimensions}");
+
+            if (request.Dimensions <= 0) request.Dimensions = _settings.DefaultDimensions;
+            if (string.IsNullOrEmpty(request.EmbeddingModel)) request.EmbeddingModel= _settings.DefaultEmbedder;
+
             ChromaChunk currentChunk = null;
             string chunkText = "";
             string textToEmbed = "";

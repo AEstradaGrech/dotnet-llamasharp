@@ -47,7 +47,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
         {
             var validatedName = $"{getValidConstructorNameTag(agentName, isUser: false)}-{getValidConstructorNameTag(userName, isUser: true)}";
 
-            ChromaChunk collectionChunk = DefaultChunk(embeddingModel ?? _settings.EmbeddingModel, dimensions ?? _settings.EmbeddingsDimension);
+            ChromaChunk collectionChunk = DefaultChunk(embeddingModel ?? _settings.EmbeddingModel, dimensions ?? _settings.EmbeddingDimensions);
 
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.AGENT_NAME).ToLower(), agentName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);

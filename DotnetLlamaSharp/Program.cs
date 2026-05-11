@@ -49,6 +49,7 @@ try
         .AddOllamaSharpApiClient(builder.Configuration)
         .AddOllamaEmbeddingsGenerator(builder.Configuration)
         .AddChromaConfiguration(builder.Configuration)
+        .AddDefaultChromaRepository()
         .AddChromaClient(builder.Configuration)
         .AddPdfDocumentLoader()
         .AddWordDocumentLoader()
