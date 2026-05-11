@@ -49,7 +49,8 @@ namespace DotnetLlamaSharp.Mappers
                 .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
             CreateMap<RagChatRequestDto, RagChatRequest>()
                 .IncludeBase<RagPromptRequestDto, RagPromptRequest>();
-
+            CreateMap<SmartQueryRequestDto, SmartQueryRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
             // Domain to Domain models
             CreateMap<SimplePromptRequest, RagPromptRequest>()
                 .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())

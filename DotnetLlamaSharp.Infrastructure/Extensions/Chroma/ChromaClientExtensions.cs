@@ -1,10 +1,7 @@
-﻿using DocumentFormat.OpenXml.Office2010.Excel;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DotnetLlamaSharp.Infrastructure.Extensions.Chroma.Models;
+﻿using DotnetLlamaSharp.Infrastructure.Extensions.Chroma.Models;
 
 using Microsoft.SemanticKernel.Connectors.Chroma;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace DotnetLlamaSharp.Infrastructure.Extensions.Chroma
 {

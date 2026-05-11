@@ -74,7 +74,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 if (collection.GetMeta<ChromaCollectionMetadata>().CHUNK_TYPE == (int)type)
                     results.Add(collection);
             }
-
+            
             return results;
         }
 

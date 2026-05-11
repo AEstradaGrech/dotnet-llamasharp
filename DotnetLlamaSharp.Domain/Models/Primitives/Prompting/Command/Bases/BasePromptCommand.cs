@@ -24,7 +24,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         protected abstract Task<string> getPromptInstruction();
         protected void validateInputRequest<TReq>(PromptCommandRequest request) where TReq : PromptCommandRequest
         {
-            if (request.GetType() != typeof(JsonRefineRequest<TReq>))
+            if (request.GetType() != typeof(TReq))
                 throw new InvalidOperationException($"{nameof(BasePromptCommand<T>)} >> request of type {request.GetType().Name} is not of type {typeof(TReq)}");
         }
         protected async Task<GenerateRequest> getGenerateRequest(PromptCommandRequest request, bool withInstruction = true)

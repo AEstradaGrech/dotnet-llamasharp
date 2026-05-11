@@ -182,9 +182,9 @@ namespace DotnetLlamaSharp.Controllers
         }
 
         [HttpPost("/rag/qa/smart/prompt")]
-        public async Task<IActionResult> SimpleSmartPrompt([FromBody] SimplePromptRequestDto request)
+        public async Task<IActionResult> SimpleSmartPrompt([FromBody] SmartQueryRequestDto request)
         {
-            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(request)));
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SmartQueryRequestDto, SmartQueryRequest>(request)));
 
             if (response != null)
                 return Ok(response);
