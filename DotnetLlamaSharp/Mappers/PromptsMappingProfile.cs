@@ -2,6 +2,7 @@
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.LangSearch.Models.Request;
 using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;
@@ -113,6 +114,10 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Choice, opt => opt.MapFrom(src => src.Selected))
                 .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => src.Score))
                 .ForMember(dest => dest.Comment, opt => opt.MapFrom(src => src.Justification));
+
+            CreateMap<LangSearchWebSearchDto, WebSearchRequest>()
+                .ForMember(dest => dest.Summary, opt => opt.MapFrom(opt => opt.WithSummary))
+                .ForMember(dest => dest.Freshness, opt => opt.MapFrom(opt => "noLimit"));
         }
     }
 }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DotnetLlamaSharp.Infrastructure.Settings
+﻿namespace DotnetLlamaSharp.Infrastructure.Settings
 {
     public class ApiSettings
     {
@@ -16,9 +12,9 @@ namespace DotnetLlamaSharp.Infrastructure.Settings
         public List<string> EmbeddingModels { get; set; }
         public List<string> JsonModels { get; set; }
         public int RagChatChunkSize { get; set; }
-        public Dictionary<string, string> ServerUrls { get; set; }
+        public Dictionary<string, string> Endpoints { get; set; }
         public int RagChatMemoryRetrievals { get; set; }
         public double RagChatMemoMinDistance { get; set; }
-        public string EndpointByKey(string key) => ServerUrls.ContainsKey(key) ? ServerUrls[key] : "";
+        public string EndpointByKey(string key) => Endpoints.ContainsKey(key) ? Endpoints[key] : "";
     }
 }

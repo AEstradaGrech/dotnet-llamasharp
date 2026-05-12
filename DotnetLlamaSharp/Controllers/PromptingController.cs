@@ -8,6 +8,8 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
+using DotnetLlamaSharp.LangSearch;
+using DotnetLlamaSharp.LangSearch.Models.Request;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;
 using Microsoft.AspNetCore.Mvc;
@@ -17,14 +19,38 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IPromptCommandsService commandService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
+    public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IPromptCommandsService commandService, 
+        ILangSearchService langSearchService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
     {
         private readonly IOllamaSharpService _ollamaService = ollamaService;
         private readonly IOllamaStreamService _streamService = streamService;
         private readonly IPromptCommandsService _ollamaCommands = commandService;
+        private readonly ILangSearchService _langSearchService = langSearchService;
         private readonly IRagService _ragService = ragService;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PromptingController> _logger = logger;
+
+        [HttpPost("/langsearch/prompt")]
+        public async Task<IActionResult> LangSearchWebData([FromBody] LangSearchWebSearchDto request)
+        {
+            var response = await _langSearchService.GetWebSearchData(_mapper.Map<LangSearchWebSearchDto, WebSearchRequest>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/langsearch/prompt/pages")]
+        public async Task<IActionResult> LangSearchPages([FromBody] LangSearchWebSearchDto request)
+        {
+            var response = await _langSearchService.GetWebSearchData(_mapper.Map<LangSearchWebSearchDto, WebSearchRequest>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
 
         [HttpPost("/simple/prompt")]
         public async Task<IActionResult> SimplePrompt([FromBody]SimplePromptRequestDto request)

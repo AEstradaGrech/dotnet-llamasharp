@@ -48,6 +48,7 @@ try
         .AddConfigurations(builder.Configuration)
         .AddOllamaSharpApiClient(builder.Configuration)
         .AddOllamaEmbeddingsGenerator(builder.Configuration)
+        .AddLangSearchClient(builder.Configuration)
         .AddChromaConfiguration(builder.Configuration)
         .AddDefaultChromaRepository()
         .AddChromaClient(builder.Configuration)

@@ -12,6 +12,9 @@ using System.Reflection;
 using Microsoft.Extensions.Options;
 using static OllamaSharp.OllamaApiClient;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
+using DotnetLlamaSharp.LangSearch.Models;
+using System.Net.Http.Headers;
+using DotnetLlamaSharp.LangSearch;
 
 namespace DotnetLlamaSharp.Extensions
 {
@@ -45,10 +48,23 @@ namespace DotnetLlamaSharp.Extensions
                 _ => services
             };
         
+        public static IServiceCollection AddLangSearchClient(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddHttpClient<ILangSearchClient>(client =>
+            {
+                var cfg = configuration.GetSection(nameof(LangSearchSettings)).Get<LangSearchSettings>();
+                client = new LangSearchClient(cfg);
+                client.BaseAddress = new Uri(cfg.Domain);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", cfg.ApiKey);
+            });
+                
+            return services;
+        }
         public static IServiceCollection AddConfigurations(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<RequestOptions>(configuration.GetSection("OllamaSettings"));
             services.Configure<ApiSettings>(configuration.GetSection(nameof(ApiSettings)));
+            services.Configure<LangSearchSettings>(configuration.GetSection(nameof(LangSearchSettings)));
             return services;
         }
 
