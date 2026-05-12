@@ -30,7 +30,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         protected async Task<GenerateRequest> getGenerateRequest(PromptCommandRequest request, bool withInstruction = true)
             => new GenerateRequest
             {
-                Model = request.Model,
+                Model = string.IsNullOrEmpty(request.Model) ? "qwen2.5:7b" : request.Model,
                 Prompt = request.Prompt,
                 System = withInstruction ? await getPromptInstruction() : string.Empty,
                 Stream = false,
@@ -38,11 +38,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
             };
         protected RequestOptions requestSettings()
             => new RequestOptions {
-                NumCtx = _settings.ContextLength,
-                NumPredict = _settings.MaxTokens,
-                Temperature = _settings.Temperature,
-                TopP = _settings.TopP,
-                TopK = _settings.TopK,
+                NumCtx = _settings.ContextLength ?? 4096,
+                NumPredict = _settings.MaxTokens ?? 300,
+                Temperature = _settings.Temperature ?? 0f,
+                TopP = _settings.TopP ?? .1f,
+                TopK = _settings.TopK ?? 10,
                 RepeatPenalty = _settings.RepeatPenalty,
                 RepeatLastN = _settings.RepeatLastN,
                 MiroStat = _settings.MiroStat,

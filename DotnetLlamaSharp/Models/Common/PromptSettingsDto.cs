@@ -4,6 +4,7 @@ namespace DotnetLlamaSharp.Models.Common
 {
     public class PromptSettingsDto
     {
+        public PromptSettingsDto() { }
         public string? Model { get; set; }
         //requested or Ollama RequestOptions defaults
         public int? MaxTokens { get; set; }

@@ -10,7 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
     public class RagExpansionCommand : ChromaPromptCommand<ChatMessage>
     {
-        public RagExpansionCommand() { }
+        public RagExpansionCommand() : base() { }
 
         public RagExpansionCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings) { }
 
@@ -24,9 +24,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             promptReq.System += $"\n{request.Prompt}";
 
-            if (expanseReq.UsePrevAsExample)
-                promptReq.System += $"\n\n# EXPECTED OUTPUT EXAMPLES:\n";
-
             var response = new ChatMessage(ChatRole.Assistant.ToString(), string.Empty);
 
             for (int i = 0; i < expanseReq.Results; i++)
@@ -35,8 +32,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
                 response.Content += $"{result}\n";
 
-                if (expanseReq.Results > 0 && expanseReq.UsePrevAsExample && i < expanseReq.MaxExamples)
+                if (expanseReq.Results > 1 && expanseReq.UsePrevAsExample && i < expanseReq.MaxExamples)
+                {
+                    if(i == 0)
+                        promptReq.System += $"\n\n# EXPECTED OUTPUT EXAMPLES:\n";
+                    
                     promptReq.System += $"\n\n{result}";
+                }
             }
 
             return response;
@@ -49,7 +51,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
             return message.Content.Trim();
         }
 
-        protected virtual string getDefaultInstruction() => @"Your task is to answer the user question in a brief yet accurate manner. The resulting text will be used to perform a similarity search and 
+        protected override string getDefaultInstruction() => @"Your task is to answer the user question in a brief yet accurate manner. The resulting text will be used to perform a similarity search and 
 retrieve more data related to the user query so follow this steps in order to generate your response:
 
 > STEP 1: Analyze the user query and extract the intent to get a better idea of the topic he is quering about.

@@ -4,7 +4,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {
     public class CommandSettings : PromptSettings
     {
-        public CommandSettings() { }
+        public CommandSettings() : base() { }
         public CommandSettings(string? model) { Model = model; }
         public CommandSettings(int maxTokens, float temperature, string? model = null) : base(maxTokens, temperature, model) { }
         public CommandSettings(int maxTokens, float temperature, int contextLength, string? model = null) : base(maxTokens, temperature, contextLength, model) { }

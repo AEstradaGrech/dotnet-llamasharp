@@ -38,21 +38,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
         {
             try
             {
-                /*
-                 {
-  "name": "rags",
-  "dimensions": 512,
-  "fileName": "BUILDING_AI_AGENTS_WITH_LLMS_RAG_AND_KNOWLEDGE_GRAPHS",
-  "fileExtension" : "pdf",
-  "chunkSize": 800,
-  "chunkOverlap": 40,
-  "initialSkip": 20,
-  "pageCutoff" : 10,
-  "metadata": {
-   
-  }
-}
-                 */
                 // Min = 0 --> append 'residual' text to beginning of next chunk
                 // Min > 0 --> discards the accumulated text if current document text > chunkSize
                 //         --> Min must be >= request chunk overlap
@@ -70,7 +55,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                 ChromaFilesCollection collection = isUpdate ?
                     await _repo.GetCollection(request.Name) :
-                    await _repo.CreateCollection(request.Name, request.Description ?? request.FileName, request.EmbeddingModel, request.Dimensions);
+                    await _repo.CreateCollection(request.Name, request.Description ?? request.FileName, request.EmbeddingModel, request.Dimensions, (int)EChunkType.FILE);
                 
                 if (collection == null)
                     throw new ArgumentNullException($"An error has occured while creating the collection {request.Name}");
@@ -84,8 +69,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     request.Dimensions = collection.GetMeta<FileCollectionMetadata>().DIMENSIONS;
                 }
 
-                else request.Metadata.Add(nameof(ChromaCollectionMetadata.CHUNK_TYPE).ToLower(), (int)EChunkType.FILE);
-                
                 _logger.LogInformation($"Beginning data ingestion process for collection: {request.Name} for document: {request.FileName}");
 
                 if (request.PageCutoff >= document.Pages.Count())

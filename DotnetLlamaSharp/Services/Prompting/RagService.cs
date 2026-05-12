@@ -131,7 +131,10 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<RagPrompt> SimpleSmartQuery(SmartQueryRequest request)
         {
-            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(new PromptCommandRequest(request.Prompt, null, request.Settings.Model));
+            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(
+                new PromptCommandRequest(request.Prompt, null, request.Settings.Model),
+                null,
+                request.Settings);
 
             var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
 
@@ -142,13 +145,9 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var evaluationInstruction = $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
 
-            var cmdRequest = _mapper.Map<SimplePromptRequest, SimpleCommandRequest>(request);
+            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, request.Settings);
 
-            cmdRequest.Settings.CommandValidations = Math.Max(0, request.CommandValidations);
-
-            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, cmdRequest.Settings);
-
-            var ragReq = _mapper.Map<SimplePromptRequest, RagPromptRequest>(request);
+            var ragReq = _mapper.Map<SimpleCommandRequest, RagPromptRequest>(request);
 
             if (isRelatedIntent.Answer && isRelatedIntent.Score >= request.IntentConfidenceThreshold)
             {
@@ -167,9 +166,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query.";
 
-                cmdRequest.Settings.CommandValidations = Math.Max(0, request.CommandValidations);
-
-                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: request.MaxCollectionChoices, instruction: selectorGuidance, cmdRequest.Settings);
+                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: request.MaxCollectionChoices, instruction: selectorGuidance, request.Settings);
 
                 ragReq.SystemMessage = null;
 
@@ -177,6 +174,8 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 selectedChoices.ForEach(selected => ragReq.QueryCollections.Add(selected.Split(" ")[0])); // in case the LLM fails to output only the collection name from the formatted catalogue values.  
             }
+
+            ragReq.SystemMessage = request.SystemMessage;
 
             return await SimpleRagQuery(ragReq, _mapper.Map<SmartQueryRequest, SmartRagSettings>(request));
         }
@@ -484,7 +483,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             sb.Append(string.IsNullOrEmpty(itemSplitMark) ? "" : itemSplitMark)
                   .Append("\n\n- COLLECTION NAME =  ")
                   .Append(collection.Name)
-                  .Append(string.IsNullOrEmpty(collection.Description) ? "" : $" - {collection.Description}\n")
+                  .Append(string.IsNullOrEmpty(collection.Description) ? "" : $"\n- DESCRIPTION: {collection.Description}\n")
                   .Append("> TOPICS: ")
                   .Append(collection.GetMeta<FileCollectionMetadata>().TOPICS);
 

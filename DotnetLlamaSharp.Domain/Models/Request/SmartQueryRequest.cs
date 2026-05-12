@@ -1,6 +1,6 @@
 ﻿namespace DotnetLlamaSharp.Domain.Models.Request
 {
-    public class SmartQueryRequest : SimplePromptRequest
+    public class SmartQueryRequest : SimpleCommandRequest
     {
         public bool WithChatCollections { get; set; } // include the catalogue of chat collections in the available collections catalogue;
         public int QueryAugments { get; set; } // generate N variants of the input to cover more similarity points;
@@ -11,7 +11,6 @@
 
         public int CollectionRetrievals { get; set; }
         public int MaxCollectionChoices { get; set; }
-        public int CommandValidations { get; set; }
         public float IntentConfidenceThreshold { get; set; }
     }
 }

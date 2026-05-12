@@ -46,7 +46,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         public override Task<TRefined> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request)
         {
-            validateInputRequest<JsonValidationRequest<TRefined>>(request);
+            validateInputRequest<JsonRefineRequest<TRefined>>(request);
 
             var validationReq = (JsonRefineRequest<TRefined>)request;
 

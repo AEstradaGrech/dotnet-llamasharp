@@ -40,8 +40,10 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<CommandSettings, PromptSettingsDto>();
             
-            CreateMap<SimplePromptRequestDto, SimplePromptRequest>();
-            CreateMap<SimplePromptRequestDto, SimpleCommandRequest>();
+            CreateMap<SimplePromptRequestDto, SimplePromptRequest>()
+                .ForMember(dest => dest.Settings, opt => opt.MapFrom(src => src.Settings));
+            CreateMap<SimplePromptRequestDto, SimpleCommandRequest>()
+                .ForMember(dest => dest.Settings, opt => opt.MapFrom(src => src.Settings));
 
             CreateMap<ChatPromptRequestDto, ChatPromptRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
@@ -50,36 +52,63 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<RagChatRequestDto, RagChatRequest>()
                 .IncludeBase<RagPromptRequestDto, RagPromptRequest>();
             CreateMap<SmartQueryRequestDto, SmartQueryRequest>()
-                .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
+                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
             // Domain to Domain models
+
+            CreateMap<PromptSettings, CommandSettings>()
+               .ForMember(dest => dest.UseDefaultCommandMessage, opt => opt.Ignore())
+               .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
+               .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
+            CreateMap<CommandSettings, PromptSettings>();
+            CreateMap<CommandSettings, CommandSettings>();
+
+            CreateMap<SimplePromptRequest, SimpleCommandRequest>().ReverseMap();
+
             CreateMap<SimplePromptRequest, RagPromptRequest>()
                 .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
                 .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
+            CreateMap<SimpleCommandRequest, RagPromptRequest>()
+               .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
+                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
+                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
+                .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
 
-            CreateMap<PromptSettings, CommandSettings>()
-                .ForMember(dest => dest.UseDefaultCommandMessage, opt => opt.Ignore())
-                .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
-                .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
+            CreateMap<SmartQueryRequest, SimplePromptRequest>()
+                .ForMember(dest => dest.Settings, opt => opt.MapFrom(opt => opt.Settings));
+            CreateMap<SmartQueryRequest, SimpleCommandRequest>()
+                .ForMember(dest => dest.Settings, opt => opt.MapFrom(opt => opt.Settings));
 
-            CreateMap<CommandSettings, PromptSettings>();
+            CreateMap<SimplePromptRequest, RagPromptRequest>()
+                .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
+                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
+                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
+                .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
+            CreateMap<SimpleCommandRequest, RagPromptRequest>()
+                .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
+                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
+                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
+                .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
+
             CreateMap<SmartQueryRequest, SmartRagSettings>()
                 .ForMember(dest => dest.MaxExamples, opt => opt.MapFrom(src => src.MaxFewShotExamples))
                 .ForMember(dest => dest.WithQueryAugmentation, opt => opt.Ignore())
                 .ForMember(dest => dest.WithRagExpansion, opt => opt.Ignore());
 
-            CreateMap<SimplePromptRequest, SimpleCommandRequest>().ReverseMap();
-
             CreateMap<RagPromptRequest, SimplePromptRequest>();
+            CreateMap<RagPromptRequest, SimpleCommandRequest>();
+
             CreateMap<RagChatRequest, ChatPromptRequest>()
                 .IncludeBase<RagPromptRequest, SimplePromptRequest>();
+            CreateMap<RagChatRequest, ChatPromptRequest>();
+
             CreateMap<ChatPromptRequest, RagPromptRequest>()
                 .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore());
-            CreateMap<RagChatRequestDto, RagChatRequest>();
 
+            CreateMap<RagChatRequestDto, RagChatRequest>();
             CreateMap<ScoredStringChoice, ScoredChoiceDto>()
                 .ForMember(dest => dest.Choice, opt => opt.MapFrom(src => src.Selected))
                 .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => src.Score))

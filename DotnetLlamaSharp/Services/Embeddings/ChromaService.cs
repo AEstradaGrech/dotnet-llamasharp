@@ -80,7 +80,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             => await _repo.GetChunkById(collectionName, id);
 
         public async Task<SysChunksCollection> CreateSystemChunksCollection(string name, string? description)
-            => await _sysRepo.CreateCollection(name, description ?? name);
+            => await _sysRepo.CreateCollection(name, description ?? name, null, null, (int)EChunkType.SYSTEM);
         
         public async Task<ChromaSysChunk> AddSysMessage(string collectionName, ChromaSysChunk chunk, string? version)
         {
