@@ -117,7 +117,8 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<LangSearchWebSearchDto, WebSearchRequest>()
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(opt => opt.WithSummary));
-
+            CreateMap<LangSearchRankedPageRequestDto, RankedPageRequest>()
+                .ForMember(dest => dest.Model, opt => opt.MapFrom(dest => dest.RankingModel));
             CreateMap<LangSearchRankedRequestDto, RankedSearchRequest>()
                 .ForMember(dest => dest.QueriedDocuments, opt => opt.MapFrom(dest => dest.Sources));
         }

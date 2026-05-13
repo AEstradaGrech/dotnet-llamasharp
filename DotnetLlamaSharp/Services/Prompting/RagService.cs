@@ -96,6 +96,71 @@ namespace DotnetLlamaSharp.Services.Prompting
                 collectionQueries = await QueryCollections(request.QueryCollections, queryPrompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
             }
 
+            ///////////////////////////////////////// RagCommand //////////////////////////////////////
+            /// aVeryBasicModel (simple secuencia en cadena. v1)
+            ///     .And(QueryAumentationCommand)
+            ///     .And(RagExpansionCommand)
+            ///     .And(LangSearchCommand)
+            /// ChatCommand.And(A)  ('enriquece' una peticion de chat)
+            ///            .And(B)
+            ///            .And(C)
+            /// ------- GameBot -------
+            /// ChatCommand.And(EvaluateSentimentCommand)
+            ///            .And(GetChatChistoyCommand)
+            ///            .And(GetLongTermMemosCommand)
+            ///            .And(EvaluateCurrentMoodComand)
+            ///            .And(EvaluateOutputActionCommand)
+            ///            .And(ChromaChatDumpCommand)
+            ///            
+            /// ChatCommand(req).And(EvaluateSentiment
+            ///                      .And(SelectMood))
+            ///                 .And(ExtractNewLoreCommand
+            ///                      .And(StoreLoreCommand)
+            ///                 .And(ChromaChatDumpCommand)
+            ///    
+            /// [esto seria v2 / encapsular commands en metodos de extension muy concretos. sigue siendo todo secuencial ]
+            /// aVeryBasicModelWithPromptAndGenerationSettings
+            ///     .Augment(req.QueryAugments)
+            ///     .Expand(req.RagExpansions)
+            ///     .LangSearch(req.ResultsNumber)
+            ///     .Rag(req) = Message 
+            ///     .ChromaDump()  (store & return) Message
+            ///     .ToPdf(path) | ToXFormat(path)
+            ///     
+            /// [SIEMPRE SE EMPIEZA POR CHAT | PROMPT COMMAND]
+            /// aVeryBasicModel     inpt = Quien era el Maestro Canches?
+            ///     .ExtractIntent() <- devuelve inpt + observacion / opt ("User wants to know who is Maestro Canches)
+            ///     .Evaluate()     <- IsItRelatedToCollections ?
+            ///     .Branch(out A = DoA() <- RagChain?
+            ///               .MoreStuff()
+            ///               .AndMoreStuff()
+            ///         ,out var B = DoB() <- Chat | LangSearch
+            ///                 .MoreBStuff()
+            ///     isTrueContinue: true / false) <-- BRANCH siempre devuelve A | B y CONTINUA con A | B segun el bool, pero siempre es 'continue | fallback', 
+            ///                                      y en fallback se pueden encadenar movidas para controlarlo
+            ///                                      y asi no hace falta 'ContinueIf | ContinueWith' (ContWith puede ser un 'ReturnToTap')
+            ///     .ContinueWith(A) <- esto depende del desarrollador, que sabe lo que quiere hacer si true / false y cual es cual (A, B)
+            ///         .ContinueIf(A | B) <- Y SI SE DA LA OTRA OPCION? EN VEZ DE _NEXT.PROMPT DEVUELVO OTRA_OPCION.PROMPT()
+            ///     .StoreResult() <- o pasa A o pasa B en ambos casos todo es MESSAGE -> opt-bridge = List<string>{input, opt1, opt2, opt3 ...} getFull() = es una instruccion acumulativa (SmartRag) | getOpt(idx)
+            ///     .Return() <- esto ejecuta ya todo o es el 'GO'. no hace  falta porque todo devuelve MESSAGE
+            ///     
+            ///     .For([commands]) // AKA FAN_OUT
+            ///     .DoXThatWillBeAppliedToEACHCommand()
+            ///     .AndEverythingFromHereIsAppliedToEachCommandUntil()
+            ///     .Collect(_nextCommand) <- ALL COMMANDS CHUNKED IN ONE SINGLE INSTRUCTION FOR _nextCommand // AKA FAN_IN
+            ///     .AndNowIsASingleCommandPipeAgain()
+            ///     
+            ///     FAN_OUT / FAN_IN examples: mismo input procesado de N formas
+            ///     .For({
+            ///         CmdA.And(cmdB),
+            ///         CmdC,
+            ///         CmdA.And(cmdC),
+            ///         CmdB.And(cmdX).And(cmdY).And(cmdZ)
+            ///      })
+            ///      .Collect(_summarizationCommand) <- las fuentes de sumarizacion se procesan diferente por las cadenas de comandos
+            ///      .ChromaDump()
+            ///      
+            /// TODO ESTO ES V1 --> CHAINABLE COMMANDS (no CHAIN STEPS)
             var baseIntruction = string.IsNullOrEmpty(request.SystemMessage) ? "" : request.SystemMessage.Trim();
 
             var systemChunk = await _chromaService.GetSysMessage("system-messages", "rag-query");
@@ -131,6 +196,8 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<RagPrompt> SimpleSmartQuery(SmartQueryRequest request)
         {
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////
             var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(
                 new PromptCommandRequest(request.Prompt, null, request.Settings.Model),
                 null,
@@ -146,6 +213,9 @@ namespace DotnetLlamaSharp.Services.Prompting
             var evaluationInstruction = $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
 
             var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, request.Settings);
+
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
             var ragReq = _mapper.Map<SimpleCommandRequest, RagPromptRequest>(request);
 
