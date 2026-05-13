@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
+using Dotnet.LangSearch.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.LangSearch.Models.Request;
 using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;

@@ -1,15 +1,12 @@
 ﻿using AutoMapper;
+using Dotnet.LangSearch.SDK;
+using Dotnet.LangSearch.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
-using DotnetLlamaSharp.LangSearch;
-using DotnetLlamaSharp.LangSearch.Models.Request;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;
 using Microsoft.AspNetCore.Mvc;
@@ -55,6 +52,10 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/langsearch/ranked/prompt")]
         public async Task<IActionResult> LangSearchReRank([FromBody] LangSearchRankedRequestDto request)
         {
+            var data = await _langSearchService.GetWebSearchData(new WebSearchRequest { Count = request.ResultsNumber ?? 1, Query =  request.Query , Summary = false });
+
+            request.Sources = data.WebPages.Results.Select(doc => doc.Snippet).ToList();
+
             var response = await _langSearchService.GetReRankData(_mapper.Map<LangSearchRankedRequestDto, RankedSearchRequest>(request));
 
             if (response != null)
