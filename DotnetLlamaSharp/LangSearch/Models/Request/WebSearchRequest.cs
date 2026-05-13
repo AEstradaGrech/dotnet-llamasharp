@@ -2,11 +2,8 @@
 
 namespace DotnetLlamaSharp.LangSearch.Models.Request
 {
-    public class WebSearchRequest
-    {
-        [JsonPropertyName("query")]
-        public string Query { get; set; }
-        
+    public class WebSearchRequest : LangSearchRequest
+    { 
         /// <summary>
         /// Whether to show long text summaries for results. Possible values:
         /// - true: Show summaries.
@@ -25,7 +22,7 @@ namespace DotnetLlamaSharp.LangSearch.Models.Request
         /// </summary>
         
         [JsonPropertyName("freshness")]
-        public string? Freshness { get; set; }
+        public string Freshness { get; set; }
         /// <summary>
         /// The number of results to return. Possible range: 1-10 (default is 10).
         /// </summary>

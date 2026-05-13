@@ -1,6 +1,6 @@
 ﻿using DotnetLlamaSharp.LangSearch.Models;
 
-namespace DotnetLlamaSharp.Models.Response
+namespace DotnetLlamaSharp.Models.Request
 {
     public class LangSearchWebSearchDto
     {

@@ -6,5 +6,6 @@ namespace DotnetLlamaSharp.LangSearch.Models
     public interface ILangSearchClient
     {
         Task<LangSearchWebResponse> GetWebSearchResponse(WebSearchRequest request);
+        Task<LangSearchRankedResponse> GetRankedSearchResponse(RankedSearchRequest request);
     }
 }

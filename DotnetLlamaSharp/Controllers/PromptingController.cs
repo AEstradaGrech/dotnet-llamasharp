@@ -52,6 +52,17 @@ namespace DotnetLlamaSharp.Controllers
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
+        [HttpPost("/langsearch/ranked/prompt")]
+        public async Task<IActionResult> LangSearchReRank([FromBody] LangSearchRankedRequestDto request)
+        {
+            var response = await _langSearchService.GetReRankData(_mapper.Map<LangSearchRankedRequestDto, RankedSearchRequest>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
         [HttpPost("/simple/prompt")]
         public async Task<IActionResult> SimplePrompt([FromBody]SimplePromptRequestDto request)
         {

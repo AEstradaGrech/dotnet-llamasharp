@@ -1,5 +1,5 @@
 ﻿using DotnetLlamaSharp.LangSearch.Models.Request;
-using DotnetLlamaSharp.LangSearch.Models.Response;
+using DotnetLlamaSharp.LangSearch.Models.Response.RankedSearch;
 using DotnetLlamaSharp.LangSearch.Models.Response.WebSearch;
 
 namespace DotnetLlamaSharp.LangSearch
@@ -8,5 +8,9 @@ namespace DotnetLlamaSharp.LangSearch
     {
         Task<SearchData> GetWebSearchData(WebSearchRequest request);
         Task<WebPage> GetWebPage(WebSearchRequest request);
+
+        Task<RankedData> GetReRankData(RankedSearchRequest request);
+
+        //TODO: SearchAndRank with LangSearch
     }
 }

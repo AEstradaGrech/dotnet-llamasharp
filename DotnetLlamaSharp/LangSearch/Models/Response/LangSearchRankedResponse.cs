@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using DotnetLlamaSharp.LangSearch.Models.Response.RankedSearch;
+using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.LangSearch.Models.Response
 {
@@ -6,5 +7,8 @@ namespace DotnetLlamaSharp.LangSearch.Models.Response
     {
         [JsonPropertyName("model")]
         public string Model { get; set; }
+
+        [JsonPropertyName("results")]
+        public List<RankedResult> Results { get; set; }
     }
 }
