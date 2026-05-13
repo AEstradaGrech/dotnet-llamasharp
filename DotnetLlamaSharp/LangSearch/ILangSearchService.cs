@@ -7,6 +7,6 @@ namespace DotnetLlamaSharp.LangSearch
     public interface ILangSearchService
     {
         Task<SearchData> GetWebSearchData(WebSearchRequest request);
-        Task<List<WebPage>> GetWebPages(WebSearchRequest request);
+        Task<WebPage> GetWebPage(WebSearchRequest request);
     }
 }

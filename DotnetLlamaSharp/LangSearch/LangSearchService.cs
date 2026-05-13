@@ -17,7 +17,7 @@ namespace DotnetLlamaSharp.LangSearch
             _client = client ?? throw new ArgumentNullException(nameof(client));
         }
 
-        public async Task<List<WebPage>> GetWebPages(WebSearchRequest request)
+        public async Task<WebPage> GetWebPage(WebSearchRequest request)
         {
             var data = await GetWebSearchData(request);
 

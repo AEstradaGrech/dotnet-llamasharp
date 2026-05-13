@@ -16,17 +16,32 @@ namespace DotnetLlamaSharp.LangSearch
         public LangSearchClient(LangSearchSettings settings) : base() { _settings = settings; }
         public async Task<LangSearchWebResponse> GetWebSearchResponse(WebSearchRequest request)
         {
-            var response = await this.PostAsJsonAsync<WebSearchRequest>($"{_settings.Domain}/{_settings.WebSearchEndpoint}", request);
+            try
+            {
+                DefaultRequestHeaders.Add("Accept", ["application/json"]);
+                DefaultRequestHeaders.Add("Authorization", [$"Bearer {_settings.ApiKey}"]);
 
-            if(!response.IsSuccessStatusCode)
-                throw new LangSearchClientException($"{nameof(LangSearchClient)} >> {nameof(GetWebSearchResponse)} >> an error has occured while requesting the data");
+                var response = await this.PostAsJsonAsync<WebSearchRequest>($"{_settings.Domain}/{_settings.WebSearchEndpoint}", request);
 
-            var data = await response.Content.ReadFromJsonAsync<LangSearchWebResponse>();
+                if (!response.IsSuccessStatusCode)
+                    throw new LangSearchClientException($"{nameof(LangSearchClient)} >> {nameof(GetWebSearchResponse)} >> an error has occured while requesting the data");
 
-            if (data.Code != HttpStatusCode.OK)
-                throw new LangSearchClientException($"{nameof(LangSearchClient)} >> {data.ErrorMessage}");
+                
+                var data = await response.Content.ReadFromJsonAsync<LangSearchWebResponse>();
 
-            return data;
+                if (data.Code != HttpStatusCode.OK)
+                    throw new LangSearchClientException($"{nameof(LangSearchClient)} >> {data.ErrorMessage}");
+
+                return data;
+            }
+            catch(Exception ex)
+            {
+                if (ex.GetType() != typeof(LangSearchClientException))
+                    throw new LangSearchClientException($"{nameof(LangSearchClient)} >> An error has occured while making the request >> {ex.Message}");
+
+                throw ex;
+            }
+            
         }
     }
 }

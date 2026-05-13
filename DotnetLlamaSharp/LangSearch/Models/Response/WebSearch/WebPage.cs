@@ -4,12 +4,12 @@ namespace DotnetLlamaSharp.LangSearch.Models.Response.WebSearch
 {
     public class WebPage
     {
-        [JsonPropertyName("webPageUrl")]
+        [JsonPropertyName("webSearchUrl")]
         public string Url { get; set; }
         [JsonPropertyName("totalEstimatedMatches")]
         public int? Matches { get; set; }
         [JsonPropertyName("value")]
-        public WebPageValue Content { get; set; }
+        public List<WebPageValue> Results { get; set; }
 
         /// <summary>
         /// Whether some results were removed due to restrictions.

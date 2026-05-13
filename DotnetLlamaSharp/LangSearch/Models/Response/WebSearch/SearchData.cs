@@ -7,6 +7,6 @@ namespace DotnetLlamaSharp.LangSearch.Models.Response.WebSearch
         [JsonPropertyName("queryContext")]
         public QueryContext QueryContext { get; set; }
         [JsonPropertyName("webPages")]
-        public List<WebPage> WebPages { get; set; }
+        public WebPage WebPages { get; set; }
     }
 }
