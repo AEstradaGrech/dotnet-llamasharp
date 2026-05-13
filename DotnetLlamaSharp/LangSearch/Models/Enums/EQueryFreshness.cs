@@ -1,4 +1,4 @@
-﻿namespace DotnetLlamaSharp.LangSearch.Models
+﻿namespace DotnetLlamaSharp.LangSearch.Models.Enums
 {
     public enum EQueryFreshness
     {

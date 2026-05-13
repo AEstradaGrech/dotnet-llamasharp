@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.LangSearch.Models
+﻿using DotnetLlamaSharp.LangSearch.Models.Enums;
+
+namespace DotnetLlamaSharp.LangSearch.Models
 {
     public class LangSearchSettings
     {
@@ -8,5 +10,13 @@
         public string RankedSearchEndpoint { get; set; }
 
         public string ApiKey { get; set; }
+
+        public string UrlFor(ELangEndpoint endpoint) 
+            => endpoint switch {
+                ELangEndpoint.SEARCH => $"{Domain}/{WebSearchEndpoint}",
+                ELangEndpoint.RANKED => $"{Domain}/{RankedSearchEndpoint}",
+                _ => ""
+            };
+
     }
 }

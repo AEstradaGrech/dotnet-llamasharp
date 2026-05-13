@@ -50,12 +50,12 @@ namespace DotnetLlamaSharp.Extensions
         
         public static IServiceCollection AddLangSearchClient(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddHttpClient<ILangSearchClient>(client =>
+            services.AddHttpClient<LangSearchClient>(client =>
             {
                 var cfg = configuration.GetSection(nameof(LangSearchSettings)).Get<LangSearchSettings>();
-                client = new LangSearchClient(cfg);
                 client.BaseAddress = new Uri(cfg.Domain);
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", cfg.ApiKey);
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             });
                 
             return services;

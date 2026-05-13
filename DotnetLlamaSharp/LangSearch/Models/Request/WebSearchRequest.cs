@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using DotnetLlamaSharp.LangSearch.Models.Enums;
+using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.LangSearch.Models.Request
 {
@@ -22,7 +23,7 @@ namespace DotnetLlamaSharp.LangSearch.Models.Request
         /// </summary>
         
         [JsonPropertyName("freshness")]
-        public string Freshness { get; set; }
+        public EQueryFreshness Freshness { get; set; }
         /// <summary>
         /// The number of results to return. Possible range: 1-10 (default is 10).
         /// </summary>

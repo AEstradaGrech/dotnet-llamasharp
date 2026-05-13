@@ -1,4 +1,4 @@
-﻿using DotnetLlamaSharp.LangSearch.Models;
+﻿using DotnetLlamaSharp.LangSearch.Models.Enums;
 
 namespace DotnetLlamaSharp.Models.Request
 {

@@ -116,8 +116,7 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Comment, opt => opt.MapFrom(src => src.Justification));
 
             CreateMap<LangSearchWebSearchDto, WebSearchRequest>()
-                .ForMember(dest => dest.Summary, opt => opt.MapFrom(opt => opt.WithSummary))
-                .ForMember(dest => dest.Freshness, opt => opt.MapFrom(opt => "noLimit"));
+                .ForMember(dest => dest.Summary, opt => opt.MapFrom(opt => opt.WithSummary));
 
             CreateMap<LangSearchRankedRequestDto, RankedSearchRequest>()
                 .ForMember(dest => dest.QueriedDocuments, opt => opt.MapFrom(dest => dest.Sources));

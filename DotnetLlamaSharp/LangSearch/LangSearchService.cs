@@ -1,13 +1,9 @@
 ﻿using Dotnet.Chroma.Repositories.Models.Interfaces;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.LangSearch.Models;
-using DotnetLlamaSharp.LangSearch.Models.Exceptions;
 using DotnetLlamaSharp.LangSearch.Models.Request;
-using DotnetLlamaSharp.LangSearch.Models.Response;
 using DotnetLlamaSharp.LangSearch.Models.Response.RankedSearch;
 using DotnetLlamaSharp.LangSearch.Models.Response.WebSearch;
-using Microsoft.Extensions.Options;
-using System.Text.Json;
 
 namespace DotnetLlamaSharp.LangSearch
 {
