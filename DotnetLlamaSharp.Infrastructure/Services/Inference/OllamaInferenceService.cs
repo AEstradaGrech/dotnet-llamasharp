@@ -1,10 +1,7 @@
-﻿using DocumentFormat.OpenXml.Office2010.CustomUI;
-using DotnetLlamaSharp.Domain.Models.Enums;
+﻿using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
@@ -115,12 +112,11 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                     await foreach (var part in _client.GenerateAsync(request))
                         if (!string.IsNullOrEmpty(part?.Response))
                             sb.Append(part.Response);
-                  
+
+                    //has no default | db message. Orchestrates commands with default | db message. uses the ChromaCommands FactoryMethod to get a ChromaRepo for the child commands
                     if (validations > 0 && validator != null)
-                    {
-                        //has no default | db message. Orchestrates commands with default | db message. uses the ChromaCommands FactoryMethod to get a ChromaRepo for the child commands
-                        return validator.PromptSync(new JsonRefineRequest<T> { Prompt = request.Prompt, SystemMessage = request.System, ValidationType = type,  RawOutput = sb.ToString(), Settings = request.Options }).Result;
-                    }
+                        return await validator.Prompt(new JsonRefineRequest<T> { Prompt = request.Prompt, SystemMessage = request.System, ValidationType = type,  RawOutput = sb.ToString(), Settings = request.Options });
+                    
                 }
                 catch(StructuredOutputException ex)
                 {

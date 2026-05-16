@@ -6,9 +6,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public class BufferedStep : ChainStep
     {
-        public BufferedStep(IJsoneable command, PromptCommandRequest request, bool isPreloaded) : base(command, request, isPreloaded)
-        {
-        }
+        public BufferedStep(IJsoneable command, PromptCommandRequest request) : base(command, request) {}
 
         public List<IJsoneable> LoadedCommands { get; set; }
 
@@ -31,7 +29,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             var cmdReq = new PromptCommandRequest { Prompt = request.Prompt, Model = request.Settings.Model };
 
-            IChaineable firstStep = new ChainStep(firstCommand, new PromptCommandRequest() /*TODO: simpleToPromptReq*/, isPreloaded: true); 
+            IChaineable firstStep = new ChainStep(firstCommand, new PromptCommandRequest()); 
 
             var currentStep = firstStep;
 

@@ -7,43 +7,39 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public static class FluentChainExtensions
     {
-        public static IChaineable StartWith(IJsoneable command, PromptCommandRequest request, bool isPreloaded = true, string? feedFwdInstruction = null)
-            => Activator.CreateInstance(typeof(ChainStep), command, request, isPreloaded, feedFwdInstruction) as IChaineable;
+        public static IChaineable StartWith(IJsoneable command, PromptCommandRequest request, string? feedFwdInstruction = null)
+            => Activator.CreateInstance(typeof(ChainStep), command, request, feedFwdInstruction) as IChaineable;
         
         public static IChaineable Then(this IChaineable step, IJsoneable command, PromptCommandRequest request, string? feedFwdInstruction = null)
         {
             var nextStep = step.ExpandTo(command, request);
 
-            if(!nextStep.IsPreloaded)
-                return step.Forge(nextStep).Result;
-            
-            else step.Link(nextStep, isForward: true, isTwoWay: true); // feedForwardData?
+            step.Link(nextStep, isForward: true, isTwoWay: true); // feedForwardData?
 
             return nextStep;
         }
 
         public static IChaineable ThenExecute(this IChaineable step, out ChainResult result, bool withFinalMessage = true)
         {
-            if (!step.IsPreloaded)
-                throw new InvalidOperationException($"{nameof(FluentChainExtensions)} >> {nameof(ThenExecute)} >> Invalid chain configuration: attempting to execute a NON-PRELOADED chain step");
-
-            result = step.ExecuteChain(withFinalMessage)
+            result = step.ExecuteChainAsync(withFinalMessage)
                 .ConfigureAwait(continueOnCapturedContext: false)
                 .GetAwaiter()
                 .GetResult();
 
             return step;
         }
+
+        public static async Task<ChainResult> ThenExecuteAsync(this IChaineable step, bool withFinalMessage = true)
+            => await step.ExecuteChainAsync(withFinalMessage); 
+        
+
         public static IChaineable Then<TCommand, TResult>(this IChaineable step, string? instruction, PromptCommandRequest request, string? feedFwdInstruction = null) 
             where TCommand : BasePromptCommand<TResult>, new() 
             where TResult : class
         {
             var nextStep = step.ExpandTo<TCommand, TResult>(instruction, request);
 
-            if (!nextStep.IsPreloaded)
-                return step.Forge(nextStep).Result;
-
-            else step.Link(nextStep, isForward: true, isTwoWay: true);
+            step.Link(nextStep, isForward: true, isTwoWay: true);
 
             return nextStep;
         }

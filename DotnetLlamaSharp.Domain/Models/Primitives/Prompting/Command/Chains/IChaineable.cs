@@ -11,7 +11,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         
         public void Link(IChaineable next, bool isForward, bool isTwoWay = false);
         Task<IChaineable> Forge(IChaineable previous);
-        public Task<ChainResult> ExecuteChain(bool withUserFriendlyMessage = true);
+        public Task<ChainResult> ExecuteChainAsync(bool withUserFriendlyMessage = true);
         IChaineable ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null);
         IChaineable ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
         TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class;
@@ -21,7 +21,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public List<string> InstructionsLog { get; }
         public string? PromptedInstruction { get; }
         public string Input { get; }
-        public bool IsPreloaded { get; }
         public ChainLink OutputLink { get; }
         
         /*
