@@ -7,5 +7,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
     public interface IJsoneable
     {
         Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction = false);
+        IOllamaInferenceService BorrowLlama { get; }
     }
 }

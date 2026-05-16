@@ -14,7 +14,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         protected IOllamaInferenceService _ollama = null;
         protected CommandSettings _settings = null;
         public string? SystemMessage => _systemMessage;
-        
+
+        public IOllamaInferenceService BorrowLlama => _ollama;
+
         public BasePromptCommand() { _settings = new CommandSettings(maxTokens: 600, temperature: 0f, topP: .1f, topK: 10); }
         public BasePromptCommand(IOllamaInferenceService ollama) : this() { _ollama = ollama; }
         public BasePromptCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : this(ollama)

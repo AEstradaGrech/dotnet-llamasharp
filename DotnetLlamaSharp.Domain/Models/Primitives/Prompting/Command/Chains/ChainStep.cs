@@ -1,5 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using Microsoft.Extensions.AI;
 using System.Text.Json;
 using System.Text.Json.Schema;
 
@@ -17,7 +18,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         private string? _feedForwardInstruction = null;    // 
         private PromptCommandRequest _request;
         public bool IsPreloaded => _isPreloaded;
+        public string Input => _request.Prompt;
         public string? PromptedInstruction => _promptedInstruction;
+        public List<string> InstructionsLog => _instructionsLog;
+
+        private List<string> _instructionsLog = new List<string>();
         public bool IsChained(bool checkNextOnly = true) 
             => checkNextOnly ? _next != null : _next != null || _prev != null;
 
@@ -45,7 +50,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public IChaineable Next => _next;
         public IChaineable Previous => _prev;
 
-        ChainLink IChaineable.OutputLink { get => OutputLink; set => throw new NotImplementedException(); }
+       
 
         /*
             Link(step, fwd, isTwoWayLink) <- configura un eslabon / union de ChainSteps
@@ -78,22 +83,32 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 //  finalStep.Output --> es un structured output que puede variar desde simple text msg, scored bool | choice hasta modelos muy complejos (CharacterDto, p.ej)
                 var typedResult = finalStep.OutputLink.SerializedResult; //AQUI HACE FALTA ALGUN TIPO DE PROCESO DEL PALO ANALYZE JSON & SCHEMA & ORIGINAL USERQUERY & (optional) USERINTENT y FINAL MESSAGE ES SIEMPRE EL RESULTADO DE ESO
-                
+
+                var finalMessage = new ChatMessage(ChatRole.Assistant.ToString(), string.Empty);
+
                 if(withUserFriendlyMessage)
                 {
+                    var finalizer = ExpandTo<MessagePromptCommand, ChatMessage>(instruction: "Analyze the provided context data from the previous outputs and return the assistant answer (wich is in JSON string format) as a text to keep on chatting",
+                        new PromptCommandRequest($"> Original user input: {firstStep.Input}", null, _request.Model));
                     
+                    var jsonMessage = await finalizer.Forge(finalStep);
+
+                    finalMessage = (ChatMessage)jsonMessage.OutputLink.TypedResult();
+
+                    var message2 = jsonMessage.GetOutputAs<ChatMessage>();
                 }
                 // OPCION B: FINAL MESSAGE ES UN MODELO DE LAME_CHAIN_SDK. Contiene  un ChatMessage porque es el modelo mas general de la api, PERO tambien lleva la info JSON del ultimo output para que el hipotético usuario haga lo 
                 //          que quiera (deserializar el json a un tipo que el espera o usar el ChatMessage si está pasando texto a otra LLM o si le vale recibir ya el resultado final en formato texto-instrucción o texto-chat porque
                 //          realmente me la suda añadir movidas del output que ya tengo en final step.OutputLink)
 
-                return new ChainResult(jsonResult: typedResult, finalStep.OutputLink.JsonSchema, chainInput: "");
+                return new ChainResult(jsonResult: typedResult, finalStep.OutputLink.JsonSchema, chainInput: firstStep.Input, stepsLog: finalStep.InstructionsLog, processedResult: finalMessage);
 
                 //return firstStep.Forge(previous)
                 // jsonResult = step.Command.JsonPrompt();
                 //  _output = new ChainLink(jsonResult); <- step.Forge() <- fancy api name executes prompt and stores result and connects to next running step
                 // return step.Next.Forge(this) que ya tiene el output
             }
+            // throw exception
             return new ChainResult();
         }
         private IChaineable getFirstStep(IChaineable current)
@@ -120,13 +135,17 @@ use this information if you find it relevant for your current task.
 ";   
                 if(!string.IsNullOrEmpty(previous.OutputLink.GuidanceMessage))
                     _request.GuidanceMessage += $"\n> This is what you are expected to do with the previous output data: {previous.OutputLink.GuidanceMessage}";
+
+                _instructionsLog.AddRange(previous.InstructionsLog);
             }
 
             var jsonResult = await _command.JsonPrompt(_request, returnFullInstruction: false); //Skip GuidanceMessage, return only instruction for this step
 
             _promptedInstruction = jsonResult.Instruction;
 
-            _output = new ChainLink(jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), feedForwardMessage: _feedForwardInstruction);
+            _instructionsLog.Add(_promptedInstruction);
+
+            _output = new ChainLink(jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), jsonResult.Type, feedForwardMessage: _feedForwardInstruction);
 
             return _next != null ? await _next.Forge(this) : this;
         }
@@ -135,7 +154,10 @@ use this information if you find it relevant for your current task.
             => Activator.CreateInstance(this.GetType(), command, request, _isPreloaded, feedForwardInstruction) as IChaineable;
 
         public IChaineable ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new()
-            => ExpandTo(Activator.CreateInstance(typeof(TCommand), instruction, request.Settings) as IJsoneable, request, feedForwardInstruction);
+            => ExpandTo(Activator.CreateInstance(typeof(TCommand), _command.BorrowLlama, instruction, request.Settings) as IJsoneable, request, feedForwardInstruction);
         
+        public TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class
+            => JsonSerializer.Deserialize<TDeserialized>(_output.SerializedResult) 
+                    ?? throw new InvalidOperationException($"Failed to deserialize JSON to type {typeof(TDeserialized).Name}");
     }
 }

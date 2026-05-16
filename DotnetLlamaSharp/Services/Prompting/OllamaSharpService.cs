@@ -15,6 +15,7 @@ using DotnetLlamaSharp.Domain.Services.Prompting;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
+using System.Text;
 using MicrosoftAI = Microsoft.Extensions.AI;
 
 namespace DotnetLlamaSharp.Services.Prompting
@@ -116,7 +117,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             //var fluentChain = await chain.ExecuteChain(withUserFriendlyMessage: true);
 
-            
+
             //var finalStep = FluentChainExtensions
             //    .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true)
             //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words", settings: request.Settings), inputCommandReq)
@@ -148,7 +149,15 @@ namespace DotnetLlamaSharp.Services.Prompting
                 .Then<QueryAugmentCommand, ChatMessage>(request) <-- esto es siempre validOption (if evaluator.True) si no fallbackOption tiene que terminar la cadena (throw new ChainFallbackException ? y todo se ejecuta siempre dentro de un try-catch (o todo va bien, o la pillo y hago X
                 
              */
-            return null;
+
+            var sb = new StringBuilder();
+
+            chainResult.ChainStepsLog.ForEach(step => sb.AppendLine($"- CHAIN STEP: {step}"));
+            return new ChatPrompt { 
+                Model = request.Settings.Model ?? "app-default",
+                Input = request.Prompt, 
+                Output = chainResult.Json, 
+                ChatHistory = [new ChatMessage(ChatRole.Assistant.ToString(), sb.ToString()), new ChatMessage(ChatRole.User.ToString(), request.Prompt), chainResult.Message] };
         }
 
         //public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)

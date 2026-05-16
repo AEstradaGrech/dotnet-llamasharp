@@ -12,11 +12,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             InputPrompt = chainInput;
         }
 
-        public ChainResult(string jsonResult, JsonNode resultSchema, string chainInput, ChatMessage? processedResult = null) : this(jsonResult, resultSchema, chainInput) { Message = processedResult; }
+        public ChainResult(string jsonResult, JsonNode resultSchema, string chainInput, List<string> stepsLog, ChatMessage? processedResult = null) : this(jsonResult, resultSchema, chainInput) 
+        {
+            ChainStepsLog = stepsLog;
+            Message = processedResult; 
+        }
 
         public ChatMessage? Message { get; set; }
         public string Json { get; set; }
         public JsonNode Schema { get; set; }
         public string InputPrompt { get; set; }
+        public List<string> ChainStepsLog { get; set; }
     }
 }
