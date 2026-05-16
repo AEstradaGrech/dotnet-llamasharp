@@ -27,7 +27,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (!step.IsPreloaded)
                 throw new InvalidOperationException($"{nameof(FluentChainExtensions)} >> {nameof(ThenExecute)} >> Invalid chain configuration: attempting to execute a NON-PRELOADED chain step");
 
-            result = step.ExecuteChain(withFinalMessage).Result;
+            result = step.ExecuteChain(withFinalMessage)
+                .ConfigureAwait(continueOnCapturedContext: false)
+                .GetAwaiter()
+                .GetResult();
 
             return step;
         }
