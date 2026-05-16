@@ -6,15 +6,21 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
-    public class ScoredBoolCommand : ChromaPromptCommand<ScoredBoolResponse>
+    public class ScoredBoolCommand : DbPromptCommand<ScoredBoolResponse>
     {
-        public ScoredBoolCommand() {}
+        public ScoredBoolCommand() : base() { }
+        public ScoredBoolCommand(IOllamaInferenceService ollama) : base(ollama) { }
 
-        public ScoredBoolCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(repo, dbMessageName, guidanceMessage, settings) {}
+        public ScoredBoolCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public override async Task<ScoredBoolResponse> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
-            => await ollama.StructuredPrompt<ScoredBoolResponse>(_settings.UseDefaultCommandMessage ? getGenerateRequest(request, withInstruction: false).Result : await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType);
+        public override async Task<ScoredBoolResponse> Prompt(PromptCommandRequest request)
+            => await _ollama.CommandPrompt<ScoredBoolResponse>(
+                _settings.UseDefaultCommandMessage ? 
+                getGenerateRequest(request, withInstruction: false).Result : 
+                await getGenerateRequest(request), _settings.CommandValidations, 
+                _settings.ValidationType, 
+                validatorFor<ScoredBoolResponse>());
 
         protected override string getDefaultInstruction()
             => @"Analyze the user request and reason a coherent response that can be sythetized in a boolean response to indicate 'YES' or 'NO' according to the provided JSON schema. 

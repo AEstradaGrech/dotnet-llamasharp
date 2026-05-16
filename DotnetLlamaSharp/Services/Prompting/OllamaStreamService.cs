@@ -21,7 +21,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             _apiSettings = apiSettings.Value;
         }
         public IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(SimplePromptRequest request)
-           => _ollamaService.SimplePromptStream(getGenerateRequest(request, isStream: true));
+           => _ollamaService.GeneratePromptStream(getGenerateRequest(request, isStream: true));
 
         public IAsyncEnumerable<ChatResponseStream?> ChatPromptStream(ChatPromptRequest request, bool bWithSysmsgUpdate = false)
         {

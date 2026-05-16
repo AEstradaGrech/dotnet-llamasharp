@@ -1,9 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
@@ -16,10 +13,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     public class GuidedStructuredPrompt<TJson> : BasePromptCommand<TJson> where TJson : class
     {
         public GuidedStructuredPrompt() : base() { }
-        public GuidedStructuredPrompt(string? systemMessage = null, CommandSettings? settings = null) : base(systemMessage, settings){ }
-        public override async Task<TJson> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
-            => await ollama.StructuredPrompt<TJson>(request.Prompt, await getPromptInstruction(), request.Model);
+        public GuidedStructuredPrompt(IOllamaInferenceService ollama) : base(ollama) { }
+        public GuidedStructuredPrompt(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings){ }
+        public override async Task<TJson> Prompt(PromptCommandRequest request)
+            => await _ollama.CommandPrompt<TJson>(await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType, validatorFor<TJson>());
 
-        protected override async Task<string> getPromptInstruction() => string.IsNullOrEmpty(_systemMessage) ? string.Empty : _systemMessage; 
+        protected override async Task<string> getPromptInstruction(string? guidanceMessage = null) => string.IsNullOrEmpty(_systemMessage) ? guidanceMessage ?? string.Empty : _systemMessage + (guidanceMessage ?? string.Empty); 
     }
 }

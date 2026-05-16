@@ -3,14 +3,18 @@ using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests.Chains;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
+using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Schema;
 
 namespace DotnetLlamaSharp.Controllers
 {
@@ -273,5 +277,21 @@ namespace DotnetLlamaSharp.Controllers
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
+
+        [HttpPost("/json-schema")]
+        public async Task<IActionResult> JsonSchemaFor([FromBody] RagChatRequestDto request)
+            => Ok(JsonSerializer.Serialize(JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(RagChatRequestDto))));
+
+        [HttpPost("/chains/test")]
+        public async Task<IActionResult> ChaiTests([FromBody] GuidedBatchRequestDto request)
+        {
+            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.GuidedBatchChain(_mapper.Map<GuidedBatchRequestDto, GuidedBatchRequest>(request)));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+        //JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(T))
     }
 }

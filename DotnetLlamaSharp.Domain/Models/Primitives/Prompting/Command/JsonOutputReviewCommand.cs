@@ -8,14 +8,15 @@ using System.Text.Json.Schema;
 //Reviews and Rewrites / corrects result
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
-    public class JsonOutputReviewCommand<TReviewed> : ChromaPromptCommand<TReviewed> where TReviewed : class
+    public class JsonOutputReviewCommand<TReviewed> : DbPromptCommand<TReviewed> where TReviewed : class
     {
-        public JsonOutputReviewCommand() : base() {}
+        public JsonOutputReviewCommand() : base() { }
+        public JsonOutputReviewCommand(IOllamaInferenceService ollama) : base(ollama) {}
+        public JsonOutputReviewCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
+        public JsonOutputReviewCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public JsonOutputReviewCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null)
-            : base(repo, dbMessageName, guidanceMessage, settings) { }
-
-        public override async Task<TReviewed> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<TReviewed> Prompt(PromptCommandRequest request)
         {
             validateInputRequest<JsonValidationRequest<TReviewed>>(request);
 
@@ -25,10 +26,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", $"- instruction: {promptRequest.SystemMessage}\n- input:{request.Prompt}").Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TReviewed)).ToJsonString());
 
-            return await ollama.StructuredPrompt<TReviewed>(cmdRequest);
+            return await _ollama.CommandPrompt<TReviewed>(cmdRequest);
         }
 
-        public override Task<TReviewed> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override Task<TReviewed> PromptSync(PromptCommandRequest request)
         {
             validateInputRequest<JsonValidationRequest<TReviewed>>(request);
 
@@ -38,7 +39,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             cmdRequest.System = cmdRequest.System.Replace("<<PROMPT>>", $"- instruction: {promptRequest.SystemMessage}\n- input:{request.Prompt}").Replace("<<RESPONSE>>", promptRequest.RawOutput).Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TReviewed)).ToJsonString());
 
-            return ollama.StructuredPrompt<TReviewed>(cmdRequest);
+            return _ollama.CommandPrompt<TReviewed>(cmdRequest);
         }
 
         protected override string getDefaultInstruction() => @"

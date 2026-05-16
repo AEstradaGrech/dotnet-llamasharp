@@ -1,4 +1,5 @@
 ﻿using DotnetLlamaSharp.Models.Common;
+using System.ComponentModel;
 
 namespace DotnetLlamaSharp.Models.Request
 {

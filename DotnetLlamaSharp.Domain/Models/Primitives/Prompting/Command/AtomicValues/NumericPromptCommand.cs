@@ -6,14 +6,20 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
-    public class NumericPromptCommand : ChromaPromptCommand<float?>
+    // Esto acopla los atomic command a Chroma
+    // Deberia usarse solo el guidance message como system y punto
+    // ChromaNumericPrompt : NumericPromptCommand : BasePromptCommand<float>
+    // añade constructor a repo y hace override de DbPromptCommand.getInstructionMessage() 
+    public class NumericPromptCommand : DbPromptCommand<float?>
     {
-        public NumericPromptCommand() {}
-        public NumericPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings) {}
+        public NumericPromptCommand() : base() { }
+        public NumericPromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public NumericPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public override async Task<float?> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<float?> Prompt(PromptCommandRequest request)
         {
-            var response = await ollama.StructuredPrompt<NumericResponse>(await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType);
+            var response = await _ollama.CommandPrompt<NumericResponse>(await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType, validatorFor<NumericResponse>());
 
             return response.Result;
         }

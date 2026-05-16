@@ -1,4 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Repositories.Chroma;
+using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
 {
@@ -14,20 +15,24 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
     ///     - chroma stored + guidance
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public abstract class ChromaPromptCommand<T> : BasePromptCommand<T>
+    public abstract class DbPromptCommand<T> : BasePromptCommand<T>
     {
         protected readonly IChromaSysChunksRepository _repo;
         protected readonly string _messageName;
         protected readonly string _defaultMessage = string.Empty;
-        public ChromaPromptCommand() : base(){ }
-        public ChromaPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(guidanceMessage, settings) 
+        public DbPromptCommand() : base() { }
+        public DbPromptCommand(IOllamaInferenceService ollama) : base(ollama){ }
+        public DbPromptCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
+        public DbPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, guidanceMessage, settings) 
         { 
             _repo = repo;
             _messageName = dbMessageName;
         }
 
+        //Validator that might read the instruction from Chroma or use the defaultInstruction
+        protected override JsonOutputRefinerCommand<T> validatorFor<T>() where T : class => new JsonOutputRefinerCommand<T>(_ollama, _repo, _messageName, null, _settings);
         protected virtual string getDefaultInstruction() => _defaultMessage;
-        protected override async Task<string> getPromptInstruction()
+        protected override async Task<string> getPromptInstruction(string? guidanceMessage = null)
         {
             try
             {
@@ -42,23 +47,33 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
                     var sysMessageChunk = await _repo.GetByName("system-messages", _messageName);
 
                     if (string.IsNullOrEmpty(sysMessageChunk.Text))
-                        throw new InvalidDataException($"{nameof(ChromaPromptCommand<T>)} >> no system message text has been found for message: '{_messageName}'");
+                        throw new InvalidDataException($"{nameof(DbPromptCommand<T>)} >> no system message text has been found for message: '{_messageName}'");
 
                     systemMessage = sysMessageChunk.Text;
                 }
                 // if no db message and/or !defaultInstruction throw ex & try defaultInstruction (if db fail) + _system (request guidance msg)
                 if (string.IsNullOrEmpty(systemMessage))
-                    throw new InvalidDataException($"{nameof(ChromaPromptCommand<T>)} >> NO SYSTEM MESSAGE FOUND >> TRYING DEFAULT MESSAGES");
+                    throw new InvalidDataException($"{nameof(DbPromptCommand<T>)} >> NO SYSTEM MESSAGE FOUND >> TRYING DEFAULT MESSAGES");
+                
+                if (!string.IsNullOrEmpty(guidanceMessage))
+                    systemMessage = $"{systemMessage}\n\n{guidanceMessage}";
 
+                // default | dbSys
+                // guidance + (default | dbSys)
+                // instruction + (default | dbSys)
+                // instruction + guidance + (default | dbSys)
                 return string.IsNullOrEmpty(_systemMessage) ? systemMessage : $"{_systemMessage}\n{systemMessage}";
             }
             catch (Exception ex)
             {
                 // default hardcoded message (if any) + any guidance message from constructor
-                var defaultMessage = $"{getDefaultInstruction()}{(string.IsNullOrEmpty(_systemMessage) ? "" : $"\n{_systemMessage}")}";
+                var defaultMessage = $"{(string.IsNullOrEmpty(_systemMessage) ? "" : $"{_systemMessage}\n")}{getDefaultInstruction()}";
 
                 if (string.IsNullOrEmpty(defaultMessage))
                     throw ex;
+
+                if (!string.IsNullOrEmpty(guidanceMessage))
+                    defaultMessage = $"{defaultMessage}\n{guidanceMessage}";
 
                 return defaultMessage;
             }

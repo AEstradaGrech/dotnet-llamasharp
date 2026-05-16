@@ -7,12 +7,13 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
-    public class MultiChoiceCommand : ChromaPromptCommand<List<string>>
+    public class MultiChoiceCommand : DbPromptCommand<List<string>>
     {
-        public MultiChoiceCommand() : base() { }
-        public MultiChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings) { }
+        public MultiChoiceCommand() { }
+        public MultiChoiceCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public MultiChoiceCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public override async Task<List<string>> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<List<string>> Prompt(PromptCommandRequest request)
         {
             validateInputRequest<MultiChoiceRequest>(request);
 
@@ -31,7 +32,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             promptReq.System = promptReq.System.Replace("<<MAX_SEL>>", $"{multiChoiceReq.MaxSelections}");
 
-            var response = await ollama.StructuredPrompt<MultiChoiceResponse>(promptReq, _settings.CommandValidations, _settings.ValidationType);
+            var response = await _ollama.CommandPrompt<MultiChoiceResponse>(promptReq, _settings.CommandValidations, _settings.ValidationType, validatorFor<MultiChoiceResponse>());
 
             return response.Selected;
         }

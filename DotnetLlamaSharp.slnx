@@ -1,5 +1,4 @@
 <Solution>
-  <Project Path="../dotnet-langsearch-sdk/Dotnet.LangSearch.SDK/Dotnet.LangSearch.SDK.csproj" />
   <Project Path="DotnetLlamaSharp.Domain/DotnetLlamaSharp.Domain.csproj" />
   <Project Path="DotnetLlamaSharp.Infrastructure/DotnetLlamaSharp.Infrastructure.csproj" />
   <Project Path="DotnetLlamaSharp/DotnetLlamaSharp.csproj" />

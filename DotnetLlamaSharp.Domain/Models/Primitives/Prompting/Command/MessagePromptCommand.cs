@@ -10,9 +10,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     public class MessagePromptCommand : BasePromptCommand<ChatMessage>
     {
         public MessagePromptCommand() : base() { }
-        public MessagePromptCommand(string? systemMessage, CommandSettings? settings) : base(systemMessage, settings) { }
+        public MessagePromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public MessagePromptCommand(IOllamaInferenceService ollama, string? systemMessage, CommandSettings? settings) : base(ollama, systemMessage, settings) { }
 
-        public override async Task<ChatMessage> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<ChatMessage> Prompt(PromptCommandRequest request)
         {
             bool isChat = request.GetType() == typeof(ChatCommandRequest);
 
@@ -20,13 +21,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                 request = setRequestForChat((ChatCommandRequest)request);
                 
             var message =  isChat ?
-                await ollama.ChatPrompt(getChatRequest((ChatCommandRequest)request)) :
-                await ollama.SimplePrompt(await getGenerateRequest(request));
+                await _ollama.ChatPrompt(getChatRequest((ChatCommandRequest)request)) :
+                await _ollama.GeneratePrompt(await getGenerateRequest(request));
 
             return new ChatMessage(message.Role.ToString(), message.Content);
         }
 
-        protected override async Task<string> getPromptInstruction() => _systemMessage == null ? string.Empty : _systemMessage;
+        protected override async Task<string> getPromptInstruction(string? guidanceMessage = null) => string.IsNullOrEmpty(_systemMessage) ? guidanceMessage ?? string.Empty :  _systemMessage + (guidanceMessage ?? string.Empty);
 
         protected ChatRequest getChatRequest(ChatCommandRequest request)
         {

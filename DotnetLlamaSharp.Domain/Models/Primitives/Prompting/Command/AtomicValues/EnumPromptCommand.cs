@@ -7,13 +7,14 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
-    public class EnumPromptCommand<TEnum> : ChromaPromptCommand<TEnum> where TEnum : struct, Enum
+    public class EnumPromptCommand<TEnum> : DbPromptCommand<TEnum> where TEnum : struct, Enum
     {
-        public EnumPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings)
-        {
-        }
+        public EnumPromptCommand() : base() { }
+        public EnumPromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public EnumPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public override async Task<TEnum> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<TEnum> Prompt(PromptCommandRequest request)
         {
             var values = Enum.GetValues<TEnum>().ToList();
             var type = Enum.GetUnderlyingType(typeof(TEnum));
@@ -26,7 +27,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
             foreach (var value in values)
                 promptRequest.System += $"\n{(int)Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(TEnum)))} = {value}";
 
-            var response = await ollama.StructuredPrompt<IntegerChoiceResponse>(promptRequest, _settings.CommandValidations, _settings.ValidationType);
+            var response = await _ollama.CommandPrompt<IntegerChoiceResponse>(promptRequest, _settings.CommandValidations, _settings.ValidationType, validatorFor<IntegerChoiceResponse>());
 
             return (TEnum)Convert.ChangeType(response.Result, type);
         }

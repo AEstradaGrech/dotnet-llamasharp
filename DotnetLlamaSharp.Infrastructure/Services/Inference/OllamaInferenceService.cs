@@ -21,20 +21,20 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
     public class OllamaInferenceService : IOllamaInferenceService
     {
         private readonly IOllamaApiClient _client;
-        private readonly IPromptCommandsFactory _ollamaCommands;
+
         private readonly ApiSettings _apiSettings;
         private readonly RequestOptions _settings;
         private readonly ILogger<OllamaInferenceService> _logger;
-        public OllamaInferenceService(IOllamaApiClient client, IPromptCommandsFactory factory, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> settings, ILogger<OllamaInferenceService> logger)
+        public OllamaInferenceService(IOllamaApiClient client, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> settings, ILogger<OllamaInferenceService> logger)
         {
             _client = client;
-            _ollamaCommands = factory;
+           
             _apiSettings = apiSettings.Value;
             _settings = settings.Value;
             _logger = logger;
         }
        
-        public async Task<Message> SimplePrompt(GenerateRequest request)
+        public async Task<Message> GeneratePrompt(GenerateRequest request)
         {
             var sb = new System.Text.StringBuilder();
 
@@ -58,7 +58,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
             return new Message(ChatRole.Assistant.ToString(), sb.ToString());
         }
 
-        public IAsyncEnumerable<GenerateResponseStream?> SimplePromptStream(GenerateRequest request)
+        public IAsyncEnumerable<GenerateResponseStream?> GeneratePromptStream(GenerateRequest request)
         {
             request.Stream = true;
             
@@ -98,7 +98,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
             return JsonSerializer.Deserialize<T>(sb.ToString());
         }
 
-        public async Task<T> StructuredPrompt<T>(GenerateRequest request, int validations = 0, EPromptValidation type = EPromptValidation.REVIEW_ONLY) where T : class
+        public async Task<T> CommandPrompt<T>(GenerateRequest request, int validations = 0, EPromptValidation type = EPromptValidation.REVIEW_ONLY, JsonOutputRefinerCommand<T> validator = null) where T : class
         {
             var sb = new System.Text.StringBuilder();
 
@@ -116,12 +116,10 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                         if (!string.IsNullOrEmpty(part?.Response))
                             sb.Append(part.Response);
                   
-                    if (validations > 0)
+                    if (validations > 0 && validator != null)
                     {
                         //has no default | db message. Orchestrates commands with default | db message. uses the ChromaCommands FactoryMethod to get a ChromaRepo for the child commands
-                        var command = _ollamaCommands.GetCommand<JsonOutputRefinerCommand<T>, T>(dbMessageName:null);
-
-                        return command.PromptSync(this, new JsonRefineRequest<T> { Prompt = request.Prompt, SystemMessage = request.System, ValidationType = type,  RawOutput = sb.ToString(), Settings = request.Options }).Result;
+                        return validator.PromptSync(new JsonRefineRequest<T> { Prompt = request.Prompt, SystemMessage = request.System, ValidationType = type,  RawOutput = sb.ToString(), Settings = request.Options }).Result;
                     }
                 }
                 catch(StructuredOutputException ex)

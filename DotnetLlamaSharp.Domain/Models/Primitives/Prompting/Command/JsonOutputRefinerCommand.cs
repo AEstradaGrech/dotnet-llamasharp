@@ -8,13 +8,14 @@ using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
-    public class JsonOutputRefinerCommand<TRefined> : ChromaPromptCommand<TRefined> where TRefined : class
+    public class JsonOutputRefinerCommand<TRefined> : DbPromptCommand<TRefined> where TRefined : class
     {
-        public JsonOutputRefinerCommand() { }
+        public JsonOutputRefinerCommand() : base() { }
+        public JsonOutputRefinerCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public JsonOutputRefinerCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
+        public JsonOutputRefinerCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public JsonOutputRefinerCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings) { }
-
-        public override async Task<TRefined> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<TRefined> Prompt(PromptCommandRequest request)
         {
             validateInputRequest<JsonValidationRequest<TRefined>>(request);
 
@@ -24,10 +25,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
             switch(validationReq.ValidationType)
             {
                 case (EPromptValidation.REVIEW_ONLY):
-                    return await reviewResponse(_repo, ollama, validationReq);
+                    return await reviewResponse(_repo, _ollama, validationReq);
 
                 case (EPromptValidation.BOOL_AND_RETRY):
-                    boolValidation = await validateResponse(_repo, ollama, validationReq);
+                    boolValidation = await validateResponse(_repo, _ollama, validationReq);
 
                     if (!boolValidation.Answer)
                         throw new InvalidDataException($"{nameof(JsonOutputRefinerCommand<TRefined>)} >> {nameof(validateResponse)} >> VALIDATION FAIL - REASON: {boolValidation.Justification} >> CONFIDENCE: {boolValidation.Score}");
@@ -35,16 +36,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                     else return JsonSerializer.Deserialize<TRefined>(validationReq.RawOutput);
                 
                 case (EPromptValidation.BOOL_AND_REVIEW):
-                    return await validateAndReview(_repo, ollama, validationReq);
+                    return await validateAndReview(_repo, _ollama, validationReq);
 
                 case (EPromptValidation.DOUBLE_BOOL):
-                    return await doubleBool(_repo, ollama, validationReq);
+                    return await doubleBool(_repo, _ollama, validationReq);
 
                 default: return null;
             }
         }
 
-        public override Task<TRefined> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override Task<TRefined> PromptSync(PromptCommandRequest request)
         {
             validateInputRequest<JsonRefineRequest<TRefined>>(request);
 
@@ -54,10 +55,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
             switch (validationReq.ValidationType)
             {
                 case (EPromptValidation.REVIEW_ONLY):
-                    return reviewResponse(_repo, ollama, validationReq);
+                    return reviewResponse(_repo, _ollama, validationReq);
 
                 case (EPromptValidation.BOOL_AND_RETRY):
-                    boolValidation = validateResponse(_repo, ollama, validationReq).Result;
+                    boolValidation = validateResponse(_repo, _ollama, validationReq).Result;
 
                     if (!boolValidation.Answer)
                         throw new InvalidDataException($"{nameof(JsonOutputRefinerCommand<TRefined>)} >> {nameof(validateResponse)} >> VALIDATION FAIL - REASON: {boolValidation.Justification} >> CONFIDENCE: {boolValidation.Score}");
@@ -65,10 +66,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                     else return Task.FromResult(JsonSerializer.Deserialize<TRefined>(validationReq.RawOutput));
 
                 case (EPromptValidation.BOOL_AND_REVIEW):
-                    return validateAndReview(_repo, ollama, validationReq);
+                    return validateAndReview(_repo, _ollama, validationReq);
 
                 case (EPromptValidation.DOUBLE_BOOL):
-                    return doubleBool(_repo, ollama, validationReq);
+                    return doubleBool(_repo, _ollama, validationReq);
 
                 default: return null;
             }
@@ -76,16 +77,20 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         private Task<TRefined> reviewResponse(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
         {
-            var command = new JsonOutputReviewCommand<TRefined>(repo, "json-review", guidanceMessage, _settings);
+            var command = _repo == null ?
+                new JsonOutputReviewCommand<TRefined>(ollama, guidanceMessage, _settings):
+                new JsonOutputReviewCommand<TRefined>(ollama, repo, "json-review", guidanceMessage, _settings);
 
-            return command.PromptSync(ollama, toValidationRequest<TRefined>(request));
+            return command.PromptSync(toValidationRequest<TRefined>(request));
         }
 
         private Task<ScoredBoolResponse> validateResponse(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
         {
-            var command = new JsonOutputValidationCommand<ScoredBoolResponse>(repo, "json-validate", guidanceMessage, _settings);
+            var command = _repo == null ?
+                new JsonOutputValidationCommand<ScoredBoolResponse>(ollama, guidanceMessage, _settings) :
+                new JsonOutputValidationCommand<ScoredBoolResponse>(ollama, repo, "json-validate", guidanceMessage, _settings);
 
-            return command.PromptSync(ollama, toValidationRequest<ScoredBoolResponse>(request));
+            return command.PromptSync(toValidationRequest<ScoredBoolResponse>(request));
         }
 
         private Task<TRefined> validateAndReview(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)

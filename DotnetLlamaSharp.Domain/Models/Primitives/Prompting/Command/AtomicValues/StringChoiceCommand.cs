@@ -6,22 +6,23 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
-    public class StringChoiceCommand : ChromaPromptCommand<string>
+    public class StringChoiceCommand : DbPromptCommand<string>
     {
-        public StringChoiceCommand() { }
-        public StringChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(repo, dbMessageName, guidanceMessage, settings) {}
+        public StringChoiceCommand() : base() { }
+        public StringChoiceCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public StringChoiceCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) {}
 
-        public override async Task<string> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<string> Prompt(PromptCommandRequest request)
         {
-            var message = await getPromptInstruction();
+            var promptReq = await getGenerateRequest(request);
 
             validateInputRequest<StringChoiceRequest>(request);
 
             foreach (var choice in ((StringChoiceRequest)request).Choices)
-                message += $"\n- {choice}";
+                promptReq.System += $"\n- {choice}";
 
-            var response = await ollama.StructuredPrompt<StringChoiceResponse>(request.Prompt, message, request.Model);
+            var response = await _ollama.CommandPrompt<StringChoiceResponse>(promptReq, _settings.CommandValidations, _settings.ValidationType, validatorFor<StringChoiceResponse>());
 
             return response.Selected;
         }

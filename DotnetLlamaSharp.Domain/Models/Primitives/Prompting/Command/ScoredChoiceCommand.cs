@@ -7,22 +7,23 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
-    public class ScoredChoiceCommand : ChromaPromptCommand<ScoredStringChoice>
+    public class ScoredChoiceCommand : DbPromptCommand<ScoredStringChoice>
     {
-        public ScoredChoiceCommand() { }
-        public ScoredChoiceCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(repo, dbMessageName, guidanceMessage, settings) {}
+        public ScoredChoiceCommand() : base() { }
+        public ScoredChoiceCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public ScoredChoiceCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) {}
 
-        public override async Task<ScoredStringChoice> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<ScoredStringChoice> Prompt(PromptCommandRequest request)
         {
-            var message = await getPromptInstruction();
-
             validateInputRequest<StringChoiceRequest>(request);
 
-            foreach (var choice in ((StringChoiceRequest)request).Choices)
-                message += $"\n- {choice}";
+            var promptReq = await getGenerateRequest(request);
 
-            return await ollama.StructuredPrompt<ScoredStringChoice>(request.Prompt, message, request.Model);
+            foreach (var choice in ((StringChoiceRequest)request).Choices)
+                promptReq.System += $"\n- {choice}";
+
+            return await _ollama.CommandPrompt<ScoredStringChoice>(promptReq, _settings.CommandValidations, _settings.ValidationType, validatorFor<ScoredStringChoice>());
         }
 
         protected override string getDefaultInstruction()

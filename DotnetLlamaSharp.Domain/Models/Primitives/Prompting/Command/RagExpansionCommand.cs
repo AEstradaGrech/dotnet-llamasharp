@@ -8,13 +8,14 @@ using OllamaSharp.Models.Chat;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
-    public class RagExpansionCommand : ChromaPromptCommand<ChatMessage>
+    public class RagExpansionCommand : DbPromptCommand<ChatMessage>
     {
         public RagExpansionCommand() : base() { }
+        public RagExpansionCommand(IOllamaInferenceService ollama) : base(ollama) { }
 
-        public RagExpansionCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings) { }
+        public RagExpansionCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public override async Task<ChatMessage> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<ChatMessage> Prompt(PromptCommandRequest request)
         {
             validateInputRequest<RagExpansionRequest>(request);
 
@@ -28,7 +29,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             for (int i = 0; i < expanseReq.Results; i++)
             {
-                var result = await getExpansionResponse(ollama, promptReq);
+                var result = await getExpansionResponse(_ollama, promptReq);
 
                 response.Content += $"{result}\n";
 
@@ -46,7 +47,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         private async Task<string> getExpansionResponse(IOllamaInferenceService ollama, GenerateRequest request)
         {
-            var message = await ollama.SimplePrompt(request);
+            var message = await ollama.GeneratePrompt(request);
 
             return message.Content.Trim();
         }

@@ -9,14 +9,15 @@ using System.Text.Json.Schema;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
-    public class JsonOutputValidationCommand<TModel> : ChromaPromptCommand<ScoredBoolResponse>
+    public class JsonOutputValidationCommand<TModel> : DbPromptCommand<ScoredBoolResponse>
     {
-        public JsonOutputValidationCommand() {}
+        public JsonOutputValidationCommand() : base() { }
+        public JsonOutputValidationCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        public JsonOutputValidationCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
+        public JsonOutputValidationCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public JsonOutputValidationCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(repo, dbMessageName, guidanceMessage, settings) {}
-
-        public override async Task<ScoredBoolResponse> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<ScoredBoolResponse> Prompt(PromptCommandRequest request)
         {
             validateInputRequest<JsonValidationRequest<TModel>>(request);
 
@@ -29,9 +30,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                 .Replace("<<RESPONSE>>", promptRequest.RawOutput)
                 .Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TModel)).ToJsonString());
  
-            return await ollama.StructuredPrompt<ScoredBoolResponse>(cmdRequest);
+            return await _ollama.CommandPrompt<ScoredBoolResponse>(cmdRequest);
         }
-        public override Task<ScoredBoolResponse> PromptSync(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override Task<ScoredBoolResponse> PromptSync(PromptCommandRequest request)
         {
             if (request.GetType() != typeof(JsonValidationRequest<TModel>))
                 throw new InvalidOperationException($"{nameof(JsonOutputValidationCommand<TModel>)} >> INVALID REQUEST TYPE ({request.GetType().Name}) IS NOT OF TYPE {nameof(JsonValidationRequest<TModel>)}");
@@ -45,7 +46,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                 .Replace("<<RESPONSE>>", promptRequest.RawOutput)
                 .Replace("<<SCHEMA>>", JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(TModel)).ToJsonString());
 
-            return ollama.StructuredPrompt<ScoredBoolResponse>(cmdRequest);
+            return _ollama.CommandPrompt<ScoredBoolResponse>(cmdRequest);
         }
 
         protected override string getDefaultInstruction() => @"

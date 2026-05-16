@@ -7,17 +7,17 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
-    public class BoolPromptCommand : ChromaPromptCommand<bool>
+    public class BoolPromptCommand : DbPromptCommand<bool>
     {
-        public BoolPromptCommand() :base() { }
-        //Todo esto se pasa desde la factory, que si tiene DI
-        public BoolPromptCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings)
-        {
-        }
+        public BoolPromptCommand() : base() { }
+        public BoolPromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
+        // Values from factory injected services
+        public BoolPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public override async Task<bool> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<bool> Prompt(PromptCommandRequest request)
         {
-            var response = await ollama.StructuredPrompt<BooleanResponse>(request.Prompt, await getPromptInstruction(), request.Model);
+            var response = await _ollama.CommandPrompt<BooleanResponse>(await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType, validatorFor<BooleanResponse>());
 
             return response.Answer;
         }

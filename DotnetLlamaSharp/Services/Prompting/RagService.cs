@@ -161,6 +161,20 @@ namespace DotnetLlamaSharp.Services.Prompting
             ///      .ChromaDump()
             ///      
             /// TODO ESTO ES V1 --> CHAINABLE COMMANDS (no CHAIN STEPS)
+            /// 
+            /// Una cosa es una commando y otra un step.
+            /// El SDK permite:
+            ///     Encadenar COMMANDS (con fluent api)
+            ///     Secuenciar STEPS (sin fluent api. Un Step es una Dictionary<string, Command> que ejectua la cadena de CMDS secuencialmente y le pasa el output a otro Dict / STEP
+            ///     Para que? -> Para poder hacer requests tipo Steps[
+            ///     {
+            ///        model &|| provider <- run step 1 w/Claude, step2 w/ollama etc
+            ///        cmdNames[]
+            ///     },
+            ///     {
+            ///         cmdNames
+            ///     }
+            ///     ]
             var baseIntruction = string.IsNullOrEmpty(request.SystemMessage) ? "" : request.SystemMessage.Trim();
 
             var systemChunk = await _chromaService.GetSysMessage("system-messages", "rag-query");

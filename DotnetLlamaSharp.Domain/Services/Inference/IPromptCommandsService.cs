@@ -16,6 +16,10 @@ namespace DotnetLlamaSharp.Domain.Services.Inference
         Task<ScoredBoolResponse> ScoredBool(string prompt, string? instrucion = null, CommandSettings settings = null);
         Task<ScoredStringChoice> ScoredChoice(List<string> choices, string prompt, string? instrucion = null, CommandSettings settings = null);
         Task<TResult> GuidedPromptCommand<TCommand, TRequest, TResult>(TRequest request, string? instruction = null, CommandSettings settings = null) where TCommand : BasePromptCommand<TResult>, new() where TRequest : PromptCommandRequest;
-        Task<TResult> DbPromptCommand<TCommand, TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null) where TCommand : ChromaPromptCommand<TResult>, new() where TRequest : PromptCommandRequest;
+        Task<TResult> GuidedPromptCommand<TRequest, TResult>(TRequest request, string? instruction = null, CommandSettings settings = null) where TRequest : PromptCommandRequest where TResult : class;
+        Task<TResult> DbPromptCommand<TCommand, TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null) where TCommand : DbPromptCommand<TResult>, new() where TRequest : PromptCommandRequest;
+        Task<TResult> DbPromptCommand<TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null) where TRequest : PromptCommandRequest where TResult : class;
+
+        TCommand GetCommand<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new();
     }
 }

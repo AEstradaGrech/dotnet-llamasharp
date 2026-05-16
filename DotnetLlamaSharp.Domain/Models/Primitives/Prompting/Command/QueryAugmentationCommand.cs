@@ -2,19 +2,20 @@
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using Microsoft.SemanticKernel.Data;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
-    public class QueryAugmentationCommand : ChromaPromptCommand<ChatMessage>
+    public class QueryAugmentationCommand : DbPromptCommand<ChatMessage>
     {
         public QueryAugmentationCommand() : base() { }
+        public QueryAugmentationCommand(IOllamaInferenceService ollama) : base(ollama) { }
 
-        public QueryAugmentationCommand(IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(repo, dbMessageName, guidanceMessage, settings) { }
+        public QueryAugmentationCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
 
-        public override async Task<ChatMessage> Prompt(IOllamaInferenceService ollama, PromptCommandRequest request)
+        public override async Task<ChatMessage> Prompt(PromptCommandRequest request)
         {
             validateInputRequest<RagExpansionRequest>(request);
 
@@ -28,7 +29,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             for (int i = 0; i < expanseReq.Results; i++)
             {
-                var result = await getAugmentedQuery(ollama, promptReq);
+                var result = await getAugmentedQuery(_ollama, promptReq);
 
                 response.Content += $"{result}\n";
 
@@ -46,7 +47,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
         private async Task<string> getAugmentedQuery(IOllamaInferenceService ollama, GenerateRequest request)
         {
-            var message = await ollama.SimplePrompt(request);
+            var message = await ollama.GeneratePrompt(request);
 
             return message.Content.Trim();
         }
