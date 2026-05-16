@@ -40,7 +40,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
             {
                 Model = string.IsNullOrEmpty(request.Model) ? "qwen2.5:7b" : request.Model,
                 Prompt = request.Prompt,
-                System = withInstruction ? (!string.IsNullOrEmpty(request.GuidanceMessage) ? $"{request.GuidanceMessage}\n\n" : "") + await getPromptInstruction() : string.Empty,
+                System = withInstruction ? await getPromptInstruction(request.GuidanceMessage) : string.Empty,
                 Stream = false,
                 Options = requestSettings()
             };
@@ -59,8 +59,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
             };
 
        
-        public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction= false)
+        public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction= false, string? preInstruction = null)
         {
+            if (!string.IsNullOrEmpty(preInstruction))
+                _systemMessage = $"{preInstruction} {_systemMessage}";
+
             var promptInstruction = await getPromptInstruction(returnFullInstruction ? request.GuidanceMessage : null);
 
             var commandPrompt = await Prompt(request);
