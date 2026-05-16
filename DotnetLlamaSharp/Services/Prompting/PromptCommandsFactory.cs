@@ -51,9 +51,9 @@ namespace DotnetLlamaSharp.Services.Prompting
         public IPrompteable<ChatMessage> GetPrompteableMessage(string? systemMessage = null, PromptSettings? settings = null)
             => Activator.CreateInstance(typeof(MessagePromptCommand), _ollama, systemMessage, settings) as IPrompteable<ChatMessage>;
 
-        public IJsoneable GetAsJsoneable<TCommand, TResult>(string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new()
-           => GetCommand<TCommand, TResult>(guidanceMessage, settings);
-        public IJsoneable GetAsJsoneable<TCommand, TResult>(string? guidanceMessage = null, string? dbMessageName = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
-           =>  GetCommand<TCommand, TResult>(dbMessageName, guidanceMessage, settings);
+        public IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new()
+           => GetCommand<TCommand, TResult>(instruction, settings);
+        public IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, string? dbMessageName = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
+           =>  GetCommand<TCommand, TResult>(dbMessageName, instruction, settings);
     }
 }

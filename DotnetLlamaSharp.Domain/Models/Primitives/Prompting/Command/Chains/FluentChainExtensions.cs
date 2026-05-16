@@ -7,17 +7,17 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public static class FluentChainExtensions
     {
-        public static IChaineable StartWith(IJsoneable command, PromptCommandRequest request, bool isPreloaded = true)
-            => Activator.CreateInstance(typeof(ChainStep), command, request, isPreloaded) as IChaineable;
+        public static IChaineable StartWith(IJsoneable command, PromptCommandRequest request, bool isPreloaded = true, string? feedFwdInstruction = null)
+            => Activator.CreateInstance(typeof(ChainStep), command, request, isPreloaded, feedFwdInstruction) as IChaineable;
         
-        public static IChaineable Then(this IChaineable step, IJsoneable command, PromptCommandRequest request)
+        public static IChaineable Then(this IChaineable step, IJsoneable command, PromptCommandRequest request, string? feedFwdInstruction = null)
         {
             var nextStep = step.ExpandTo(command, request);
 
             if(!nextStep.IsPreloaded)
                 return step.Forge(nextStep).Result;
             
-            else step.Link(nextStep, isForward: true, isTwoWay: true);
+            else step.Link(nextStep, isForward: true, isTwoWay: true); // feedForwardData?
 
             return nextStep;
         }
@@ -31,7 +31,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             return step;
         }
-        public static IChaineable Then<TCommand, TResult>(this IChaineable step, string? instruction, PromptCommandRequest request) 
+        public static IChaineable Then<TCommand, TResult>(this IChaineable step, string? instruction, PromptCommandRequest request, string? feedFwdInstruction = null) 
             where TCommand : BasePromptCommand<TResult>, new() 
             where TResult : class
         {

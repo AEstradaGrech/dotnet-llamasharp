@@ -13,9 +13,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         private IChaineable _next; // Si el sistema funciona Then = execute & store esto no tiene sentido. Si funciona tipo Load & Run si, pero entonces necesito _prev para reconstruir la cadena
         private IChaineable _prev;
         private bool _isPreloaded; // RunThen | LoadNext AKA Chain
-                                   // 
+        private string? _promptedInstruction = null; // The prompted instruction for this step. Serves as a log and also to generate the feedForwardInstruction (provide context about prev step). Null if !Executed
+        private string? _feedForwardInstruction = null;    // 
         private PromptCommandRequest _request;
         public bool IsPreloaded => _isPreloaded;
+        public string? PromptedInstruction => _promptedInstruction;
         public bool IsChained(bool checkNextOnly = true) 
             => checkNextOnly ? _next != null : _next != null || _prev != null;
 
@@ -30,11 +32,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         //          > Serializar y guardar
         //          > Combinar (_pdfService.GetChunkingChain().Merge(_ragService.GetIngestionChain()).Merge(_svcX.SomeChain()) <- remove last step (if 'ThenFinish), pdfChain.LastStep.Then(ragChain.First())
 
-        public ChainStep(IJsoneable command, PromptCommandRequest request, bool isPreloaded)
+        public ChainStep(IJsoneable command, PromptCommandRequest request, bool isPreloaded, string? feedFwdInstruction = null)
         {
             _command = command;
             _isPreloaded = isPreloaded;
             _request = request;
+            _feedForwardInstruction = feedFwdInstruction;
         }
 
         private ChainLink _output;
@@ -78,7 +81,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 
                 if(withUserFriendlyMessage)
                 {
-
+                    
                 }
                 // OPCION B: FINAL MESSAGE ES UN MODELO DE LAME_CHAIN_SDK. Contiene  un ChatMessage porque es el modelo mas general de la api, PERO tambien lleva la info JSON del ultimo output para que el hipotético usuario haga lo 
                 //          que quiera (deserializar el json a un tipo que el espera o usar el ChatMessage si está pasando texto a otra LLM o si le vale recibir ya el resultado final en formato texto-instrucción o texto-chat porque
@@ -100,22 +103,39 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             if(!IsFirstStep())
             {
-                //processPrev
-                _request.GuidanceMessage = "YOQUESE";   
+                // The guidance message is appended to the command final system message in this way: _systemMessage (optional. guidance. on constructor) + dbMessage (optional. main msg. on construction) | defaultInstruction(optional. main msg. hardcoded) + _request.Guidance
+                _request.GuidanceMessage = @$"# CONTEXT: A previous process on your current task has reported the next results for this user query and instruction, 
+use this information if you find it relevant for your current task.
+
+- PREVIOUS PROMPT: {_request.Prompt}
+- PREVIOUS TASK: {previous.PromptedInstruction}
+
+- PREVIOUS OUTPUT:
+
+{previous.OutputLink.SerializedResult}
+
+- PREVIOUS OUTPUT SCHEMA:
+
+{previous.OutputLink.SchemaForMessage()}
+";   
+                if(!string.IsNullOrEmpty(previous.OutputLink.GuidanceMessage))
+                    _request.GuidanceMessage += $"\n> This is what you are expected to do with the previous output data: {previous.OutputLink.GuidanceMessage}";
             }
 
-            var jsonResult = await _command.JsonPrompt(_request);
+            var jsonResult = await _command.JsonPrompt(_request, returnFullInstruction: false); //Skip GuidanceMessage, return only instruction for this step
 
-            _output = new ChainLink(jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type));
+            _promptedInstruction = jsonResult.Instruction;
 
-            return await _next.Forge(this);
+            _output = new ChainLink(jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), feedForwardMessage: _feedForwardInstruction);
+
+            return _next != null ? await _next.Forge(this) : this;
         }
 
-        public IChaineable ExpandTo(IJsoneable command, PromptCommandRequest request)
-            => Activator.CreateInstance(this.GetType(), command, request, _isPreloaded) as IChaineable;
+        public IChaineable ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null)
+            => Activator.CreateInstance(this.GetType(), command, request, _isPreloaded, feedForwardInstruction) as IChaineable;
 
-        public IChaineable ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request) where TCommand : BasePromptCommand<TResult>, new()
-            => ExpandTo(Activator.CreateInstance(typeof(TCommand), instruction, request.Settings) as IJsoneable, request);
+        public IChaineable ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new()
+            => ExpandTo(Activator.CreateInstance(typeof(TCommand), instruction, request.Settings) as IJsoneable, request, feedForwardInstruction);
         
     }
 }

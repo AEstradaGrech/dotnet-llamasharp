@@ -57,11 +57,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
             };
 
        
-        public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request)
+        public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction= false)
         {
+            var promptInstruction = await getPromptInstruction(returnFullInstruction ? request.GuidanceMessage : null);
+
             var commandPrompt = await Prompt(request);
 
-            return new JsonPromptResult(commandPrompt, commandPrompt.GetType(), JsonSerializer.Serialize(commandPrompt), JsonSerializerOptions.Default.GetJsonSchemaAsNode(commandPrompt.GetType()));
+            return new JsonPromptResult(promptInstruction, commandPrompt, commandPrompt.GetType(), JsonSerializer.Serialize(commandPrompt), JsonSerializerOptions.Default.GetJsonSchemaAsNode(commandPrompt.GetType()));
         }
 
         // Validators with defaultInstruction & no guidanceMessage

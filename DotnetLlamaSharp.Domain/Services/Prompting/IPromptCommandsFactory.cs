@@ -21,7 +21,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         IPrompteable<TResult> GetAsPrompteable<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null);
         IPrompteable<ChatMessage> GetPrompteableMessage(string? systemMessage = null, PromptSettings? settings = null);
 
-        IJsoneable GetAsJsoneable<TCommand, TResult>(string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new();
-        IJsoneable GetAsJsoneable<TCommand, TResult>(string? guidanceMessage = null, string? dbMessageName = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new();
+        IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new();
+        IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, string? dbMessageName = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new();
     }
 }

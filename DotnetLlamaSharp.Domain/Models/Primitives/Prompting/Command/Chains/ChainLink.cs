@@ -8,11 +8,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     // B: pasar nodo y nameof(Type) //  Type type = ass.GetType(typename); ass = LameChain.SDK.Models (los tipos derivados de usuarios cascarian [loadFrom: result.GetType().AssemblyQualifiedName, typeName = result.GetType.Name]
     public class ChainLink // JsonStructureOutput
     {
-        public ChainLink(string jsonResult, JsonNode result, string? guidanceMessage = null)
+        public ChainLink(string jsonResult, JsonNode result, string? feedForwardMessage = null)
         {
             SerializedResult = jsonResult;
             JsonSchema = result;
-            GuidanceMessage = guidanceMessage;
+            GuidanceMessage = feedForwardMessage;
             
         }
         public string SerializedResult { get; set; } // THE RESULT TAL CUAL

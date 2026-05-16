@@ -87,13 +87,14 @@ namespace DotnetLlamaSharp.Services.Prompting
             //          isPreloaded: true);
             var inputCommandReq = new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt };
 
-            var initialStep = new ChainStep(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true);
+            IChaineable initialStep = new ChainStep(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true);
             
             var currentStep = initialStep;
+            var instructions = request.Instructions.Skip(1).ToList();
             //request.Instructions.ForEach(instruction => currentStep.Then<MessagePromptCommand, ChatMessage>(request)); //TODO: comprobar esta FluentAPI tambien
-            request.Instructions.ForEach(instruction => currentStep.Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: instruction, settings: request.Settings), inputCommandReq));
+            instructions.ForEach(instruction => currentStep = currentStep.Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: instruction, settings: request.Settings), inputCommandReq));
             
-            var chainResult = initialStep.ExecuteChain();
+            var chainResult = await initialStep.ExecuteChain();
 
             //TODO: ChainService con getJsoneable<TComm, TResult> y asi es menos verboso. _chainService lleva _promptsFactory
             /*
@@ -107,21 +108,21 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             */
 
-            var chain = FluentChainExtensions
-                .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: "Explain the previous output in less than 200 words", settings: request.Settings), inputCommandReq)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words", settings: request.Settings), inputCommandReq)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: "Analyze the content of the previous output and rewrite it as if you were Master Miyagi, from the Karate Kid movie", settings: request.Settings), inputCommandReq);
+            //var chain = FluentChainExtensions
+            //    .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true, feedFwdInstruction: "Enhance the extracted topic, but don't avoid repetition.")
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction:"Use the provided topic information and explain it to the user according to your role / character")
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Master Miyagi, from the Karate Kid movie.", settings: request.Settings), inputCommandReq);
 
-            var fluentChain = await chain.ExecuteChain(withUserFriendlyMessage: true);
+            //var fluentChain = await chain.ExecuteChain(withUserFriendlyMessage: true);
 
             
-            var finalStep = FluentChainExtensions
-                .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: "Explain the previous output in less than 200 words", settings: request.Settings), inputCommandReq)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words", settings: request.Settings), inputCommandReq)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the frontman of the band WASP", settings: request.Settings), inputCommandReq)
-                .ThenExecute(out fluentChain, withFinalMessage: true);
+            //var finalStep = FluentChainExtensions
+            //    .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true)
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words", settings: request.Settings), inputCommandReq)
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words", settings: request.Settings), inputCommandReq)
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the frontman of the band WASP", settings: request.Settings), inputCommandReq)
+            //    .ThenExecute(out fluentChain, withFinalMessage: true);
 
             //////////////////////////////////////////////////////////////////
             ///

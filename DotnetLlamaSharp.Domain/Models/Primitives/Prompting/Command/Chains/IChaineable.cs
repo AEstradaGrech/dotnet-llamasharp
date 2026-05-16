@@ -12,11 +12,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public void Link(IChaineable next, bool isForward, bool isTwoWay = false);
         Task<IChaineable> Forge(IChaineable previous);
         public Task<ChainResult> ExecuteChain(bool withUserFriendlyMessage = true);
-        IChaineable ExpandTo(IJsoneable command, PromptCommandRequest request);
-        IChaineable ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request) where TCommand : BasePromptCommand<TResult>, new();
+        IChaineable ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null);
+        IChaineable ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
         public IChaineable Previous { get; }
         public IChaineable Next { get; }
         public IJsoneable Command { get; }
+        public string? PromptedInstruction { get; }
         public bool IsPreloaded { get; }
         public ChainLink OutputLink { get; set; }
         
