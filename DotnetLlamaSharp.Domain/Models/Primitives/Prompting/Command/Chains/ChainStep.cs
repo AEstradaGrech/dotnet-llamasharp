@@ -23,11 +23,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public List<string> InstructionsLog => _instructionsLog;
 
         private List<string> _instructionsLog = new List<string>();
-        public bool IsChained(bool checkNextOnly = true) 
-            => checkNextOnly ? _next != null : _next != null || _prev != null;
-
+        public bool IsChained(bool? isForwardCheck = true) // Hail the Trinary Boolean
+        {
+            if(isForwardCheck == null) // CHECK BOTH
+                return _next != null || _prev != null; 
+            
+            else // CHECK FWD || CHECK BWD
+                return isForwardCheck.Value ? _next != null : _prev != null;
+        }
         public bool IsFirstStep()
-            => IsChained() && _prev == null;
+            => IsChained(isForwardCheck: null) && _prev == null;
 
         // IOutputable (esconde el tipado)
         public ChainLink OutputLink => _output;
@@ -112,8 +117,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             return new ChainResult();
         }
         private IChaineable getFirstStep(IChaineable current)
-            => IsFirstStep() ? this : getFirstStep(_prev);
+        {
+            var isFirst = current.IsFirstStep(); 
+                
+            var returned = isFirst ? current : null;
 
+            if (returned != null)
+                return returned;
+
+            return getFirstStep(current.Previous);
+        }
         public async Task<IChaineable> Forge(IChaineable previous)
         {
             if(!IsFirstStep())

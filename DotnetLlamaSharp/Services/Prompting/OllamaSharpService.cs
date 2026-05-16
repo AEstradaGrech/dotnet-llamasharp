@@ -86,16 +86,16 @@ namespace DotnetLlamaSharp.Services.Prompting
             //          _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: request.Instructions.First().Value, request.Settings) :                      [JSONEABLE BASE]
             //          _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(dbMessageName: request.Instructions.First().Value, guidanceMessage: null, request.Settings)   [JSONEABLE CHROMA]
             //          isPreloaded: true);
-            var inputCommandReq = new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt };
+            //var inputCommandReq = new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt };
 
-            IChaineable initialStep = new ChainStep(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true);
-            
-            var currentStep = initialStep;
-            var instructions = request.Instructions.Skip(1).ToList();
+            //IChaineable initialStep = new ChainStep(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true);
+
+            //var currentStep = initialStep;
+            //var instructions = request.Instructions.Skip(1).ToList();
             //request.Instructions.ForEach(instruction => currentStep.Then<MessagePromptCommand, ChatMessage>(request)); //TODO: comprobar esta FluentAPI tambien
-            instructions.ForEach(instruction => currentStep = currentStep.Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: instruction, settings: request.Settings), inputCommandReq));
-            
-            var chainResult = await initialStep.ExecuteChain();
+            //instructions.ForEach(instruction => currentStep = currentStep.Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: instruction, settings: request.Settings), inputCommandReq));
+
+            //var chainResult = await initialStep.ExecuteChain();
 
             //TODO: ChainService con getJsoneable<TComm, TResult> y asi es menos verboso. _chainService lleva _promptsFactory
             /*
@@ -109,13 +109,15 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             */
 
-            //var chain = FluentChainExtensions
-            //    .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true, feedFwdInstruction: "Enhance the extracted topic, but don't avoid repetition.")
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction:"Use the provided topic information and explain it to the user according to your role / character")
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Master Miyagi, from the Karate Kid movie.", settings: request.Settings), inputCommandReq);
+            var inputCommandReq = new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt };
 
-            //var fluentChain = await chain.ExecuteChain(withUserFriendlyMessage: true);
+            var chain = FluentChainExtensions
+                .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, isPreloaded: true, feedFwdInstruction: "Enhance the extracted topic, but don't avoid repetition.")
+                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
+                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
+                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Master Miyagi, from the Karate Kid movie.", settings: request.Settings), inputCommandReq);
+
+            var chainResult = await chain.ExecuteChain(withUserFriendlyMessage: true);
 
 
             //var finalStep = FluentChainExtensions

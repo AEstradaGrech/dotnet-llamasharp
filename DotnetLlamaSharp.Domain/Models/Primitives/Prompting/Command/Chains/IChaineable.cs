@@ -6,7 +6,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public interface IChaineable
     {
-        bool IsChained(bool checkNextOnly = true);
+        bool IsChained(bool? checkNextOnly = true);
         bool IsFirstStep();
         
         public void Link(IChaineable next, bool isForward, bool isTwoWay = false);
