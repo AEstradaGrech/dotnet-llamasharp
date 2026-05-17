@@ -91,8 +91,8 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             //var currentStep = initialStep;
             //var instructions = request.Instructions.Skip(1).ToList();
-            //request.Instructions.ForEach(instruction => currentStep.Then<MessagePromptCommand, ChatMessage>(request)); //TODO: comprobar esta FluentAPI tambien
-            //instructions.ForEach(instruction => currentStep = currentStep.Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: instruction, settings: request.Settings), inputCommandReq));
+            //request.Instructions.ForEach(instruction => currentStep.WireTo<MessagePromptCommand, ChatMessage>(request)); //TODO: comprobar esta FluentAPI tambien
+            //instructions.ForEach(instruction => currentStep = currentStep.WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: instruction, settings: request.Settings), inputCommandReq));
 
             //var chainResult = await initialStep.ExecuteChain();
 
@@ -101,10 +101,10 @@ namespace DotnetLlamaSharp.Services.Prompting
              *  var chain = new ChainResult();
                 var finalStep = FluentChainExtensions
                    .StartWith(chainStepFor<MessagePromptCommand, ChatMessage>(guidanceMessage: request.Instructions.First(), request.Settings))
-                   .Then(chainStepFor<MessagePromptCommand, ChatMessage>(guidanceMessage: "Do this", settings: request.Settings), request)
-                   .Then(chainStepFor<MessagePromptCommand, ChatMessage>(guidanceMessage: "Do that", settings: request.Settings), request)
-                   .Then(chainStepFor<MessagePromptCommand, ChatMessage>(guidanceMessage: "And also this", settings: request.Settings), request)
-                   .ThenExecute(out chain, withFinalMessage: true);
+                   .WireTo(chainStepFor<MessagePromptCommand, ChatMessage>(guidanceMessage: "Do this", settings: request.Settings), request)
+                   .WireTo(chainStepFor<MessagePromptCommand, ChatMessage>(guidanceMessage: "Do that", settings: request.Settings), request)
+                   .WireTo(chainStepFor<MessagePromptCommand, ChatMessage>(guidanceMessage: "And also this", settings: request.Settings), request)
+                   .WireToExecute(out chain, withFinalMessage: true);
 
             */
 
@@ -112,22 +112,26 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             //var chain = FluentChainExtensions
             //    .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, feedFwdInstruction: "Enhance the extracted topic, but avoid repetition.")
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Master Miyagi, from the Karate Kid movie.", settings: request.Settings), inputCommandReq);
+            //    .WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
+            //    .WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
+            //    .WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Master Miyagi, from the Karate Kid movie.", settings: request.Settings), inputCommandReq);
 
             //var chainResult = await chain.ExecuteChain(withUserFriendlyMessage: true);
 
 
             //var finalStep = FluentChainExtensions
             //    .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq)
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
-            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the singer and frontman of the band WASP.", settings: request.Settings), inputCommandReq)
+            //    .WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
+            //    .WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
+            //    .WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the singer and frontman of the band WASP.", settings: request.Settings), inputCommandReq)
             //    .ThenExecute(out var chainResult, withFinalMessage: true);
 
             var chainResult = await FluentChainExtensions
-                .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq)
+                .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, null)
+                .Tap([new StepInstruction(), new StepInstruction()], inputCommandReq)
+                .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), pipeFeedFwd: string.Empty)
+                .Join(new StepInstruction(), inputCommandReq)
+                .Feed(new StepInstruction(), [new StepInstruction(), new StepInstruction(), new StepInstruction()], inputCommandReq)
                 .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
                 .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
                 .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the singer and frontman of the band WASP.", settings: request.Settings), inputCommandReq)
@@ -135,17 +139,17 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             //////////////////////////////////////////////////////////////////
             ///
-            //initialStep.Then<NumericResponse>(request, _promptsFactory.GetAsPrompteable<NumericPromptCommand, NumericResponse>("", null, request.Settings))
+            //initialStep.WireTo<NumericResponse>(request, _promptsFactory.GetAsPrompteable<NumericPromptCommand, NumericResponse>("", null, request.Settings))
             /*
              command<CreateCharacterCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
-                .Then<JsonValidationCommand, ScoredBoolResponse>(request, new PromptCommandReq&Sons)
-                .Then<JsonReviewCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
+                .WireTo<JsonValidationCommand, ScoredBoolResponse>(request, new PromptCommandReq&Sons)
+                .WireTo<JsonReviewCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
 
             ----------------------------------------------
 
              StartWith(request, new PromptCommandReq&Sons) [RETURN STEP]
-                .Then<JsonValidationCommand, ScoredBoolResponse>(request, new PromptCommandReq&Sons)
-                .Then<JsonReviewCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
+                .WireTo<JsonValidationCommand, ScoredBoolResponse>(request, new PromptCommandReq&Sons)
+                .WireTo<JsonReviewCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
 
             step.From<UserIntentCommand, ChatMessage>()
                 .Branch<ScoredBoolCommand, ScoredBoolResponse>("# USER INTENT:")
@@ -154,7 +158,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
              step.From<UserIntentCommand, ChatMessage>()
                 .Branch(request, validOption: IPrompteable<T1>, fallbackOption: IPrompteable<T2>, ScoredBoolCommand evaluator)
-                .Then<QueryAugmentCommand, ChatMessage>(request) <-- esto es siempre validOption (if evaluator.True) si no fallbackOption tiene que terminar la cadena (throw new ChainFallbackException ? y todo se ejecuta siempre dentro de un try-catch (o todo va bien, o la pillo y hago X
+                .WireTo<QueryAugmentCommand, ChatMessage>(request) <-- esto es siempre validOption (if evaluator.True) si no fallbackOption tiene que terminar la cadena (throw new ChainFallbackException ? y todo se ejecuta siempre dentro de un try-catch (o todo va bien, o la pillo y hago X
                 
              */
 
@@ -164,6 +168,8 @@ namespace DotnetLlamaSharp.Services.Prompting
                 Output = chainResult.Json, 
                 ChatHistory = [chainResult.SystemInstructions, new ChatMessage(ChatRole.User.ToString(), request.Prompt), chainResult.Message] };
         }
+
+        
 
         //public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)
         //{

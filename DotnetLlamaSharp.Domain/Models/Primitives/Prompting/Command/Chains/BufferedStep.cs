@@ -6,9 +6,20 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public class BufferedStep : ChainStep
     {
-        public BufferedStep(IJsoneable command, PromptCommandRequest request) : base(command, request) {}
+        public BufferedStep() : base() { }
+        public BufferedStep(IJsoneable command, PromptCommandRequest request) : base(request) {}
 
         public List<IJsoneable> LoadedCommands { get; set; }
+
+        public override bool CanBeForged(IChaineable previous)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task<IChaineable> Forge(IChaineable previous)
+        {
+            throw new NotImplementedException();
+        }
 
         public void Load(IJsoneable command)
         {
@@ -29,7 +40,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             var cmdReq = new PromptCommandRequest { Prompt = request.Prompt, Model = request.Settings.Model };
 
-            IChaineable firstStep = new ChainStep(firstCommand, new PromptCommandRequest()); 
+            var firstStep = new SingleThrowStep(firstCommand, new PromptCommandRequest()); 
 
             var currentStep = firstStep;
 

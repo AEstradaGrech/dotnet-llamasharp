@@ -1,6 +1,7 @@
 ﻿
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using System.Windows.Input;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
@@ -8,20 +9,25 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     {
         bool IsChained(bool? checkNextOnly = true);
         bool IsFirstStep();
-        
+        public bool CanBeForged(IChaineable previous);
+        bool IsMultiSocket { get; }
+        public bool IsForged { get; }
         public void Link(IChaineable next, bool isForward, bool isTwoWay = false);
         Task<IChaineable> Forge(IChaineable previous);
-        public Task<ChainResult> ExecuteChainAsync(bool withUserFriendlyMessage = true);
-        IChaineable ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null);
-        IChaineable ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
+        
+        TStep ExpandTo<TStep>(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null) where TStep : ChainStep;
+        SingleThrowStep ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null);
+        SplitterStep ExpandTo(List<StepInstruction> commands, PromptCommandRequest request);
+        TStep ExpandTo<TStep, TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new() where TStep : ChainStep;
+        SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
         TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class;
         public IChaineable Previous { get; }
         public IChaineable Next { get; }
-        public IJsoneable Command { get; }
+        public List<IJsoneable> Commands { get; }
         public List<string> InstructionsLog { get; }
         public string? PromptedInstruction { get; }
         public string Input { get; }
-        public ChainLink OutputLink { get; }
+        public List<ChainLink> Outputs { get; }
         
         /*
             Extensions:
