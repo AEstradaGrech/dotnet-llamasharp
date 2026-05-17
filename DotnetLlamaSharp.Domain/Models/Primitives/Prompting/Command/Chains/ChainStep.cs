@@ -1,12 +1,14 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public abstract class ChainStep : IChaineable
     {
-        
+
+        protected readonly Guid _id;
         protected IChaineable _next;
         protected IChaineable _prev;
         protected string preInstructionTag = "# INSTRUCTION: ";
@@ -16,11 +18,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         protected List<string> _instructionsLog = new List<string>();
         protected List<IJsoneable> _commands = new List<IJsoneable>();
         protected List<ChainLink> _outputs = new List<ChainLink>();
+
+        public Guid Id => _id;
         public IChaineable Next => _next;
         public IChaineable Previous => _prev;
         public List<IJsoneable> Commands => _commands;
         public List<ChainLink> Outputs => _outputs;
         public string Input => _request.Prompt;
+        public string? FeedForwardInstruction => _feedForwardInstruction;
         public string? PromptedInstruction => _promptedInstruction;
         public List<string> InstructionsLog => _instructionsLog;
         public bool IsMultiSocket => this.GetType() == typeof(SplitterStep) || this.GetType() == typeof(PipedStep);
@@ -35,10 +40,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         //Checks that _cmds.Count > 0 & the input type of step to ensure that the pieces match (single from single, collector from multi or pipe, multi from single, pipe from multi or pipe
         public abstract bool CanBeForged(IChaineable previous);
+        //protected abstract Task forgeLink(IChaineable previous); // this makes the request and add the resulting link to the outputs list (allows multi-socket)
+        public ChainStep() { _id = Guid.NewGuid(); }
 
-        public ChainStep() { }
-
-        public ChainStep(PromptCommandRequest request) { _request = request; }
+        public ChainStep(PromptCommandRequest request, string? feedForwardMessage = null) : this() 
+        { 
+            _request = request; 
+            _feedForwardInstruction = feedForwardMessage;
+        }
         public void Link(IChaineable step, bool isForward, bool isTwoWay)
         {
             if (isForward)
@@ -55,14 +64,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public abstract Task<IChaineable> Forge(IChaineable previous);
         
         public SingleThrowStep ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null)
-            => Activator.CreateInstance(this.GetType(), command, request, feedForwardInstruction) as SingleThrowStep;
-        public SplitterStep ExpandTo(List<StepInstruction> instructions, PromptCommandRequest request)
-           => Activator.CreateInstance(this.GetType(), instructions, request) as SplitterStep;
+            => Activator.CreateInstance(typeof(SingleThrowStep), command, request, feedForwardInstruction) as SingleThrowStep;
+        public SplitterStep ExpandTo(List<StepInstruction> instructions, PromptCommandRequest request, string? splitterFeedFwd = null)
+           => Activator.CreateInstance(typeof(SplitterStep), instructions, request, splitterFeedFwd) as SplitterStep;
         public SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new()
             => ExpandTo(Activator.CreateInstance(typeof(TCommand), Commands.First().BorrowLlama, instruction, request.Settings) as IJsoneable, request, feedForwardInstruction);
 
         public TStep ExpandTo<TStep>(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null) where TStep : ChainStep
-            => Activator.CreateInstance(this.GetType(), command, request, feedForwardInstruction) as TStep;
+            => Activator.CreateInstance(typeof(TStep), command, request, feedForwardInstruction) as TStep;
 
         public TStep ExpandTo<TStep, TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null)
             where TCommand : BasePromptCommand<TResult>, new()
@@ -78,5 +87,17 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         protected IChaineable getFirstStep(IChaineable current)
             => current.IsFirstStep() ? current : getFirstStep(current.Previous);
 
+        public IChaineable GetFirstStep() => _prev != null ? getFirstStep(_prev) : this;
+        public Dictionary<Guid, List<ChainLink>> GrouppedOutputs()
+        {
+            var result = new Dictionary<Guid, List<ChainLink>>();
+
+            _outputs.GroupBy(link => link.StepId)
+                    .Select(group => new { group.Key, Value = group.ToList() })
+                    .ToList()
+                    .ForEach(group => result.Add(group.Key, group.Value));
+
+            return result;
+        }
     }
 }

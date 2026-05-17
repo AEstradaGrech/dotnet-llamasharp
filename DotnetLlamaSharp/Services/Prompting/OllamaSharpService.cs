@@ -126,16 +126,25 @@ namespace DotnetLlamaSharp.Services.Prompting
             //    .WireTo(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the singer and frontman of the band WASP.", settings: request.Settings), inputCommandReq)
             //    .ThenExecute(out var chainResult, withFinalMessage: true);
 
+            //var chainResult = await FluentChainExtensions
+            //    .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, null)
+            //    .Tap([new StepInstruction(), new StepInstruction()], inputCommandReq)
+            //    .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), pipeFeedFwd: string.Empty)
+            //    .Join(new StepInstruction(), inputCommandReq)
+            //    .Feed(new StepInstruction(), [new StepInstruction(), new StepInstruction(), new StepInstruction()], inputCommandReq)
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
+            //    .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the singer and frontman of the band WASP.", settings: request.Settings), inputCommandReq)
+            //    .ThenExecuteAsync(withFinalMessage: true);
+
+
             var chainResult = await FluentChainExtensions
-                .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, null)
-                .Tap([new StepInstruction(), new StepInstruction()], inputCommandReq)
-                .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), pipeFeedFwd: string.Empty)
-                .Join(new StepInstruction(), inputCommandReq)
-                .Feed(new StepInstruction(), [new StepInstruction(), new StepInstruction(), new StepInstruction()], inputCommandReq)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Explain the previous output in less than 200 words.", settings: request.Settings), inputCommandReq)
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Develop the topic of the previous output to provide an enhanced version of around 400-500 words.", settings: request.Settings), inputCommandReq, feedFwdInstruction: "Use the provided topic information and explain it to the user according to your role / character")
-                .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Analyze the content of the previous output and rewrite it as if you were Blackie Lawless, the singer and frontman of the band WASP.", settings: request.Settings), inputCommandReq)
-                .ThenExecuteAsync(withFinalMessage: true);
+               .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, "Use the name and age to develop your character part")
+               .Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
+                     new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
+                     inputCommandReq)
+               .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings), feedFwd: ""), inputCommandReq)
+               .ThenExecuteAsync(withFinalMessage: true);
 
             //////////////////////////////////////////////////////////////////
             ///

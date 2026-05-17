@@ -22,7 +22,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                     - Feed<TJoiner>(piped, [cmds]) = OnForge executes every cmd with the prevOutput, executes the piped cmd on every splitter cmd and joins the result with the TJoiner generating 1 SINGLE output with it. Is a 1 step Split & Pipe & Join
                     - And<TJunction>(a, b) OnForge executes a and B and GENERATES 1 OPT LINK USING the TJunction & the opt from A & B as input. It is a Split & Join step. It is Plug<TJoiner>([]) for 2 conditions (synthactic sugar)
                     - Loop(times: N, cmd) do N times the input command with the prev output
-                    
+                    - Branch(A, B, decisorCmd) --> on runtime evaluates decision and forges(A) or (B) SWAPPING the step AND CONTINUEING
+                   
              */
 
             var nextStep = step.ExpandTo(command, request);
@@ -105,7 +106,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         //                  b Split + Then = 1 jsonPrompt x PrevLink <- util para ej: start with SelName.Split(SelGameStuff, SelProfile).Then(refine).Join(SumarizationCommand or X From 2 sources).Then(x)
         public static SingleThrowStep Join( this SplitterStep step, StepInstruction instruction, PromptCommandRequest request)
         {
-            var next = step.ExpandTo(instruction.Command, request, instruction.FeedFwdInstruction);
+            var next = step.ExpandTo<JunctionStep>(instruction.Command, request, instruction.FeedFwdInstruction);
             step.Link(next, isForward: true, isTwoWay: true);
             return next;
         }

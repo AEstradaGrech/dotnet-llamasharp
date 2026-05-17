@@ -7,6 +7,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public interface IChaineable
     {
+        Guid Id { get; }
         bool IsChained(bool? checkNextOnly = true);
         bool IsFirstStep();
         public bool CanBeForged(IChaineable previous);
@@ -17,7 +18,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         
         TStep ExpandTo<TStep>(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null) where TStep : ChainStep;
         SingleThrowStep ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null);
-        SplitterStep ExpandTo(List<StepInstruction> commands, PromptCommandRequest request);
+        SplitterStep ExpandTo(List<StepInstruction> commands, PromptCommandRequest request, string? splitterFeedFwd = null);
         TStep ExpandTo<TStep, TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new() where TStep : ChainStep;
         SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
         TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class;
@@ -26,9 +27,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public List<IJsoneable> Commands { get; }
         public List<string> InstructionsLog { get; }
         public string? PromptedInstruction { get; }
+        public string? FeedForwardInstruction { get; }
         public string Input { get; }
         public List<ChainLink> Outputs { get; }
-        
+        public Dictionary<Guid, List<ChainLink>> GrouppedOutputs();
+        public IChaineable GetFirstStep(); // returns the first step connected to caller step
         /*
             Extensions:
 
