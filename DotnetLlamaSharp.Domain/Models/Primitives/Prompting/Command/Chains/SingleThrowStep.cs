@@ -11,11 +11,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public class SingleThrowStep : ChainStep
     {
-        public ChainLink OutputLink => _outputs.FirstOrDefault();
-        public IJsoneable Command => _commands.FirstOrDefault();
-
         public SingleThrowStep() : base() { }
 
+        public SingleThrowStep(StepInstruction instruction, PromptCommandRequest request) : base(request, instruction.FeedFwdInstruction)
+        {
+            _commands.Add(instruction.Command);
+            _request = request;
+        }
         public SingleThrowStep(IJsoneable command, PromptCommandRequest request, string? feedFwdInstruction = null) : base(request, feedFwdInstruction)
         {
             _commands.Add(command);
@@ -50,48 +52,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public override async Task<IChaineable> Forge(IChaineable previous)
         {
-            if (!CanBeForged(previous))
-                throw new InvalidOperationException($"{nameof(SingleThrowStep)} >> {nameof(Forge)} >> An error has occured whil forging the chain link. No Commands found for the current step");
-            // --------------------- protected abstract Task ForgeLink(previous) --> SingleThrow = esto hasta _output=, Splitter -> foreach Branch Task.Create -> ForgeLink(prev) + add output
-            if (!IsFirstStep() && previous.IsForged)
-            {
-                // The guidance message is appended to the command final system message in this way: _systemMessage (optional. guidance. on constructor) + dbMessage (optional. main msg. on construction) | defaultInstruction(optional. main msg. hardcoded) + _request.Guidance
-                _request.GuidanceMessage = guidanceMessageFrom(_request.Prompt, previous.PromptedInstruction, previous.Outputs.First().SerializedResult, previous.Outputs.First().SchemaForMessage(), previous.Outputs.First().GuidanceMessage); 
-
-                _instructionsLog.AddRange(previous.InstructionsLog);
-            }
-
-            await forgeLink();
+            await forgeLinkForPlug(previous);
           
             return _next != null ? await _next.Forge(this) : this;
         }
-
-        protected async Task forgeLink()
-        {
-            var jsonResult = await Command.JsonPrompt(_request, returnFullInstruction: false, preInstruction: preInstructionTag); //Skip GuidanceMessage, return only instruction for this step
-
-            _promptedInstruction = jsonResult.Instruction;
-
-            _instructionsLog.Add(_promptedInstruction);
-
-            _outputs.Add(new ChainLink(_id, jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), jsonResult.Type, feedForwardMessage: _feedForwardInstruction));
-        }
-        protected string guidanceMessageFrom(string prompt, string instruction, string serialized, string jsonSchema, string? outputGuidance = null)
-         => @$"
-# CONTEXT: A previous process on your current task has reported the next results for this user query and instruction, 
-use this information if you find it relevant for your current task.
-
-- PREVIOUS PROMPT: {prompt}
-- PREVIOUS TASK: {instruction.Replace(preInstructionTag, "").Trim()}
-
-- PREVIOUS OUTPUT:
-
-{serialized}
-
-- PREVIOUS OUTPUT SCHEMA:
-
-{jsonSchema}
-
-{(string.IsNullOrEmpty(outputGuidance) ? string.Empty : $"# PREVIOUS STEP REQUEST (this is what you are expected to do with the previous output data): {outputGuidance}")}";
     }
 }

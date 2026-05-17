@@ -18,6 +18,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public override async Task<IChaineable> Forge(IChaineable previous)
         {
+            checkCanForge(previous);
+
             if (!previous.IsMultiSocket)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> PREVIOUS STEP IS NOT MULTISOCKET >> A JunctionStep can only be connected from a SplitterStep (or subclasses of)");
 
@@ -37,12 +39,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             // build a multi-socket result containing multi and single socket sub-chain results
             // Difference: a multi-socket uses the FirstStep.CommandInstruction AND .FeedForwardInstruction (if any) as general goal description for all the LAST step splitter results
             //             then each output has it's own instruction & specific-feedFwd guidance message
-            //            Otherwise it is treated as a SingleOutput command (whether it is the first one or the last one)
+            //             Otherwise it is treated as a SingleOutput command (whether it is the first one or the last one)
             foreach(var key in outputs.Keys)
             {
                 var forgedPrevious = castedPrev.GetForgedSubStep(key);
 
-                // Build a multi-socket message result
+                // Build a multi-socket message result (Join after Tap | Split)
                 if (outputs[key].Count > 1)
                 {
                     var originalStep = castedPrev.GetPluggedById(key);
@@ -61,16 +63,17 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                         _instructionsLog.AddRange(previous.InstructionsLog);
                     });
                 }
-                else // build a single output result
+                else // build a single output result (Join after SPST | Pipe
                 {
                     var output = outputs[key].FirstOrDefault();
 
-                    sb.Append(guidanceMessageFrom(_request.Prompt, forgedPrevious.PromptedInstruction, output.SerializedResult, output.SchemaForMessage(), output.GuidanceMessage).Trim());
+                    sb.AppendLine()
+                      .AppendLine(guidanceMessageFrom(_request.Prompt, forgedPrevious.PromptedInstruction, output.SerializedResult, output.SchemaForMessage(), output.GuidanceMessage).Trim());
                 }
-                
             }
-            //_request.GuidanceMessage = sb.ToString()
-            // this.ForgeLink() AKA JsonPrompt
+
+            _request.GuidanceMessage = sb.ToString().Trim();
+            
             await forgeLink(); // TODO: throw new LameChainException("AN ERROR WHILE PROMPTING REQ")
 
             return _next != null ? await _next.Forge(this) : this;

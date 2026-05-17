@@ -55,7 +55,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <returns></returns>
         public static SplitterStep Tap(this SingleThrowStep step, List<StepInstruction> instructions, PromptCommandRequest request)
         {
-            var split = step.ExpandTo(instructions, request);
+            var split = step.Plug(instructions, request);
+
+            step.Link(split, isForward: true, isTwoWay: true);
+
+            return split;
+        }
+
+        public static SplitterStep Split(this SingleThrowStep step, StepInstruction splitted, List<StepInstruction> instructions, PromptCommandRequest request)
+        {
+            var split = step.SplitTo(splitted, instructions, request);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
@@ -74,7 +83,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <returns></returns>
         public static SingleThrowStep Feed(this SingleThrowStep step, StepInstruction instruction, List<StepInstruction> instructions, PromptCommandRequest request)
         {
-            var split = step.ExpandTo(instructions, request);
+            var split = step.Plug(instructions, request);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
@@ -93,21 +102,21 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="command"></param>
         /// <param name="pipeFeedFwd"></param>
         /// <returns></returns>
-        public static PipedStep Pipe(this SplitterStep step, IJsoneable command, string? pipeFeedFwd = null)
+        public static PipedStep Pipe(this SplitterStep step, PromptCommandRequest request, IJsoneable command, string? pipeFeedFwd = null)
         {
-            var split = step.ExpandTo<PipedStep>(command, new PromptCommandRequest(), pipeFeedFwd);
+            var split = step.ExpandTo<PipedStep>(new StepInstruction(command, pipeFeedFwd), request);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
             return split;
         }
-        //                      Then                         Other hace lo mismo a no ser que Then aplique su command * cada prevLink
-        // FUNCIONAMIENTO: a Split + Then = GroupPrevSplit & 1 opt
-        //                  b Split + Then = 1 jsonPrompt x PrevLink <- util para ej: start with SelName.Split(SelGameStuff, SelProfile).Then(refine).Join(SumarizationCommand or X From 2 sources).Then(x)
+        
         public static SingleThrowStep Join( this SplitterStep step, StepInstruction instruction, PromptCommandRequest request)
         {
             var next = step.ExpandTo<JunctionStep>(instruction.Command, request, instruction.FeedFwdInstruction);
+            
             step.Link(next, isForward: true, isTwoWay: true);
+            
             return next;
         }
 

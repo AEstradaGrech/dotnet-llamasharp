@@ -143,6 +143,8 @@ namespace DotnetLlamaSharp.Services.Prompting
                .Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
                      new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
                      inputCommandReq)
+               .Pipe(inputCommandReq, _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Review the output so far, the input and the goal or expected output and modify it if necessary to ensure it is adapted to the provided game lore", request.Settings), pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+               .Pipe(inputCommandReq, _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary", request.Settings), pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
                .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings), feedFwd: ""), inputCommandReq)
                .ThenExecuteAsync(withFinalMessage: true);
 

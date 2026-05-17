@@ -3,6 +3,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
@@ -19,22 +20,34 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
     public class SplitterStep : ChainStep
     {
-        List<IChaineable> _branches = new List<IChaineable>();
-        Dictionary<IChaineable, Guid> _forgedSubSteps;
+        protected List<IChaineable> _branches = new List<IChaineable>();
+        protected Dictionary<IChaineable, Guid> _forgedSubSteps;
+
+        public SplitterStep() : base() { }
+        // Constructor for Tap (execute N commands with the PREV OUT) (foreach branch, forge(branch))
         public SplitterStep(List<StepInstruction> instructions, PromptCommandRequest request, string? feedFwdMessage) : base(request, feedFwdMessage)
         {
             _forgedSubSteps = new Dictionary<IChaineable, Guid>();
             instructions.ForEach(i => _branches.Add(ExpandTo(i.Command, request, i.FeedFwdInstruction)));
         }
 
+        //Constructor fro Split<TComm>([]) <- executes the command and SPLITS the result over the plugged subchains passing the splitFeedFwd (forge(this) then Branches)
+       
+        public SplitterStep(StepInstruction splittedCommand, List<StepInstruction> instructions, PromptCommandRequest request) : base(request, splittedCommand.FeedFwdInstruction)
+        {
+            _forgedSubSteps = new Dictionary<IChaineable, Guid>();
+            _commands.Add(splittedCommand.Command);
+            instructions.ForEach(i => _branches.Add(ExpandTo(i.Command, request, i.FeedFwdInstruction)));
+        }
+
+        // constructor for .Pipe<TComm> <- executes the command ON EACH input (foreach prevOUT forge(this))
+        public SplitterStep(StepInstruction pipedCommand, PromptCommandRequest request) : this(pipedCommand, [], request) { }
         // It is not the first step of a chain (prev != null)
         // The previous is a SPST
         // It has at leas one command to run (should assert it has at least two probably otherwise is a bad / stupid configuration)
         public override bool CanBeForged(IChaineable previous)
-            => previous != null && !previous.IsMultiSocket && _commands.Count > 0;
+            => previous != null && !previous.IsMultiSocket && _branches.Count > 0;
 
-        //public void Sink([] --> branches = array, isReversed = true (N - 1)
-        //public void Split([] -> branches = array, isReversed = false (1 - N)
         public void Plug(IChaineable branch)
         {
             _branches.Add(branch);
@@ -42,12 +55,27 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public override async Task<IChaineable> Forge(IChaineable previous) //En el momento que hago split tipado hace que solo pueda recibir SplitterStep hasta .Join()
         {
+            checkCanForge(previous);
+
             if (previous.IsMultiSocket)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> PREVIOUS STEP IS MULTISOCKET >> A SplitterStep can only be connected from a SingleThrowStep");
 
 
             if (_next == null)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> A CHAIN cannot end up in a SplitterStep and the current has no NEXT assigned >> CHAIN CANNOTE BE CLOSED");
+
+            if (!string.IsNullOrEmpty(_feedForwardInstruction))
+                _instructionsLog.Add($"- SPLITTER: {_id}");
+
+            
+            if(_commands.Count == 1)
+            {
+                //is Split and FanOut
+
+                await forgeLinkForPlug(previous, plugIdx: 0);
+                //get Outputs.First()
+                // use as previous --> previous.SwapOutput(this.Outputs.First())
+            }
 
             var chainResults = new List<IChaineable>();
 
@@ -64,56 +92,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                     }
             // ✅ This is safe - LINQ's Select() creates a new scope per item
              */
-            var results = await Task.WhenAll(_branches.Select(branch => Task.Run(() => branch.Forge(previous))));
-
-            results.ToList().ForEach(chaineable =>
-            {
-                var fistro = chaineable.GetFirstStep();
-                _forgedSubSteps.Add(chaineable, fistro.Id);
-                //var original = _branches.SingleOrDefault(b => b.Id == fistro.Id);
-                // _branches.IndexOf(original);
-                // _dictionary<int, Links> -> _dict[idx].AddRange(fistro.Outputs)
-
-                // Y ya tengo relacionados _branchStep -> resultingStep -> resultingStep N outputs
-                // Y se quedan como dictionary en Splitter a modo de backup
-                // Y se añaden a Outputs, que es la interfaz comun a todos los steps O previous.GetOutputs() devuelve Outputs.First() [SPST] Outputs.All [SPLITTER w/N x SPST] Outputs.ByPlugged() SPLITTER w/N x N]?
-                //                                                                     LO QUE TENGO ES QUE AGRUPAR POR ICHAINEABLE PARA GENERAR SECCIONES EN EL CURRENT SYS <- SECCION STEP-FWD_MSG-LINK(s) (1-1-N)
-                
-                //                                                                     ejemplo mas enrevesado: N Chainables w/ N LINKS cada uno (un Splitter con Splitters y SingleThrows)
-                
-                //                                                                      -------- se supone que el tema es montar sysmessages con PREVOUTS --------
-                //
-                //                                                                      A --- Afwd: 'create char cmd.tap(self faction, gen-profile) [TAP 2]  <-- splitter feedFwdMessage (parent. explica objetivo step gral)
-                //                                                                        > A-Ln1 faction res --> [cada uno puede tener su propio fwdMessage)<-- child feedFwdMessage. explica objectivo child step especifico)
-                //                                                                        > A-Ln2 profile res
-                //                                                                      B --- Bfwd: 'gen-char-routines' [SPST]
-                //                                                                        > B-Ln1
-                //                                                                      C --- Cfwd: 'select game traits mood and personalities [Tap 3]
-                //                                                                        > C-Ln1 : traits res
-                //                                                                        > C-Ln2 : mood res
-                //                                                                        > C-Ln3 : personalities res
-                //
-                // TODO ESTO ES PARA JOIN | PIPE, SPST NO PUEDE RECIBIR SPLITTERS:
-                // override Forge(previous)
-                //      if(previous.IsMultiSocket)
-                //          Get as 1 (JOIN) | Get for PIPE = (1 command x prev CHAINEABLE (w/N opts) <- cmd sys = pregv.GroupBy(chaineableid).Foreach().BuildSectionFromOutputs().Then() -> command.JsonPrompt
-                //                                    JOIN = 1 command with 1 section grouping all PREV OUT LINKS grouped by PREV CHAINEABLE ID (el esquema de arriba) --> produce 1 Output
-                //  previous.Outputs.GroupBy(link => link.StepId).ToList().ForEach(group => { previous.Get}
-                //cada IChaineable puede devolver N outputs. No tienen porque ser subcadenas cerradas ni terminadas en SingleThrow
-                // el chaineable ya NO es el mismo objeto que en BRANCHES (ID != ID)
-                Outputs.AddRange(chaineable.Outputs);
-                // 17-05-26: como funciona >> cada Branch ejecuta su subchain. puede acabar en splitter y devolver N results por Branch.
-                //                            cada result esta marcado con el GUID del comando que lo ejecutó asi que se guardan juntos y revueltos en base.Outputs
-                //                            cuando llega el siguiente se pillan los previous.GrouppedOutputs() = Dictionary<Guid, List<ChainLink>> [por cada branch N output]
-                //                            si necesito recuperar la branch que los ejecuto... el OUTPUT TIENE EL ID DEL ULTIMO ESLABON
-                //                            PARA QUE QUIERO EL PRIMER ESLABON DE LA SUB CHAIN --> poque el patron de arriba es recursivo: N results = parent feedFwd (primerSlabon) + child res feedFwd (ultimo Eslabon)
-                //                              PARA RECUPERAR LA INSTRUCCION DE LA SUBCADENA Y MONTAR EL MENSAJE DEL SIGUIENTE
-                //                                   (es decir, lleva Instruction (FIRST STEP) + FeedFwd (LAST STEP) >> PREVIOUS_INSTRUCTION + >> EXPECTED TO DO WITH (last) OUTPUT)
-                //  NUEVA REGLA: el FeedFwd que cuenta en una subchain es el ultimo, y punto (primero guia a segundo etc, no aporta nada en resultado final)
-                // tendria que reconstruir desde stepId hasta firstStep ha que guardar entonces los CHAINEABLES DE VUELTA
-                _instructionsLog.Add($"- SUB CHAIN {chaineable.Id} LOG:");
-                _instructionsLog.AddRange(chaineable.InstructionsLog);
-            });   
+            processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => branch.Forge(previous)))));
 
             return await _next.Forge(this);
         }
@@ -128,6 +107,21 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             }
 
             else return _branches.SingleOrDefault(step => step.Id == stepId);
+        }
+
+        public void processBranchResults(IChaineable[] results)
+        {
+            results.ToList().ForEach(chaineable =>
+            {
+                var first = chaineable.GetFirstStep();
+
+                _forgedSubSteps.Add(chaineable, first.Id);
+
+                Outputs.AddRange(chaineable.Outputs);
+
+                _instructionsLog.Add($"- SUB CHAIN {chaineable.Id} LOG:");
+                _instructionsLog.AddRange(chaineable.InstructionsLog);
+            });
         }
 
         public IChaineable GetForgedSubStep(Guid stepId)
