@@ -19,11 +19,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             Name = name ?? $"{Guid.NewGuid()}-{DateTime.Now.ToShortDateString()}";
             _forgedSteps = new List<ForgeLog>();
             _replays = new List<ReplayLog>();
+
+            RunnedInstructions = new List<string>();
         }
 
         public ChainRunner(ChainRunner cloned) : this(cloned.UserPrompt, cloned.Name)
         {
-            RunnedInstructions = cloned.RunnedInstructions;
+            RunnedInstructions = new List<string>();
         }
 
         public delegate void OnReplay();
@@ -36,14 +38,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public string UserPrompt { get; }
         public List<ForgeLog> ForgedLogs => _forgedSteps;
         private List<ReplayLog> ReplayLogs => _replays;
-        public List<string> RunnedInstructions { get; private set; }
+        public List<string> RunnedInstructions { get; set; }
 
-        public void OnRunnerNotification(ForgeLog log)
+        public void OnRunnerNotification(ForgeLog log, bool updateRunnersLog = true)
         {
             _forgedSteps.Add(log);
 
-            if (log.ForgeTimestamp != null)
-                RunnedInstructions = log.RunnersLog;
+            if (updateRunnersLog)
+                RunnedInstructions.AddRange(log.RunnersLog);
         }
 
 

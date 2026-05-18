@@ -51,12 +51,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (_next == null)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> A CHAIN cannot end up in a SplitterStep and the current has no NEXT assigned >> CHAIN CANNOT BE CLOSED");
 
-            _instructionsLog.Add($"- SPLITTER: {_id}");
+            
 
             if(_commands.Count == 1)
             {
-                var splitted = ThrowTo(swapRunner: false, _commands.First(), _request, previous.FeedForwardInstruction);
-                
+                _runner.RunnedInstructions.Add($"- SPLITTER: {_id}");
+
+                var splitted = ThrowTo(swapRunner: false, _commands.First(), _request, _feedForwardInstruction);
+
                 splitted.Link(previous, isForward: false, isTwoWay: false);
                 
                 var splittedOut = await splitted.Forge(previous);
@@ -65,6 +67,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 previous = splittedOut;
             }
+            
+            else _runner.RunnedInstructions.Add($"- TAP: {_id}");
 
             _pluggedInstructions.ForEach(i => _branches.Add(ThrowTo(swapRunner: true, i.Command, _request, i.FeedFwdInstruction)));
 
@@ -102,10 +106,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 Outputs.AddRange(chaineable.Outputs);
 
-                chaineable.Runner.ForgedLogs.ForEach(log => sendForgeLog(log));
+                chaineable.Runner.ForgedLogs.ForEach(log => sendForgeLog(log, false));
 
                 _instructionsLog.Add($"- SUB CHAIN {firstStepId}: ");
                 _instructionsLog.AddRange(chaineable.Runner.RunnedInstructions);
+                _instructionsLog.Add($"- END SUB CHAIN -");
             });
         }
 

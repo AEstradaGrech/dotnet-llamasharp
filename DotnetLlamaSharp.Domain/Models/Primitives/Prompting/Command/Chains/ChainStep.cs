@@ -8,7 +8,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     public abstract class ChainStep : IChaineable
     {
 
-        public delegate void OnRunNotify(ForgeLog log); //communicate / persist data during execution
+        public delegate void OnRunNotify(ForgeLog log, bool appendLogs = true); //communicate / persist data during execution
         public event OnRunNotify onRunNotify;
 
         public delegate void OnReportReplay(ReplayLog log);
@@ -111,13 +111,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 _forgeLog.NextId = _next.Id;
 
             _forgeLog.RunnersLog = _instructionsLog;
-
+            _forgeLog.FeedForwardMessage = _feedForwardInstruction;
             onRunNotify(_forgeLog);
         }
 
-        protected void sendForgeLog(ForgeLog log)
+        protected void sendForgeLog(ForgeLog log, bool updateRunnersLog = true)
         {
-            onRunNotify(log);
+            onRunNotify(log, updateRunnersLog);
         }
         public SingleThrowStep ThrowTo(bool swapRunner, IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null)
         {
@@ -170,13 +170,17 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         protected async Task forgeLinkForPlug(IChaineable previous, int plugIdx = 0)
         {
-           
             if (!IsFirstStep() && previous.IsForged)
             {
                 // The guidance message is appended to the command final system message in this way: _systemMessage (optional. guidance. on constructor) + dbMessage (optional. main msg. on construction) | defaultInstruction(optional. main msg. hardcoded) + _request.Guidance
-                _request.GuidanceMessage = guidanceMessageFrom(_request.Prompt, previous.PromptedInstruction, previous.Outputs.First().SerializedResult, previous.Outputs.First().SchemaForMessage(), previous.Outputs.First().GuidanceMessage);
+                _request.GuidanceMessage = guidanceMessageFrom(
+                    _request.Prompt, 
+                    previous.PromptedInstruction, 
+                    previous.Outputs.First().SerializedResult, 
+                    previous.Outputs.First().SchemaForMessage(),
+                    previous.Outputs.First().GuidanceMessage);
                 
-                _instructionsLog.AddRange(previous.InstructionsLog);
+                //_instructionsLog.AddRange(previous.InstructionsLog);
             }
 
             await forgeLink(plugIdx);
@@ -203,7 +207,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             _forgeLog.Prompt = _request.Prompt;
         }
 
-        protected string guidanceMessageFrom(string prompt, string instruction, string serialized, string jsonSchema, string? outputGuidance = null)
+        protected string guidanceMessageFrom(string prompt, string instruction, string serialized, string jsonSchema, string? feededInstruction = null)
          => @$"
 # CONTEXT: A previous process on your current task has reported the next results for this user query and instruction, 
 use this information if you find it relevant for your current task.
@@ -219,7 +223,7 @@ use this information if you find it relevant for your current task.
 
 {jsonSchema}
 
-{(string.IsNullOrEmpty(outputGuidance) ? string.Empty : $"# PREVIOUS STEP REQUEST (this is what you are expected to do with the previous output data): {outputGuidance}")}";
+{(string.IsNullOrEmpty(feededInstruction) ? string.Empty : $"# PREVIOUS STEP REQUEST (this is what you are expected to do with the previous output data): {feededInstruction}")}";
 
         public bool hasCatchedThrow(IChaineable previous)
         {

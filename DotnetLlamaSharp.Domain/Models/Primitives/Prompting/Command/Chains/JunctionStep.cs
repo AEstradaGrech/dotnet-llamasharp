@@ -25,6 +25,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (!previous.IsMultiSocket)
                 throw new InvalidOperationException($"{nameof(JunctionStep)} >> BAD CHAIN CONFIGURATION >> PREVIOUS STEP IS NOT MULTISOCKET >> A JunctionStep can only be connected from a SplitterStep (or subclasses of)");
 
+            _runner.RunnedInstructions.Add($"- JOIN: {_id}");
+
             var castedPrev = (SplitterStep)previous;
 
             //splitter con splitters

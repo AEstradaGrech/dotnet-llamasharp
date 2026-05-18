@@ -44,6 +44,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             var finalMessage = new ChatMessage(ChatRole.Assistant.ToString(), string.Empty);
 
+            ChainRunner finalRunner = null;
             if (withUserFriendlyMessage)
             {
                 var finalizer = ExpandTo<MessagePromptCommand, ChatMessage>(instruction: "Analyze the provided context data from the previous outputs and return the assistant answer (which is in JSON string format) as a text to keep on chatting",
@@ -53,10 +54,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 finalMessage = jsonMessage.GetOutputAs<ChatMessage>();
 
-                _runner = jsonMessage.Drop();
+                finalRunner = jsonMessage.Drop();
             }
 
-            var finalRunner = withUserFriendlyMessage ? _runner : finalStep.Drop();
+            else finalRunner = finalStep.Drop();
 
             return new ChainResult(finalRunner.ForgedLogs, jsonResult: typedResult, finalStep.Outputs.First().JsonSchema, chainInput: firstStep.Input, stepsLog: finalRunner.RunnedInstructions, processedResult: finalMessage);
         }
@@ -70,7 +71,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             }
 
             else _passCatchTimestamp = DateTime.Now;
-            
+
             await forgeLinkForPlug(previous);
 
             submitForgeLog();

@@ -1,5 +1,4 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
@@ -16,7 +15,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (!hasCatchedThrow(previous))
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> {nameof(Forge)} >> {nameof(hasCatchedThrow)} >> An error has occured while passing the runner. STEP CANNOT BE FORGED");
 
-            var castedPrev = (SplitterStep) previous;
+            _runner.RunnedInstructions.Add($"- PIPE: {_id}");
+
+            var castedPrev = (SplitterStep)previous;
 
             var outputs = castedPrev.GrouppedOutputs();
 
@@ -28,16 +29,19 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 outputs[key].ForEach(link =>
                 {
-                    var branch = ExpandTo(_commands.First(), _request, _feedForwardInstruction);
+                    var branch = ThrowTo(swapRunner: true, _commands.First(), _request, _feedForwardInstruction);
 
                     _branches.Add(branch);
-                    
+
                     prevsMap.Add(branch.Id, origin);
                 });
             });
 
-            processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => branch.Forge(prevsMap[branch.Id])))));
-
+            processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => {
+                branch.Link(previous, isForward: false, isTwoWay: false);
+                return branch.Forge(prevsMap[branch.Id]);  
+            }))));
+            
             submitForgeLog();
 
             return await _next.Forge(this);

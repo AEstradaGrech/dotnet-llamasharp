@@ -22,7 +22,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             
             if(stepsLog.Count > 0)
                 for (int i = 0; i < stepsLog.Count; i++)
-                    SystemInstructions.Content += $"- STEP {i + 1} {stepsLog[i]}";
+                    SystemInstructions.Content += $"\n{stepsLog[i]}";
         }
 
         public ChainResult( List<ForgeLog> logs, string jsonResult, JsonNode resultSchema, string chainInput, List<string> stepsLog, ChatMessage? processedResult = null) 
