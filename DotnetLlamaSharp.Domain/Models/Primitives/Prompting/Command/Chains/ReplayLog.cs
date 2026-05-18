@@ -19,6 +19,6 @@
 
         public string FeededMessage { get; set; }
 
-        public Dictionary<Guid, ForgeLog> BranchLogs { get; set; }
+        public Dictionary<Guid, ReplayLog> BranchLogs { get; set; }
     }
 }

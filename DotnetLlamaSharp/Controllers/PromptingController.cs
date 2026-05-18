@@ -285,7 +285,9 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/chains/test")]
         public async Task<IActionResult> ChaiTests([FromBody] GuidedBatchRequestDto request)
         {
-            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.GuidedBatchChain(_mapper.Map<GuidedBatchRequestDto, GuidedBatchRequest>(request)));
+            //var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.GuidedBatchChainPrompt(_mapper.Map<GuidedBatchRequestDto, GuidedBatchRequest>(request)));
+
+            var response = await _ollamaService.GuidedBatchChain(_mapper.Map<GuidedBatchRequestDto, GuidedBatchRequest>(request));
 
             if (response != null)
                 return Ok(response);

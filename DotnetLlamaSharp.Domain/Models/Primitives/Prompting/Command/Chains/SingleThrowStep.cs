@@ -52,17 +52,21 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 var jsonMessage = await finalizer.Forge(finalStep);
 
                 finalMessage = jsonMessage.GetOutputAs<ChatMessage>();
+
+                _runner = jsonMessage.Drop();
             }
 
-            return new ChainResult(jsonResult: typedResult, finalStep.Outputs.First().JsonSchema, chainInput: firstStep.Input, stepsLog: finalStep.InstructionsLog, processedResult: finalMessage);
+            var finalRunner = withUserFriendlyMessage ? _runner : finalStep.Drop();
+
+            return new ChainResult(finalRunner.ForgedLogs, jsonResult: typedResult, finalStep.Outputs.First().JsonSchema, chainInput: firstStep.Input, stepsLog: finalRunner.RunnedInstructions, processedResult: finalMessage);
         }
 
         public override async Task<IChaineable> Forge(IChaineable previous)
         {
             if (!IsFirstStep())
             {
-                if(!IsRunning && !hasCatchedPass(previous))
-                    throw new InvalidOperationException($"{nameof(SingleThrowStep)} >> {nameof(Forge)} >> {_commands.First().GetType().Name} >> {nameof(hasCatchedPass)} >> AN ERROR HAS OCCURED WHILE PASSING THE CHAIN RUNNER FROM PREVIOUS STEP");
+                if(!IsRunning && !hasCatchedThrow(previous))
+                    throw new InvalidOperationException($"{nameof(SingleThrowStep)} >> {nameof(Forge)} >> {_commands.First().GetType().Name} >> {nameof(hasCatchedThrow)} >> AN ERROR HAS OCCURED WHILE PASSING THE CHAIN RUNNER FROM PREVIOUS STEP");
             }
 
             else _passCatchTimestamp = DateTime.Now;

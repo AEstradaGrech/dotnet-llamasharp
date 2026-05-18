@@ -24,7 +24,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public ChainRunner(ChainRunner cloned) : this(cloned.UserPrompt, cloned.Name)
         {
             RunnedInstructions = cloned.RunnedInstructions;
-            StepInstructions = cloned.StepInstructions;
         }
 
         public delegate void OnReplay();
@@ -33,23 +32,28 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public List<ForgeLog> _forgedSteps;
         public List<ReplayLog> _replays;
 
+        public string Name { get; }
+        public string UserPrompt { get; }
+        public List<ForgeLog> ForgedLogs => _forgedSteps;
+        private List<ReplayLog> ReplayLogs => _replays;
+        public List<string> RunnedInstructions { get; private set; }
+
         public void OnRunnerNotification(ForgeLog log)
         {
             _forgedSteps.Add(log);
+
+            if (log.ForgeTimestamp != null)
+                RunnedInstructions = log.RunnersLog;
         }
+
 
         public void OnReplayReport(ReplayLog log)
         {
             _replays.Add(log);
         }
 
-        public string Name { get; }
-        public string UserPrompt { get;}
-        // instructions by step forge
-        public Dictionary<Guid, List<string>> StepInstructions { get; }
-        // instructions executed so far. accumulated from all previous steps
-        public List<string> RunnedInstructions { get; }
-
         public ChainRunner Clone() => new ChainRunner(this);
+
+        public ForgeLog GetLogById(Guid id) => _forgedSteps.SingleOrDefault(step => step.RunnerId == id);
     }
 }

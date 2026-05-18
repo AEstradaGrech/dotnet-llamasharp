@@ -42,8 +42,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public override async Task<IChaineable> Forge(IChaineable previous)
         {
-            if (!hasCatchedPass(previous))
-                throw new InvalidOperationException($"{nameof(SplitterStep)} >> {nameof(Forge)} >> {nameof(hasCatchedPass)} >> An error has occured while passing the runner. STEP CANNOT BE FORGED");
+            if (!hasCatchedThrow(previous))
+                throw new InvalidOperationException($"{nameof(SplitterStep)} >> {nameof(Forge)} >> {nameof(hasCatchedThrow)} >> An error has occured while passing the runner. STEP CANNOT BE FORGED");
 
             if (previous.IsMultiSocket)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> PREVIOUS STEP IS MULTISOCKET >> A SplitterStep can only be connected from a SingleThrowStep");
@@ -51,23 +51,29 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (_next == null)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> A CHAIN cannot end up in a SplitterStep and the current has no NEXT assigned >> CHAIN CANNOT BE CLOSED");
 
-            if (!string.IsNullOrEmpty(_feedForwardInstruction))
-                _instructionsLog.Add($"- SPLITTER: {_id}");
+            _instructionsLog.Add($"- SPLITTER: {_id}");
 
             if(_commands.Count == 1)
             {
-                var splittedOut = await PassTo(swapRunner: false, _commands.First(), _request, previous.FeedForwardInstruction).Forge(previous);
+                var splitted = ThrowTo(swapRunner: false, _commands.First(), _request, previous.FeedForwardInstruction);
+                
+                splitted.Link(previous, isForward: false, isTwoWay: false);
+                
+                var splittedOut = await splitted.Forge(previous);
 
-                _runner = splittedOut.PassRunner();
+                _runner = splittedOut.Drop();
 
                 previous = splittedOut;
             }
 
-            _pluggedInstructions.ForEach(i => _branches.Add(PassTo(swapRunner: true, i.Command, _request, i.FeedFwdInstruction)));
+            _pluggedInstructions.ForEach(i => _branches.Add(ThrowTo(swapRunner: true, i.Command, _request, i.FeedFwdInstruction)));
 
             var chainResults = new List<IChaineable>();
 
-            processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => branch.Forge(previous)))));
+            processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => {
+                branch.Link(previous, isForward: false, isTwoWay: false);    
+                return branch.Forge(previous); 
+            }))));
 
             submitForgeLog();
 
@@ -90,14 +96,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             results.ToList().ForEach(chaineable =>
             {
-                var first = chaineable.GetFirstStep();
+                var firstStepId = chaineable.Runner.ForgedLogs.First().RunnerId;
 
-                _forgedSubSteps.Add(chaineable, first.Id);
+                _forgedSubSteps.Add(chaineable, firstStepId);
 
                 Outputs.AddRange(chaineable.Outputs);
 
-                _instructionsLog.Add($"- SUB CHAIN {chaineable.Id} LOG:");
-                _instructionsLog.AddRange(chaineable.InstructionsLog);
+                chaineable.Runner.ForgedLogs.ForEach(log => sendForgeLog(log));
+
+                _instructionsLog.Add($"- SUB CHAIN {firstStepId}: ");
+                _instructionsLog.AddRange(chaineable.Runner.RunnedInstructions);
             });
         }
 

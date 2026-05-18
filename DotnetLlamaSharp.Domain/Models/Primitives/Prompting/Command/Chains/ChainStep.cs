@@ -35,6 +35,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public List<ChainLink> Outputs => _outputs;
         public string Input => _request.Prompt;
         public bool IsRunning => _runner != null;
+        public ChainRunner? Runner => _runner;
         public string? FeedForwardInstruction => _feedForwardInstruction;
         public string? PromptedInstruction => _promptedInstruction;
         public List<string> InstructionsLog => _instructionsLog;
@@ -86,7 +87,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             return result;
         }
 
-        public ChainRunner PassRunner()
+        public ChainRunner Drop()
         {
             var reference = _runner;
             _runner = null;
@@ -99,24 +100,30 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         protected virtual void submitForgeLog()
         {
             if (!IsRunning) return;
+
             // the other forge log data is setted up on construction
             // or at runtime, when the value is generated (json result, prompted instruction...)
             // this is just a centralized way to submit the log to the ChainRunner object
-
             if (_prev != null)
                 _forgeLog.PrevId = _prev.Id;
             
             if(_next != null)
                 _forgeLog.NextId = _next.Id;
 
+            _forgeLog.RunnersLog = _instructionsLog;
+
             onRunNotify(_forgeLog);
         }
-        public SingleThrowStep PassTo(bool swapRunner, IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null)
+
+        protected void sendForgeLog(ForgeLog log)
+        {
+            onRunNotify(log);
+        }
+        public SingleThrowStep ThrowTo(bool swapRunner, IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null)
         {
             if (!IsRunning)
-                throw new InvalidOperationException($"{nameof(ChainStep)} >> {nameof(PassTo)} >> This method is to instantiate steps with a copy of the chain runner and the current caller is not the runner");
+                throw new InvalidOperationException($"{nameof(ChainStep)} >> {nameof(ThrowTo)} >> This method is to instantiate steps with a copy of the chain runner and the current caller is not the runner");
 
-            // la mitica cruz de tres cuartos
             var newRunner = swapRunner ? _runner.Clone() : _runner;
 
             //every step of this sub chain gets a new nullable runner with the previous log, but they subscribe to their own runner
@@ -179,25 +186,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             if (idx >= _commands.Count) return;
 
-            // CreateLogWith:
-            //  prev guidance esta en request
-            //  main instruction lo pillo de jsonResult.Instruction
-            //  preInstruction es tag pero podria se ina preInstruccion de usuario
-            //  FEED NEXT _feedFwdMessag
-            // Y lo guardo aqui hasta que chainResult haga onReport()
             // Es decir: se pasa el instructions log que es el step-by-step lite que ya funciona. sirve como sumary para Steps si hace falta.
             //           opcionalmente se puede pedir el reporte completo ordenado por fecha de ejecucion con todos los mensajes internos (StepLogs con instrucciones)
-            
-            //  COMO ME SUSCRIBO A UN EVENTO DE UN OBJETO QUE TODAVIA NO EXISTE??
-            //      A: report chain -> el primero lleva el evento onReport. ExpandTo tiene que suscribir al EXPANDIDO al evento del anterior y asi sucesivamente --> OnReport va pasando el balon hacia atras (como es logico). Devuelve el balon + su log
-            //          Cuando llega al ala ya tiene toda la info y es solo correr a la zona de try
-            //      B: un tipo recibe todo y lo ordena segun triggerTimestamp (EL MOMENTO EN QUE SE DIO LA ORDEN, NO CUANDO SE CUMPLIO. Los dos timestamps son utiles
-            //      C: true rugby: ChainReport ES el balon. El que lleva el balon es el primero siempre y corre palante
-            //                     Execute = choque + pase y seguir corriendo
-            //                     el siguiente recibe el balon y se suscribe (el balon lleva el evento) y sigue jugando
-            //                     cuando el ultimo ensaya todo el mundo esta suscrito al balon
-            //                     balon.Replay() <- collect logs <- cada jugador cuenta lo que ha hecho en la jugada
-            //                    Como se pasa el balon? --> en el expand. Lo crea el primero y se va pasando como el instructionsLog
+
             var jsonResult = await _commands[idx].JsonPrompt(_request, returnFullInstruction: false, preInstruction: preInstructionTag); //Skip GuidanceMessage, return only instruction for this step
 
             _promptedInstruction = jsonResult.Instruction;
@@ -230,9 +221,9 @@ use this information if you find it relevant for your current task.
 
 {(string.IsNullOrEmpty(outputGuidance) ? string.Empty : $"# PREVIOUS STEP REQUEST (this is what you are expected to do with the previous output data): {outputGuidance}")}";
 
-        public bool hasCatchedPass(IChaineable previous)
+        public bool hasCatchedThrow(IChaineable previous)
         {
-            _runner = previous.PassRunner();
+            _runner = previous.Drop();
 
             onRunNotify += _runner.OnRunnerNotification;
             _runner.onReplayRequest += SendReplay;

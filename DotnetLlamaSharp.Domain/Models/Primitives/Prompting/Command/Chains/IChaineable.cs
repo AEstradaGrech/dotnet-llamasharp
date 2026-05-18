@@ -13,10 +13,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public bool CanBeForged(IChaineable previous);
         bool IsMultiSocket { get; }
         public bool IsForged { get; }
+        public ChainRunner? Runner { get; }
         public bool IsRunning { get; }
         public void Link(IChaineable next, bool isForward, bool isTwoWay = false);
         Task<IChaineable> Forge(IChaineable previous);
-        ChainRunner PassRunner(); // passes the runner to the step requesting it, and nulls the reference? (game rule: there can be only ONE runner / ONE ball in the match field. A step without runner !CanBeForged(previous))
+        ChainRunner Drop(); // passes the runner to the step requesting it, and nulls the reference? (game rule: there can be only ONE runner / ONE ball in the match field. A step without runner !CanBeForged(previous))
         //                                                                                            La referencia NO es null si eres el portador del balon. EL balon está o en juego o en la zona de try (lo tiene el ultimo)
         void SendReplay();
    

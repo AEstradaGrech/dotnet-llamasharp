@@ -1,4 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests.Chains;
 using DotnetLlamaSharp.Domain.Models.Request;
 using OllamaSharp.Models;
@@ -10,7 +11,8 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         Task<ChatPrompt> SimplePrompt(SimplePromptRequest request);
         Task<ChatPrompt> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request);
-        Task<ChatPrompt> GuidedBatchChain(GuidedBatchRequest request);
+        Task<ChatPrompt> GuidedBatchChainPrompt(GuidedBatchRequest request);
+        Task<ChainResult> GuidedBatchChain(GuidedBatchRequest request);
         //Task<ChatPrompt> BooleanQuestion(SimplePromptRequest request);
     }
 }
