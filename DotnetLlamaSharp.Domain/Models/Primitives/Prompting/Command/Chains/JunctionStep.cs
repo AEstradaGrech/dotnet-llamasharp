@@ -18,10 +18,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public override async Task<IChaineable> Forge(IChaineable previous)
         {
-            checkCanForge(previous);
+             if (!hasCatchedPass(previous))
+                throw new InvalidOperationException($"{nameof(JunctionStep)} >> {nameof(Forge)} >> {nameof(hasCatchedPass)} >> An error has occured while passing the runner. STEP CANNOT BE FORGED");
 
+            // TODO override checkCanForge
             if (!previous.IsMultiSocket)
-                throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> PREVIOUS STEP IS NOT MULTISOCKET >> A JunctionStep can only be connected from a SplitterStep (or subclasses of)");
+                throw new InvalidOperationException($"{nameof(JunctionStep)} >> BAD CHAIN CONFIGURATION >> PREVIOUS STEP IS NOT MULTISOCKET >> A JunctionStep can only be connected from a SplitterStep (or subclasses of)");
 
             var castedPrev = (SplitterStep)previous;
 
@@ -75,6 +77,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             _request.GuidanceMessage = sb.ToString().Trim();
             
             await forgeLink(); // TODO: throw new LameChainException("AN ERROR WHILE PROMPTING REQ")
+
+            submitForgeLog();
 
             return _next != null ? await _next.Forge(this) : this;
         }

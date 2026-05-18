@@ -1,25 +1,11 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
+﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
-   //
-   // Executes all branch commands using the output of the previous link
-   // generates 1 link x branch
-   // if you concat a .Then after a .Spli,t IT APPENDS EVERY PREV OUTPUT AND RETURS ONE LINK. .Pipe(this Splitter) executes THE COMMAND ON EACH PREV OUTPUT AND GENERATES 1 X PREV OUT LINKS
-   //   .Join<TJoiner>() merges EVERY PREV OUT LINK USING A SPECIFIC COMMAND (as opposed to the .Then 'raw' appending)
-   // OPCION B: SingleThrowStep & SplitterStep extensions --> .Then para SingleThrow, pipe para Splitter, asi queda mas cerrado el uso (hasta que no haces Join no puedes usar .Then
-   //           y el merge a las bravas del .Split().Then() pasaria a ser un .Join sin TJoiner. Es decir, tendria .Join(nextCommand) (append burro = ejecuto next con todo lo que haya prev) y
-   //                                                                                                             .Join<TJoiner>(nextCommand) que interiormente sequencia un reducer con el nextCommand)
-   //                                                                                                                es decir, procesa el multioutput como quiere el usuario y ese es el feed de nextCommand
-   // Split([]) (NO A B)
-
     public class SplitterStep : ChainStep
     {
+        protected List<StepInstruction> _pluggedInstructions;
+
         protected List<IChaineable> _branches = new List<IChaineable>();
         protected Dictionary<IChaineable, Guid> _forgedSubSteps;
 
@@ -28,58 +14,62 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public SplitterStep(List<StepInstruction> instructions, PromptCommandRequest request, string? feedFwdMessage) : base(request, feedFwdMessage)
         {
             _forgedSubSteps = new Dictionary<IChaineable, Guid>();
-            instructions.ForEach(i => _branches.Add(ExpandTo(i.Command, request, i.FeedFwdInstruction)));
+            _pluggedInstructions = instructions;
         }
 
-        //Constructor fro Split<TComm>([]) <- executes the command and SPLITS the result over the plugged subchains passing the splitFeedFwd (forge(this) then Branches)
+        // Constructor for Split<TComm>([]) <- executes the command and SPLITS the result over the plugged subchains passing the splitFeedFwd (forge(this) then Branches)
        
         public SplitterStep(StepInstruction splittedCommand, List<StepInstruction> instructions, PromptCommandRequest request) : base(request, splittedCommand.FeedFwdInstruction)
         {
             _forgedSubSteps = new Dictionary<IChaineable, Guid>();
             _commands.Add(splittedCommand.Command);
-            instructions.ForEach(i => _branches.Add(ExpandTo(i.Command, request, i.FeedFwdInstruction)));
+            _pluggedInstructions = instructions;
         }
 
-        // constructor for .Pipe<TComm> <- executes the command ON EACH input (foreach prevOUT forge(this))
+        // Constructor for .Pipe<TComm> <- executes the command ON EACH input (foreach PREV OUT forge(this))
         public SplitterStep(StepInstruction pipedCommand, PromptCommandRequest request) : this(pipedCommand, [], request) { }
+        
         // It is not the first step of a chain (prev != null)
         // The previous is a SPST
-        // It has at leas one command to run (should assert it has at least two probably otherwise is a bad / stupid configuration)
+        // It has at least one command to run (should assert it has at least two probably otherwise is a bad / stupid configuration)
         public override bool CanBeForged(IChaineable previous)
-            => previous != null && !previous.IsMultiSocket && _branches.Count > 0;
+            => IsRunning && previous != null && !previous.IsMultiSocket && _pluggedInstructions.Count > 0;
 
         public void Plug(IChaineable branch)
         {
             _branches.Add(branch);
         }
 
-        public override async Task<IChaineable> Forge(IChaineable previous) //En el momento que hago split tipado hace que solo pueda recibir SplitterStep hasta .Join()
+        public override async Task<IChaineable> Forge(IChaineable previous)
         {
-            checkCanForge(previous);
+            if (!hasCatchedPass(previous))
+                throw new InvalidOperationException($"{nameof(SplitterStep)} >> {nameof(Forge)} >> {nameof(hasCatchedPass)} >> An error has occured while passing the runner. STEP CANNOT BE FORGED");
 
             if (previous.IsMultiSocket)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> PREVIOUS STEP IS MULTISOCKET >> A SplitterStep can only be connected from a SingleThrowStep");
 
-
             if (_next == null)
-                throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> A CHAIN cannot end up in a SplitterStep and the current has no NEXT assigned >> CHAIN CANNOTE BE CLOSED");
+                throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> A CHAIN cannot end up in a SplitterStep and the current has no NEXT assigned >> CHAIN CANNOT BE CLOSED");
 
             if (!string.IsNullOrEmpty(_feedForwardInstruction))
                 _instructionsLog.Add($"- SPLITTER: {_id}");
 
-            
             if(_commands.Count == 1)
             {
-                //is Split and FanOut
+                var splittedOut = await PassTo(swapRunner: false, _commands.First(), _request, previous.FeedForwardInstruction).Forge(previous);
 
-                var splittedOut = await ExpandTo(_commands.First(), _request, previous.FeedForwardInstruction).Forge(previous);
+                _runner = splittedOut.PassRunner();
 
                 previous = splittedOut;
             }
 
+            _pluggedInstructions.ForEach(i => _branches.Add(PassTo(swapRunner: true, i.Command, _request, i.FeedFwdInstruction)));
+
             var chainResults = new List<IChaineable>();
 
             processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => branch.Forge(previous)))));
+
+            submitForgeLog();
 
             return await _next.Forge(this);
         }

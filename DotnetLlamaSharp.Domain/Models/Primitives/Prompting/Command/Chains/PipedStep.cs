@@ -13,7 +13,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public override async Task<IChaineable> Forge(IChaineable previous)
         {
-            checkCanForge(previous);
+            if (!hasCatchedPass(previous))
+                throw new InvalidOperationException($"{nameof(SplitterStep)} >> {nameof(Forge)} >> {nameof(hasCatchedPass)} >> An error has occured while passing the runner. STEP CANNOT BE FORGED");
 
             var castedPrev = (SplitterStep) previous;
 
@@ -36,6 +37,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             });
 
             processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => branch.Forge(prevsMap[branch.Id])))));
+
+            submitForgeLog();
 
             return await _next.Forge(this);
         }
