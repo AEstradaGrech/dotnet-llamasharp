@@ -72,26 +72,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             {
                 //is Split and FanOut
 
-                await forgeLinkForPlug(previous, plugIdx: 0);
-                //get Outputs.First()
-                // use as previous --> previous.SwapOutput(this.Outputs.First())
+                var splittedOut = await ExpandTo(_commands.First(), _request, previous.FeedForwardInstruction).Forge(previous);
+
+                previous = splittedOut;
             }
 
             var chainResults = new List<IChaineable>();
 
-            /*
-             // ❌ This has a closure bug - all tasks capture the SAME 'branch' reference
-                    foreach(var branch in _branches)
-                        splitterTasks.Add(Task.Run(() => branch.Forge(previous)));
-
-            // ✅ Fixed version:
-                    foreach(var branch in _branches)
-                    {
-                        var currentBranch = branch;  // Capture by value
-                        splitterTasks.Add(Task.Run(() => currentBranch.Forge(previous)));
-                    }
-            // ✅ This is safe - LINQ's Select() creates a new scope per item
-             */
             processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => branch.Forge(previous)))));
 
             return await _next.Forge(this);

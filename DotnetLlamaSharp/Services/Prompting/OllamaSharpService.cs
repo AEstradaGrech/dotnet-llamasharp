@@ -139,11 +139,17 @@ namespace DotnetLlamaSharp.Services.Prompting
 
 
             var chainResult = await FluentChainExtensions
-               .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq, "Use the name and age to develop your character part")
-               .Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
-                     new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
-                     inputCommandReq)
-               .Pipe(inputCommandReq, _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Review the output so far, the input and the goal or expected output and modify it if necessary to ensure it is adapted to the provided game lore", request.Settings), pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+               .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq)
+               .SplitThrough(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Reduce the previous output if necessary to ensure it only includes the requested name and the age, remove the rest", request.Settings), feedFwd: "Use the name and age to develop your character part"),
+                [
+                    new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
+                    new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")
+                ],
+                inputCommandReq)
+               //.Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
+               //      new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
+               //      inputCommandReq)
+               //.Pipe(inputCommandReq, _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Review the output so far, the input and the goal or expected output and modify it if necessary to ensure it is adapted to the provided game lore", request.Settings), pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
                .Pipe(inputCommandReq, _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary", request.Settings), pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
                .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings), feedFwd: ""), inputCommandReq)
                .ThenExecuteAsync(withFinalMessage: true);

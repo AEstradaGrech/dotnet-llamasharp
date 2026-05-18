@@ -62,7 +62,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             return split;
         }
 
-        public static SplitterStep Split(this SingleThrowStep step, StepInstruction splitted, List<StepInstruction> instructions, PromptCommandRequest request)
+        public static SplitterStep SplitThrough(this SingleThrowStep step, StepInstruction splitted, List<StepInstruction> instructions, PromptCommandRequest request)
         {
             var split = step.SplitTo(splitted, instructions, request);
 
