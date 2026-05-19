@@ -202,8 +202,8 @@ namespace DotnetLlamaSharp.Services.Prompting
             return await FluentChainExtensions
                .StartWith(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.First(), request.Settings), inputCommandReq)
                .SplitThrough(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                   instruction: "Reduce the previous output if necessary to ensure it only includes the requested name and the age, remove the rest", request.Settings), 
-                   feedFwd: "Use the name and age to develop your character part"), // InSplitThrough feedFwd is the message for the plugged instructions (not the next step), in TAP is added to the next guidance (as a general guidance)
+                   instruction: "Reduce the previous output and ensure it only includes the requested name and the age, remove the rest. Do not provide any other information about the character, only the requested name and age (in whatever format is the age written)", request.Settings), 
+                   feedFwd: "Use the name and age to develop your part of the character using the provided name and age"), // InSplitThrough feedFwd is the message for the plugged instructions (not the next step), in TAP is added to the next guidance (as a general guidance)
                 [
                     new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings),
                         feedFwd: "Use this game related data to ground your profile to the game lore"),
@@ -212,10 +212,10 @@ namespace DotnetLlamaSharp.Services.Prompting
                 ],
                 inputCommandReq)
                //.ExposeThisId(out var id)
-               //.Pipe(inputCommandReq,
-               //     _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-               //         instruction: "Review the output so far, the input and the goal or expected output and modify it if necessary to ensure it is adapted to the provided game lore", request.Settings),
-               //         pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+               .Pipe(inputCommandReq,
+                    _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+                        instruction: "Review the output so far, the input and the goal or expected output and modify it if necessary to ensure it is adapted to the provided game lore. Ensure it is self-consistent (be sure you use any feeded data from the previous output", request.Settings),
+                        pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
                .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings), feedFwd: ""), inputCommandReq)
                .ThenExecuteAsync(withFinalMessage: true);
         }

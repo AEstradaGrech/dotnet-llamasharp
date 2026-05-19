@@ -38,7 +38,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             });
 
             processBranchResults(await Task.WhenAll(_branches.Select(branch => Task.Run(() => {
-                branch.Link(previous, isForward: false, isTwoWay: false);
+                branch.Link(prevsMap[branch.Id], isForward: false, isTwoWay: false);
                 return branch.Forge(prevsMap[branch.Id]);  
             }))));
             

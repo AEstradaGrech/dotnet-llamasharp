@@ -192,6 +192,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             // Es decir: se pasa el instructions log que es el step-by-step lite que ya funciona. sirve como sumary para Steps si hace falta.
             //           opcionalmente se puede pedir el reporte completo ordenado por fecha de ejecucion con todos los mensajes internos (StepLogs con instrucciones)
+            _request.Prompt = "Complete the specified instruction";
 
             var jsonResult = await _commands[idx].JsonPrompt(_request, returnFullInstruction: false, preInstruction: preInstructionTag); //Skip GuidanceMessage, return only instruction for this step
 
