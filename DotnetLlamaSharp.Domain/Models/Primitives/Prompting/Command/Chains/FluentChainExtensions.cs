@@ -7,10 +7,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public static class FluentChainExtensions
     {
-        public static SingleThrowStep StartWith(IJsoneable command, PromptCommandRequest request, string? feedFwdInstruction = null)
-            => Activator.CreateInstance(typeof(SingleThrowStep), command, new ChainRunner(request.Prompt, "CharCreatorChain"), request, feedFwdInstruction) as SingleThrowStep;
+        public static SingleThrowStep StartWith(FirstInstruction firstInstruction, CommandSettings defaultSettings)
+            => Activator.CreateInstance(typeof(SingleThrowStep), 
+                    firstInstruction.Command, 
+                    new ChainRunner(firstInstruction.UserPrompt, defaultSettings, firstInstruction.FinalMessageGuidance, firstInstruction.ChainIntent), 
+                    firstInstruction.FeedFwdInstruction) 
+                as SingleThrowStep;
         
-        public static SingleThrowStep Then(this SingleThrowStep step, IJsoneable command, PromptCommandRequest request, string? feedFwdInstruction = null)
+        public static SingleThrowStep Then(this SingleThrowStep step, IJsoneable command, ChainPromptRequest request, string? feedFwdInstruction = null)
         {
             /*
                 BASIC API:
@@ -72,20 +76,20 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// </summary>
         /// <param name="step"></param>
         /// <param name="instructions"></param>
-        /// <param name="request"></param>
+        /// <param name="stepRequest"></param>
         /// <returns></returns>
-        public static SplitterStep Tap(this SingleThrowStep step, List<StepInstruction> instructions, PromptCommandRequest request)
+        public static SplitterStep Tap(this SingleThrowStep step, List<StepInstruction> instructions, ChainPromptRequest? stepRequest = null)
         {
-            var split = step.Plug(instructions, request);
+            var split = step.Plug(instructions, stepRequest);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
             return split;
         }
 
-        public static SplitterStep SplitThrough(this SingleThrowStep step, StepInstruction splitted, List<StepInstruction> instructions, PromptCommandRequest request)
+        public static SplitterStep SplitThrough(this SingleThrowStep step, StepInstruction splitted, List<StepInstruction> instructions, ChainPromptRequest? stepRequest = null)
         {
-            var split = step.SplitTo(splitted, instructions, request);
+            var split = step.SplitTo(splitted, instructions, stepRequest);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
@@ -100,15 +104,15 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="step"></param>
         /// <param name="instruction"></param>
         /// <param name="instructions"></param>
-        /// <param name="request"></param>
+        /// <param name="stepRequest"></param>
         /// <returns></returns>
-        public static SingleThrowStep Feed(this SingleThrowStep step, StepInstruction instruction, List<StepInstruction> instructions, PromptCommandRequest request)
+        public static SingleThrowStep Feed(this SingleThrowStep step, StepInstruction instruction, List<StepInstruction> instructions, ChainPromptRequest? stepRequest = null)
         {
-            var split = step.Plug(instructions, request);
+            var split = step.Plug(instructions, stepRequest);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
-            var feeded = split.ExpandTo<JunctionStep>(instruction.Command, request, instruction.FeedFwdInstruction);
+            var feeded = split.ExpandTo<JunctionStep>(instruction.Command, stepRequest, instruction.FeedFwdInstruction);
 
             split.Link(feeded, isForward: true, isTwoWay: true);
 
@@ -123,25 +127,56 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="command"></param>
         /// <param name="pipeFeedFwd"></param>
         /// <returns></returns>
-        public static PipedStep Pipe(this SplitterStep step, PromptCommandRequest request, IJsoneable command, string? pipeFeedFwd = null)
+        public static PipedStep Pipe(this SplitterStep step, IJsoneable command, string? pipeFeedFwd = null, ChainPromptRequest? stepRequest = null)
         {
-            var split = step.ExpandTo<PipedStep>(new StepInstruction(command, pipeFeedFwd), request);
+            var split = step.ExpandTo<PipedStep>(new StepInstruction(command, pipeFeedFwd), stepRequest);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
             return split;
         }
         
-        public static SingleThrowStep Join( this SplitterStep step, StepInstruction instruction, PromptCommandRequest request)
+        public static SingleThrowStep Join( this SplitterStep step, StepInstruction instruction, ChainPromptRequest? stepRequest = null)
         {
-            var next = step.ExpandTo<JunctionStep>(instruction.Command, request, instruction.FeedFwdInstruction);
+            var next = step.ExpandTo<JunctionStep>(instruction.Command, stepRequest, instruction.FeedFwdInstruction);
             
             step.Link(next, isForward: true, isTwoWay: true);
             
             return next;
         }
 
+        /// <summary>
+        /// Injects a random / uncontrolled amount of context data (with optional guidance) in the system message of 
+        /// the step at runtime
+        /// 
+        /// Work for both SingleThrow and Splitter steps
+        /// </summary>
+        /// <param name="step"></param>
+        /// <param name="sources"></param>
+        /// <param name="guidance"></param>
+        /// <returns></returns>
+        public static SingleThrowStep WithRebujito(this SingleThrowStep step, List<string> sources, string? guidance = null)
+        {
+            //step.ChainStringFeeds = sources
+            return step;
+        }
 
+
+        /// <summary>
+        /// Injects a random / uncontrolled amount of context data (with optional guidance) in the system message of 
+        /// the step at runtime
+        /// 
+        /// Work for both SingleThrow and Splitter steps
+        /// </summary>
+        /// <param name="step"></param>
+        /// <param name="sources"></param>
+        /// <param name="guidance"></param>
+        /// <returns></returns>
+        public static SplitterStep WithRebujito(this SplitterStep step, List<string> sources, string? guidance = null)
+        {
+            //step.ChainStringFeeds = sources
+            return step;
+        }
         // Sequence (N, returnMaxTokens: 1000) --> opt = input * N & collect? (for N -> opt = N * input) equivalente a loop esto es .For() con el collect incorporado
         //  > usado con limite puede usarse para algo asi como MapAndReduce <- se añade SIEMPRE un eslabón de sumarizacion con MaxToken = param. Util para controlar CTX_LEN
         //
@@ -153,11 +188,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public static async Task<ChainResult> ThenExecuteAsync(this SingleThrowStep step, bool withFinalMessage = true)
             => await step.ExecuteChainAsync(withFinalMessage);
        
-        public static ChainStep Then<TCommand, TResult>(this ChainStep step, string? instruction, PromptCommandRequest request, string? feedFwdInstruction = null) 
+        public static ChainStep Then<TCommand, TResult>(this ChainStep step, string? instruction, ChainPromptRequest? stepRequest = null, string? feedFwdInstruction = null) 
             where TCommand : BasePromptCommand<TResult>, new() 
             where TResult : class
         {
-            var nextStep = step.ExpandTo<TCommand, TResult>(instruction, request);
+            var nextStep = step.ExpandTo<TCommand, TResult>(instruction, stepRequest);
 
             step.Link(nextStep, isForward: true, isTwoWay: true);
 
@@ -170,7 +205,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         //    return step;
         //}
-        public static TypedOutput<TResult> Then<TResult>(this TypedOutput<TResult> step, IPrompteable<TResult> cmd /*IPromptCommand<TResult> cmd*/, PromptCommandRequest request) where TResult : class
+        public static TypedOutput<TResult> Then<TResult>(this TypedOutput<TResult> step, IPrompteable<TResult> cmd /*IPromptCommand<TResult> cmd*/, ChainPromptRequest? stepRequest = null) where TResult : class
         {
            
             return step;

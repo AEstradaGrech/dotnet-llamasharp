@@ -11,7 +11,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public SplitterStep() : base() { }
         // Constructor for Tap (execute N commands with the PREV OUT) (foreach branch, forge(branch))
-        public SplitterStep(List<StepInstruction> instructions, PromptCommandRequest request, string? feedFwdMessage) : base(request, feedFwdMessage)
+        public SplitterStep(List<StepInstruction> instructions, ChainPromptRequest request, string? feedFwdMessage) : base(request, feedFwdMessage)
         {
             _forgedSubSteps = new Dictionary<IChaineable, Guid>();
             _pluggedInstructions = instructions;
@@ -19,7 +19,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         // Constructor for Split<TComm>([]) <- executes the command and SPLITS the result over the plugged subchains passing the splitFeedFwd (forge(this) then Branches)
        
-        public SplitterStep(StepInstruction splittedCommand, List<StepInstruction> instructions, PromptCommandRequest request) : base(request, splittedCommand.FeedFwdInstruction)
+        public SplitterStep(StepInstruction splittedCommand, List<StepInstruction> instructions, ChainPromptRequest request) : base(request, splittedCommand.FeedFwdInstruction)
         {
             _forgedSubSteps = new Dictionary<IChaineable, Guid>();
             _commands.Add(splittedCommand.Command);
@@ -27,7 +27,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         }
 
         // Constructor for .Pipe<TComm> <- executes the command ON EACH input (foreach PREV OUT forge(this))
-        public SplitterStep(StepInstruction pipedCommand, PromptCommandRequest request) : this(pipedCommand, [], request) { }
+        public SplitterStep(StepInstruction pipedCommand, ChainPromptRequest request) : this(pipedCommand, [], request) { }
         
         // It is not the first step of a chain (prev != null)
         // The previous is a SPST

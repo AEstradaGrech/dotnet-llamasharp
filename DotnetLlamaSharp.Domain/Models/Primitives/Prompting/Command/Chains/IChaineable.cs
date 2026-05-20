@@ -20,13 +20,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         ChainRunner Drop(); // passes the runner to the step requesting it, and nulls the reference? (game rule: there can be only ONE runner / ONE ball in the match field. A step without runner !CanBeForged(previous))
         //                                                                                            La referencia NO es null si eres el portador del balon. EL balon está o en juego o en la zona de try (lo tiene el ultimo)
         void SendReplay();
-   
+        IChaineable OnRunnerCall();
+        void OnRunnerSupport(Guid id);
 
-        TStep ExpandTo<TStep>(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null) where TStep : ChainStep;
-        SingleThrowStep ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null);
-        SplitterStep Plug(List<StepInstruction> commands, PromptCommandRequest request, string? splitterFeedFwd = null);
-        TStep ExpandTo<TStep, TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new() where TStep : ChainStep;
-        SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
+        TStep ExpandTo<TStep>(IJsoneable command, ChainPromptRequest request, string? feedForwardInstruction = null) where TStep : ChainStep;
+        SingleThrowStep ExpandTo(IJsoneable command, ChainPromptRequest request, string? feedForwardInstruction = null);
+        SplitterStep Plug(List<StepInstruction> commands, ChainPromptRequest request, string? splitterFeedFwd = null);
+        TStep ExpandTo<TStep, TCommand, TResult>(string instruction, ChainPromptRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new() where TStep : ChainStep;
+        SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, ChainPromptRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
         TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class;
         public IChaineable Previous { get; }
         public IChaineable Next { get; }

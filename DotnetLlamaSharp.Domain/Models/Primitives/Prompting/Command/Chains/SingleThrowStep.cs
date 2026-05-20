@@ -8,27 +8,62 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     {
         public SingleThrowStep() : base() { }
 
-        public SingleThrowStep(StepInstruction instruction, PromptCommandRequest request) : base(request, instruction.FeedFwdInstruction)
+        public SingleThrowStep(StepInstruction instruction, ChainPromptRequest request) : base(request, instruction.FeedFwdInstruction)
         {
             _commands.Add(instruction.Command);
         }
-        public SingleThrowStep(IJsoneable command, PromptCommandRequest request, string? feedFwdInstruction = null) : base(request, feedFwdInstruction)
+        public SingleThrowStep(IJsoneable command, ChainPromptRequest request, string? feedFwdInstruction = null) : base(request, feedFwdInstruction)
         {
             _commands.Add(command);
 
         }
-        public SingleThrowStep(IJsoneable command, ChainRunner runner, PromptCommandRequest request, string? feedFwdInstruction = null) 
-            : this(command, request, feedFwdInstruction)
+
+        /// <summary>
+        /// This is the constructor for the FIRST RUNNER. ALWAYS
+
+        /// It recieves and stores the original (and unique-per-chain) ChainRunner or a Clone (if swapped in a ThrowTo(parallelSubchain) [in splitters | pipes])
+        /// 
+        /// > If it is the FIRST RUNNER, the ChainRunner MUST CONTAIN the general INIT DATA (user prompt, chain intent and finalSysMessage) to 
+        /// be used as contextual info on each step. Also...
+        /// 
+        /// > Subscribes to the NECESSARY events to persist outputs and messages across the chain steps. This is the only place for a FIRST RUNNER to do that, the 
+        /// other runners must catch the previous pass on runtime (calling Forge(previous)) to do this and keep running the chain.
+        /// 
+        /// > The UserPrompt is prompted ONLY in the first step (the rest should work on interpretations of the previous data and 
+        /// feedFwd guidance messages)
+        /// 
+        /// > If it is the FIRST SUBRUNNER, it works exactly as any other step in terms of recieved data / template instruction formation, but
+        ///   it recieves a clone of the ChainRunner to run their chain in parallel and then return their ChainRunner clone with the results
+        ///   to append  them to the (unique) original ChainRunner and keep running the main chain.
+        ///   
+        ///     *Note: subrunners MUST use Link(prev, fwd: false, two-way-bind: false) to recieve a previous from the main chain
+        /// 
+        /// > FIRST RUNNER is differenced from a FIRST SUB_RUNNER because the total RunnedInstruction stored in the ChainRunner & SwappedClones
+        /// 
+        /// </summary>
+        /// <param name="command"> The initial chain command</param>
+        /// <param name="runner">A data structure containing the initial data and store the generated data to pass it along the chain</param>
+        /// <param name="feedFwdInstruction">This is like 'what you want to tell the next one about the instruction output' </param>
+        public SingleThrowStep(IJsoneable command, ChainRunner runner, string? feedFwdInstruction = null) 
+            : base()
         {
+            //validateRunner.UserInput ONLY (the rest are optional)
+
+            _request = new ChainPromptRequest(); // just to avoid crashes since the FIRST RUNNER does not recieve a previous guidance message (stored in the previous output and passed with the _request)
+            _commands.Add(command);
+            _feedForwardInstruction = feedFwdInstruction;
             _runner = runner;
             _passCatchTimestamp = DateTime.Now;
-            //SUBSCRIBE TO EVENTS. THIS IS THE ONLY PLACE TO SETUP FOR CHAIN FIRST_STEPS. THE REST HAVE TO CATCH THE PASS ON FORGE
-
-            onRunNotify += _runner.OnRunnerNotification; // write stuff to runner. This is triggered AFTER forgeLink(); PERSIST FWD INSTRUCTIONS FOR MORE THAN ONE STEP
+           
+            onRunNotify += _runner.OnRunnerNotification; // write stuff to runner. This is always triggered AFTER forgeLink or when appending subchain results
+           
+            onSupportIncoming += _runner.OnSupporterResponse;
+            //_runner.onSupportRequest += OnRunnerCall;
+            // onSupportRunner += _runner.OnRunnedSupport;
             _runner.onReplayRequest += SendReplay; // handle request of writing stuff to runner. This might be called at the end of the chain to debug or whatever TBD
-
+            
         }
-        // Tiene el balon Y ...
+        // All runners MUST check if they are in possession of the ChainRunner (IsRunner) and... (<step-type-check>)
         public override bool CanBeForged(IChaineable previous)
             => IsRunning && previous == null ? _commands.Count > 0 : !previous.IsMultiSocket;
 
@@ -38,6 +73,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             // onPassRunner(this, _runner)
             // next -- subscribed -> OnReceive(IChaineable, previous, runner) _runner = runner --> IsRunning = true
+
             var finalStep = await firstStep.Forge(null);
 
             var typedResult = finalStep.Outputs.First().SerializedResult;
@@ -48,7 +84,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (withUserFriendlyMessage)
             {
                 var finalizer = ExpandTo<MessagePromptCommand, ChatMessage>(instruction: "Analyze the provided context data from the previous outputs and return the assistant answer (which is in JSON string format) as a text to keep on chatting",
-                    new PromptCommandRequest($"> Original user input: {firstStep.Input}", null, _request.Model));
+                    new ChainPromptRequest($"> Original user input: {firstStep.Input}", finalStep.Runner.FwdSystemMessage, null, _request.Model));
 
                 var jsonMessage = await finalizer.Forge(finalStep);
 

@@ -7,7 +7,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     public class BufferedStep : ChainStep
     {
         public BufferedStep() : base() { }
-        public BufferedStep(IJsoneable command, PromptCommandRequest request) : base(request) {}
+        public BufferedStep(IJsoneable command) : base() {}
 
         public List<IJsoneable> LoadedCommands { get; set; }
 
@@ -38,9 +38,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             var firstCommand = q.Dequeue();
 
-            var cmdReq = new PromptCommandRequest { Prompt = request.Prompt, Model = request.Settings.Model };
+            var cmdReq = new ChainPromptRequest { Prompt = request.Prompt, Model = request.Settings.Model };
 
-            var firstStep = new SingleThrowStep(firstCommand, new PromptCommandRequest()); 
+            var firstStep = new SingleThrowStep(firstCommand, new ChainRunner(userInput: request.Prompt,  request.Settings, finalSysMessage: request.SystemMessage)); 
 
             var currentStep = firstStep;
 

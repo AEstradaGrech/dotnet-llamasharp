@@ -9,7 +9,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     public class JunctionStep : SingleThrowStep
     {
         public JunctionStep() : base() { }
-        public JunctionStep(IJsoneable junctionCommand, PromptCommandRequest request, string? feedFwdMessage = null) : base(junctionCommand, request, feedFwdMessage) { }
+        public JunctionStep(IJsoneable junctionCommand, ChainPromptRequest request, string? feedFwdMessage = null) : base(junctionCommand, request, feedFwdMessage) { }
         // NO ES el primer eslabon de una cadena (es un colector)
         // El anterior step es MULTI SOCKET
         // Tiene un comando que ejecutar (en este caso deberia validarse que _commands == 1 porque la pieza es N a 1 siempre
@@ -62,7 +62,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                     {
                         // BUILD MESSAGE
                         sb.AppendLine()
-                          .AppendLine(guidanceMessageFrom(_request.Prompt, forgedPrevious.PromptedInstruction, output.SerializedResult, output.SchemaForMessage(), output.GuidanceMessage).Trim());
+                          .AppendLine(guidanceMessageFrom(forgedPrevious.PromptedInstruction, output.SerializedResult, output.SchemaForMessage(), output.GuidanceMessage).Trim());
 
                         _instructionsLog.AddRange(previous.InstructionsLog);
                     });
@@ -72,7 +72,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                     var output = outputs[key].FirstOrDefault();
 
                     sb.AppendLine()
-                      .AppendLine(guidanceMessageFrom(_request.Prompt, forgedPrevious.PromptedInstruction, output.SerializedResult, output.SchemaForMessage(), output.GuidanceMessage).Trim());
+                      .AppendLine(guidanceMessageFrom(forgedPrevious.PromptedInstruction, output.SerializedResult, output.SchemaForMessage(), output.GuidanceMessage).Trim());
                 }
             }
 

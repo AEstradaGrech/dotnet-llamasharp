@@ -5,7 +5,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     public class PipedStep : SplitterStep
     {
         public PipedStep() : base() { }
-        public PipedStep(StepInstruction piped, PromptCommandRequest request) : base(piped, request) { }
+        public PipedStep(StepInstruction piped, ChainPromptRequest request) : base(piped, request) { }
 
         public override bool CanBeForged(IChaineable previous)
             => previous != null && previous.IsMultiSocket && _commands.Count == 1;

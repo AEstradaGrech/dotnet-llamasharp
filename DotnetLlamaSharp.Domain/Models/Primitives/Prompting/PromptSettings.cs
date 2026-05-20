@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
+﻿using OllamaSharp.Models;
+
+namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {
     public class PromptSettings
     {
@@ -62,5 +64,19 @@
         //     64, 0 = disabled, -1 = num_ctx)
         public int? RepeatLastN { get; set; } = null;
 
+
+        public RequestOptions ToOllamaRequest()
+            => new RequestOptions {
+               NumCtx = ContextLength ?? 4096,
+               NumPredict = MaxTokens ?? 300,
+               Temperature = Temperature ?? 0f,
+               TopP = TopP ?? .1f,
+               TopK = TopK ?? 10,
+               RepeatPenalty = RepeatPenalty,
+               RepeatLastN = RepeatLastN,
+               MiroStat = MiroStat,
+               MiroStatEta = MiroStatEta,
+               MiroStatTau = MiroStatTau,
+           };
     }
 }

@@ -1,5 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Schema;
 
@@ -14,6 +15,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public delegate void OnReportReplay(ReplayLog log);
         public event OnReportReplay onReportReplay;
 
+        public delegate void OnSupportAcknowledge(IChaineable id);
+        public event OnSupportAcknowledge onSupportIncoming;
+
         protected readonly Guid _id;
         protected readonly ForgeLog _forgeLog;
         protected IChaineable _next;
@@ -21,7 +25,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         protected string preInstructionTag = "# INSTRUCTION: ";
         protected string? _promptedInstruction = null; // The prompted instruction for this step. Serves as a log and also to generate the feedForwardInstruction (provide context about prev step). Null if !Executed
         protected string? _feedForwardInstruction = null;
-        protected PromptCommandRequest _request;
+        protected ChainPromptRequest _request;
         protected List<string> _instructionsLog = new List<string>();
         protected List<IJsoneable> _commands = new List<IJsoneable>();
         protected List<ChainLink> _outputs = new List<ChainLink>();
@@ -58,7 +62,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             _forgeLog = new ForgeLog(_id, _feedForwardInstruction);
         }
 
-        public ChainStep(PromptCommandRequest request, string? feedForwardMessage = null) : this() 
+        public ChainStep(ChainPromptRequest request, string? feedForwardMessage = null) : this() 
         { 
             _request = request; 
             _feedForwardInstruction = feedForwardMessage;
@@ -119,7 +123,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             onRunNotify(log, updateRunnersLog);
         }
-        public SingleThrowStep ThrowTo(bool swapRunner, IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null)
+        public SingleThrowStep ThrowTo(bool swapRunner, IJsoneable command, ChainPromptRequest? request = null, string? feedForwardInstruction = null)
         {
             if (!IsRunning)
                 throw new InvalidOperationException($"{nameof(ChainStep)} >> {nameof(ThrowTo)} >> This method is to instantiate steps with a copy of the chain runner and the current caller is not the runner");
@@ -129,25 +133,25 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             //every step of this sub chain gets a new nullable runner with the previous log, but they subscribe to their own runner
             // this is to run chains in parallel. The last runner of each subChain has the report for the original Multithrow Step so they can be appended
             // to the original / main runner and deleted
-            return Activator.CreateInstance(typeof(SingleThrowStep),  command, newRunner, request, feedForwardInstruction) as SingleThrowStep;
+            return Activator.CreateInstance(typeof(SingleThrowStep), command, newRunner, feedForwardInstruction) as SingleThrowStep;
         }
-        public SingleThrowStep ExpandTo(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null)
+        public SingleThrowStep ExpandTo(IJsoneable command, ChainPromptRequest? request, string? feedForwardInstruction = null)
             => Activator.CreateInstance(typeof(SingleThrowStep), command, request, feedForwardInstruction) as SingleThrowStep;
-        public SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new()
-            => ExpandTo(Activator.CreateInstance(typeof(TCommand), Commands.First().BorrowLlama, instruction, request.Settings) as IJsoneable, request, feedForwardInstruction);
+        public SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, ChainPromptRequest? request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new()
+            => ExpandTo(Activator.CreateInstance(typeof(TCommand), Commands.First().BorrowLlama, instruction, request.StepSettings) as IJsoneable, request, feedForwardInstruction);
 
-        public TStep ExpandTo<TStep>(IJsoneable command, PromptCommandRequest request, string? feedForwardInstruction = null) where TStep : ChainStep
+        public TStep ExpandTo<TStep>(IJsoneable command, ChainPromptRequest? request, string? feedForwardInstruction = null) where TStep : ChainStep
             => Activator.CreateInstance(typeof(TStep), command, request, feedForwardInstruction) as TStep;
-        public TStep ExpandTo<TStep>(StepInstruction command, PromptCommandRequest request) where TStep : ChainStep
+        public TStep ExpandTo<TStep>(StepInstruction command, ChainPromptRequest? request) where TStep : ChainStep
             => Activator.CreateInstance(typeof(TStep), command, request) as TStep;
-        public TStep ExpandTo<TStep, TCommand, TResult>(string instruction, PromptCommandRequest request, string? feedForwardInstruction = null)
+        public TStep ExpandTo<TStep, TCommand, TResult>(string instruction, ChainPromptRequest request, string? feedForwardInstruction = null)
             where TCommand : BasePromptCommand<TResult>, new()
             where TStep : ChainStep
                 => ExpandTo<TStep>(Activator.CreateInstance(typeof(TCommand), Commands.First().BorrowLlama, instruction, request.Settings) as IJsoneable, request, feedForwardInstruction);
 
-        public SplitterStep Plug(List<StepInstruction> instructions, PromptCommandRequest request, string? splitterFeedFwd = null)
+        public SplitterStep Plug(List<StepInstruction> instructions, ChainPromptRequest? request, string? splitterFeedFwd = null)
           => Activator.CreateInstance(typeof(SplitterStep), instructions, request, splitterFeedFwd) as SplitterStep;
-        public SplitterStep SplitTo(StepInstruction splitted, List<StepInstruction> instructions, PromptCommandRequest request)
+        public SplitterStep SplitTo(StepInstruction splitted, List<StepInstruction> instructions, ChainPromptRequest? request = null)
           => Activator.CreateInstance(typeof(SplitterStep),  splitted, instructions, request) as SplitterStep;
         public TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class
             => IsForged ? JsonSerializer.Deserialize<TDeserialized>(Outputs.First().SerializedResult) ??
@@ -168,21 +172,27 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             // I is subscribed
         }
 
-        protected async Task forgeLinkForPlug(IChaineable previous, int plugIdx = 0)
+        protected string getStepGuidanceMessage(IChaineable previous)
         {
+            var sb = new StringBuilder();
+
             if (!IsFirstStep() && previous.IsForged)
             {
                 // The guidance message is appended to the command final system message in this way: _systemMessage (optional. guidance. on constructor) + dbMessage (optional. main msg. on construction) | defaultInstruction(optional. main msg. hardcoded) + _request.Guidance
-                _request.GuidanceMessage = guidanceMessageFrom(
-                    _request.Prompt, 
-                    previous.PromptedInstruction, 
-                    previous.Outputs.First().SerializedResult, 
-                    previous.Outputs.First().SchemaForMessage(),
-                    previous.Outputs.First().GuidanceMessage);
-                
-                //_instructionsLog.AddRange(previous.InstructionsLog);
+                sb.AppendLine()
+                  .AppendLine(guidanceMessageFrom(
+                    previous.PromptedInstruction,
+                    previous.Outputs.First().SerializedResult,
+                    previous.Outputs.First().SchemaForMessage(), // deberia ser opcional
+                    previous.Outputs.First().GuidanceMessage));
             }
 
+            return sb.ToString();
+        }
+        protected async Task forgeLinkForPlug(IChaineable previous, int plugIdx = 0)
+        {
+            _request.GuidanceMessage += string.IsNullOrEmpty(_request.GuidanceMessage) ? getStepGuidanceMessage(previous) : $"\ngetStepGuidanceMessage(previous)";
+            //_request.Feeds.Foreach guid => _request.GuidanceMessage += _runner.TryFind(out guid)
             await forgeLink(plugIdx);
         }
 
@@ -192,7 +202,27 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             // Es decir: se pasa el instructions log que es el step-by-step lite que ya funciona. sirve como sumary para Steps si hace falta.
             //           opcionalmente se puede pedir el reporte completo ordenado por fecha de ejecucion con todos los mensajes internos (StepLogs con instrucciones)
-            _request.Prompt = "Complete the specified instruction";
+            _request.Prompt = IsFirstStep() && _runner.RunnedInstructions.Count == 0 ? _runner.UserPrompt : "Complete the specified instruction";
+            
+            if (_request.Settings == null)
+                _request.Settings = _request.Settings != null ?_request.Settings : _runner.DefaultSettings.ToOllamaRequest();
+            
+            var sb = new StringBuilder();
+            
+            _request.ForwardChainFeeds.ForEach(runnerId =>
+            {
+                var opts = _runner.OutputsFromRunned(runnerId);
+
+                if (_runner.TryFindForged(runnerId, out var forged))
+                    sb.AppendLine()
+                      .AppendLine(guidanceMessageFrom(
+                        forged.CommandInstruction,
+                        forged.JsonResult,
+                        string.Empty,
+                        forged.FeedForwardMessage));
+            });
+
+            _request.GuidanceMessage += $"\n{sb.ToString()}";
 
             var jsonResult = await _commands[idx].JsonPrompt(_request, returnFullInstruction: false, preInstruction: preInstructionTag); //Skip GuidanceMessage, return only instruction for this step
 
@@ -208,30 +238,33 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             _forgeLog.Prompt = _request.Prompt;
         }
 
-        protected string guidanceMessageFrom(string prompt, string instruction, string serialized, string jsonSchema, string? feededInstruction = null)
+        protected string guidanceMessageFrom(string instruction, string serialized, string jsonSchema, string? feededInstruction = null)
          => @$"
-# CONTEXT: A previous process on your current task has reported the next results for this user query and instruction, 
-use this information if you find it relevant for your current task.
+# CONTEXT: This section contains relevant information about a previous instruction. Use the provided data as a guidance to complete your own instruction. Use each section 
+description (wrapped with parenthesis) to understand what deas it represent and how can it help you to complete your task.
 
-- PREVIOUS PROMPT: {prompt}
-- PREVIOUS TASK: {instruction.Replace(preInstructionTag, "").Trim()}
+{(!string.IsNullOrEmpty(_runner.Intent) ? $"- CHAIN INTENT (this is the overall goal of the whole chain in a categoric manner. Use it to have a very general idea about the task that the chain is trying to complete): {_runner.Intent}\n" : string.Empty)}
+- USER INPUT (this is the actual user request. Use it to understand what the user is trying to do in general terms): {_runner.UserPrompt}
 
-- PREVIOUS OUTPUT:
+- PREVIOUS INSTRUCTION (use this to have a clear idea of what was exactly the previous worker task and understand its output): {instruction.Replace(preInstructionTag, "").Trim()}
+
+- PREVIOUS OUTPUT (this is the raw json output of the previous instruction):
 
 {serialized}
 
-- PREVIOUS OUTPUT SCHEMA:
+{(string.IsNullOrEmpty(jsonSchema) ? string.Empty : $"- PREVIOUS OUTPUT SCHEMA (use this to understand the previous output json model):\n\n{jsonSchema}")}
 
-{jsonSchema}
-
-{(string.IsNullOrEmpty(feededInstruction) ? string.Empty : $"# PREVIOUS STEP REQUEST (this is what you are expected to do with the previous output data): {feededInstruction}")}";
+{(string.IsNullOrEmpty(feededInstruction) ? string.Empty : $"## PREVIOUS STEP REQUEST (this is what you are expected to do with the previous output data): {feededInstruction}")}";
 
         public bool hasCatchedThrow(IChaineable previous)
         {
             _runner = previous.Drop();
 
+            _runner.OnDropTo(this, previous);
+            
+            //_runner.onSupportRequest += previous.OnRunnerCall;
+
             onRunNotify += _runner.OnRunnerNotification;
-            _runner.onReplayRequest += SendReplay;
 
             checkCanForge(previous);
 
@@ -250,6 +283,17 @@ use this information if you find it relevant for your current task.
             report.PassCatchTimestamp = _passCatchTimestamp;
 
             onReportReplay(report);
+        }
+
+        // 19-05-2026 --> esto realmente rompe el patron rugby (info al runner y solo un runner)
+        //                si tengo que llamar a esto en algun sitio es que lo estoy haciendo mal
+        public IChaineable OnRunnerCall()
+            => this;
+
+        public void OnRunnerSupport(Guid id)
+        {
+            if (_id == id)
+                onSupportIncoming(this);
         }
     }
 }
