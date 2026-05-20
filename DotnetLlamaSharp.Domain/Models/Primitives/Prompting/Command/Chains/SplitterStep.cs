@@ -55,7 +55,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             if(_commands.Count == 1)
             {
-                _runner.RunnedInstructions.Add($"- SPLITTER: {_id}");
+                _instructionsLog.Add($"- SPLITTER: {_id}");
 
                 var splitted = ThrowTo(swapRunner: false, _commands.First(), _request, _feedForwardInstruction);
 
@@ -68,7 +68,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 previous = splittedOut;
             }
             
-            else _runner.RunnedInstructions.Add($"- TAP: {_id}");
+            else _instructionsLog.Add($"- TAP: {_id}");
 
             _pluggedInstructions.ForEach(i => _branches.Add(ThrowTo(swapRunner: true, i.Command, _request, i.FeedFwdInstruction)));
 
@@ -96,12 +96,22 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             else return _branches.SingleOrDefault(step => step.Id == stepId);
         }
 
+        // Como funciona ahora (20/05/2026) el tracking de instrucciones en subcadenas
+        // El ChainRunner es unico y mantiene el arrastre de todas las instrucciones ejecutadas
+        // Esto se clona en las sub cadenas para poder diferenciar FIRST RUNNER (chain) de FIRST SUBRUNNER (parallel subchain)
+        // Entonces, cada subRunner tambien recibe el arrastre de instrucciones mas las de su branch, PERO
+        // cada uno mantiene SU PROPIA INSTRUCCION. Cuando terminan las subcadenas NO se puede hacer append sin mas del RunnersLog
+        // porque lleva copias del arrastre de la principal, asi que se tiene que hacer un
+        // _subRunner.onReport <- y cada subrunner reporta su ReplayLog con SU instruccion y ya solo es hacer append
+        // en el _instructionLog de ESTE runner (que indica si es SPLITTER | TAP | PIPE y las subcadenas ejecutadas AKA el principal)
         public void processBranchResults(IChaineable[] results)
         {
             results.ToList().ForEach(chaineable =>
             {
-                var firstStepId = chaineable.Runner.ForgedLogs.First().RunnerId;
+                var replays = chaineable.Runner.GetReplays();
 
+                var firstStepId = replays.First().RunnerId;
+                
                 _forgedSubSteps.Add(chaineable, firstStepId);
 
                 Outputs.AddRange(chaineable.Outputs);
@@ -109,7 +119,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 chaineable.Runner.ForgedLogs.ForEach(log => sendForgeLog(log, false));
 
                 _instructionsLog.Add($"- SUB CHAIN {firstStepId}: ");
-                _instructionsLog.AddRange(chaineable.Runner.RunnedInstructions);
+                _instructionsLog.AddRange(replays.SelectMany(rep => rep.RunnersLog));
                 _instructionsLog.Add($"- END SUB CHAIN -");
             });
         }

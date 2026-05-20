@@ -168,30 +168,6 @@ namespace DotnetLlamaSharp.Services.Prompting
                      stepRequest: new ChainPromptRequest())
                .ThenExecuteAsync(withFinalMessage: true);
 
-            //////////////////////////////////////////////////////////////////
-            ///
-            //initialStep.WireTo<NumericResponse>(request, _promptsFactory.GetAsPrompteable<NumericPromptCommand, NumericResponse>("", null, request.Settings))
-            /*
-             command<CreateCharacterCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
-                .WireTo<JsonValidationCommand, ScoredBoolResponse>(request, new PromptCommandReq&Sons)
-                .WireTo<JsonReviewCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
-
-            ----------------------------------------------
-
-             StartWith(request, new PromptCommandReq&Sons) [RETURN STEP]
-                .WireTo<JsonValidationCommand, ScoredBoolResponse>(request, new PromptCommandReq&Sons)
-                .WireTo<JsonReviewCommand, CharacterResponse>(request, new PromptCommandReq&Sons)
-
-            step.From<UserIntentCommand, ChatMessage>()
-                .Branch<ScoredBoolCommand, ScoredBoolResponse>("# USER INTENT:")
-                
-            ---------------------------------------------------
-
-             step.From<UserIntentCommand, ChatMessage>()
-                .Branch(request, validOption: IPrompteable<T1>, fallbackOption: IPrompteable<T2>, ScoredBoolCommand evaluator)
-                .WireTo<QueryAugmentCommand, ChatMessage>(request) <-- esto es siempre validOption (if evaluator.True) si no fallbackOption tiene que terminar la cadena (throw new ChainFallbackException ? y todo se ejecuta siempre dentro de un try-catch (o todo va bien, o la pillo y hago X
-                
-             */
 
             return new ChatPrompt { 
                 Model = request.Settings.Model ?? "app-default",

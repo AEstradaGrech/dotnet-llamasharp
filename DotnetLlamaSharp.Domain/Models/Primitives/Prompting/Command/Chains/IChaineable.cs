@@ -19,10 +19,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         Task<IChaineable> Forge(IChaineable previous);
         ChainRunner Drop(); // passes the runner to the step requesting it, and nulls the reference? (game rule: there can be only ONE runner / ONE ball in the match field. A step without runner !CanBeForged(previous))
         //                                                                                            La referencia NO es null si eres el portador del balon. EL balon está o en juego o en la zona de try (lo tiene el ultimo)
+        bool IsReady();
         void SendReplay();
         IChaineable OnRunnerCall();
         void OnRunnerSupport(Guid id);
-
+        void FollowRunner(IChaineable current);
         TStep ExpandTo<TStep>(IJsoneable command, ChainPromptRequest request, string? feedForwardInstruction = null) where TStep : ChainStep;
         SingleThrowStep ExpandTo(IJsoneable command, ChainPromptRequest request, string? feedForwardInstruction = null);
         SplitterStep Plug(List<StepInstruction> commands, ChainPromptRequest request, string? splitterFeedFwd = null);

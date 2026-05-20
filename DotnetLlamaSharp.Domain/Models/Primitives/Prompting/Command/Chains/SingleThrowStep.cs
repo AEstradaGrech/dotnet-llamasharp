@@ -54,14 +54,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             _feedForwardInstruction = feedFwdInstruction;
             _runner = runner;
             _passCatchTimestamp = DateTime.Now;
-           
-            onRunNotify += _runner.OnRunnerNotification; // write stuff to runner. This is always triggered AFTER forgeLink or when appending subchain results
-           
-            onSupportIncoming += _runner.OnSupporterResponse;
-            //_runner.onSupportRequest += OnRunnerCall;
-            // onSupportRunner += _runner.OnRunnedSupport;
-            _runner.onReplayRequest += SendReplay; // handle request of writing stuff to runner. This might be called at the end of the chain to debug or whatever TBD
             
+            if(_runner.RunnedInstructions.Count != 0) //It is recieving a Throw with the original ChainRunner or a clone (it is a FIRST SUBRUNNER, then has 'prev guidance')
+                _request.GuidanceMessage += getContextMessageHeader(); // IF the request has a Guidance from the instantiation it will be inserted in-between the CMD.Instruction (maps to cmd._systemMessage) and the STEP.Context
+
+            onRunNotify += _runner.OnRunnerNotification; // write stuff to runner. This is always triggered AFTER forgeLink or when appending subchain results
+            onReportReplay += _runner.OnReplayReport;
+
+            _runner.SetReady(this);
         }
         // All runners MUST check if they are in possession of the ChainRunner (IsRunner) and... (<step-type-check>)
         public override bool CanBeForged(IChaineable previous)
@@ -71,10 +71,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             var firstStep = getFirstStep(current: this);
 
-            // onPassRunner(this, _runner)
-            // next -- subscribed -> OnReceive(IChaineable, previous, runner) _runner = runner --> IsRunning = true
-
-            var finalStep = await firstStep.Forge(null);
+            if (!firstStep.IsReady())
+                throw new InvalidOperationException($"{nameof(SingleThrowStep)} >> {nameof(ExecuteChainAsync)} >> {nameof(firstStep.IsReady)} >> FIRST STEP IS NOT READY :: ABORTING CHAIN");
+            
+            var finalStep = await firstStep.Forge(null); // Rename ? .Run(cmd) & (runner.Go(previous: null) | runner.Play(previous)
 
             var typedResult = finalStep.Outputs.First().SerializedResult;
 
@@ -83,8 +83,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             ChainRunner finalRunner = null;
             if (withUserFriendlyMessage)
             {
-                var finalizer = ExpandTo<MessagePromptCommand, ChatMessage>(instruction: "Analyze the provided context data from the previous outputs and return the assistant answer (which is in JSON string format) as a text to keep on chatting",
-                    new ChainPromptRequest($"> Original user input: {firstStep.Input}", finalStep.Runner.FwdSystemMessage, null, _request.Model));
+                var finalizer = ExpandTo<MessagePromptCommand, ChatMessage>(
+                    instruction: @"Your task is to analyze the provided context data from the previous outputs and return a 'user-friendly' text version of it in order to keep chatting with the user about the output results.
+Try to preserve the provided content information unless instructed to give the final result a specific mood, tone or whatever extra instruction you are commanded to apply over the results",
+                    new ChainPromptRequest($"> Analyze the provided content and generate a final message as instructed", finalStep.Runner.FwdSystemMessage, null, _request.Model));
 
                 var jsonMessage = await finalizer.Forge(finalStep);
 

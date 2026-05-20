@@ -19,6 +19,7 @@
         
         public string Prompt { get; set; }
         public string JsonResult { get; set; }
+        public string JsonSchema { get; set; }
         public string CommandInstruction { get; set; } // tap (exception) -> append Branches.First().Instruction (no hay una instruccion prioritaria) >> Split es splitted command SIN subinstrucciones (goal = splitted + feedFwd(s)
         public string FeedForwardMessage { get; set; } //_feedFwd + subchains.FeedForward
 

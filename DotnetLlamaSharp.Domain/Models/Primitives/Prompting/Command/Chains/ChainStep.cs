@@ -93,6 +93,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public ChainRunner Drop()
         {
+            
             var reference = _runner;
             _runner = null;
             return reference;
@@ -116,6 +117,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             _forgeLog.RunnersLog = _instructionsLog;
             _forgeLog.FeedForwardMessage = _feedForwardInstruction;
+
             onRunNotify(_forgeLog);
         }
 
@@ -191,7 +193,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         }
         protected async Task forgeLinkForPlug(IChaineable previous, int plugIdx = 0)
         {
-            _request.GuidanceMessage += string.IsNullOrEmpty(_request.GuidanceMessage) ? getStepGuidanceMessage(previous) : $"\ngetStepGuidanceMessage(previous)";
+            // any context injected / generated previously in the step process + default previous context mesage
+            _request.GuidanceMessage += string.IsNullOrEmpty(_request.GuidanceMessage) ? getStepGuidanceMessage(previous) : $"\n{getStepGuidanceMessage(previous)}";
             //_request.Feeds.Foreach guid => _request.GuidanceMessage += _runner.TryFind(out guid)
             await forgeLink(plugIdx);
         }
@@ -211,18 +214,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             
             _request.ForwardChainFeeds.ForEach(runnerId =>
             {
-                var opts = _runner.OutputsFromRunned(runnerId);
-
                 if (_runner.TryFindForged(runnerId, out var forged))
                     sb.AppendLine()
                       .AppendLine(guidanceMessageFrom(
                         forged.CommandInstruction,
                         forged.JsonResult,
-                        string.Empty,
+                        forged.JsonSchema,
                         forged.FeedForwardMessage));
             });
 
-            _request.GuidanceMessage += $"\n{sb.ToString()}";
+            _request.GuidanceMessage += $"\n{sb.ToString()}".Trim();
 
             var jsonResult = await _commands[idx].JsonPrompt(_request, returnFullInstruction: false, preInstruction: preInstructionTag); //Skip GuidanceMessage, return only instruction for this step
 
@@ -230,43 +231,53 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             _instructionsLog.Add(_promptedInstruction);
 
-            _outputs.Add(new ChainLink(_id, jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), jsonResult.Type, feedForwardMessage: _feedForwardInstruction));
+            var link = new ChainLink(_id, jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), jsonResult.Type, feedForwardMessage: _feedForwardInstruction);
+
+            _outputs.Add(link);
 
             _forgeLog.ForgeTimestamp = DateTime.Now;
             _forgeLog.JsonResult = jsonResult.RawJson;
-            _forgeLog.CommandInstruction = _promptedInstruction + (string.IsNullOrEmpty(_request.GuidanceMessage) ? "" : $"\n{_request.GuidanceMessage}");
+            _forgeLog.JsonSchema = link.SchemaForMessage();
             _forgeLog.Prompt = _request.Prompt;
+            _forgeLog.CommandInstruction = _promptedInstruction + (string.IsNullOrEmpty(_request.GuidanceMessage) ? "" : $"\n{_request.GuidanceMessage}");
+            // important: CommandInstruction lleva CONTEXT, onSendForgeLog lleva RunnersLog (this._instructionsLog) con instruccion unica 'limpia' de step O el log ya formateado si es MultiThrow
         }
+
+        public string getContextMessageHeader()
+            => !IsRunning ? string.Empty : @$"
+# CONTEXT: This section contains relevant information about previous instruction. Use the provided data as a guidance to complete your own instruction. Use each section 
+description (wrapped in parenthesis) to understand what does it represent and how can it help you to complete your task but, REMEMBER: your instruction is ALWAYS your priority.
+
+{(!string.IsNullOrEmpty(_runner.Intent) ? $"> CHAIN INTENT (this is the overall goal of the whole chain in a categoric manner. Use it to have a very general idea about the task that the chain is trying to complete): {_runner.Intent}\n" : string.Empty)}
+> USER INPUT (this is the actual user request. Use it to understand what the user is trying to do in general terms): {_runner.UserPrompt}";
 
         protected string guidanceMessageFrom(string instruction, string serialized, string jsonSchema, string? feededInstruction = null)
          => @$"
-# CONTEXT: This section contains relevant information about a previous instruction. Use the provided data as a guidance to complete your own instruction. Use each section 
-description (wrapped with parenthesis) to understand what deas it represent and how can it help you to complete your task.
+> PREVIOUS INSTRUCTION (use this to have a clear idea of what was exactly the previous worker task and understand its output):
 
-{(!string.IsNullOrEmpty(_runner.Intent) ? $"- CHAIN INTENT (this is the overall goal of the whole chain in a categoric manner. Use it to have a very general idea about the task that the chain is trying to complete): {_runner.Intent}\n" : string.Empty)}
-- USER INPUT (this is the actual user request. Use it to understand what the user is trying to do in general terms): {_runner.UserPrompt}
+ {instruction.Replace(preInstructionTag, "").Trim()}
 
-- PREVIOUS INSTRUCTION (use this to have a clear idea of what was exactly the previous worker task and understand its output): {instruction.Replace(preInstructionTag, "").Trim()}
-
-- PREVIOUS OUTPUT (this is the raw json output of the previous instruction):
+> PREVIOUS OUTPUT (this is the raw json output of the previous instruction):
 
 {serialized}
 
-{(string.IsNullOrEmpty(jsonSchema) ? string.Empty : $"- PREVIOUS OUTPUT SCHEMA (use this to understand the previous output json model):\n\n{jsonSchema}")}
+{(string.IsNullOrEmpty(jsonSchema) ? string.Empty : $"> PREVIOUS OUTPUT SCHEMA (use this to understand the previous output json model):\n\n{jsonSchema}")}
 
-{(string.IsNullOrEmpty(feededInstruction) ? string.Empty : $"## PREVIOUS STEP REQUEST (this is what you are expected to do with the previous output data): {feededInstruction}")}";
+{(string.IsNullOrEmpty(feededInstruction) ? string.Empty : $"> GUIDANCE MESSAGE FROM PREVIOUS WORKER (this states what the previous worker expects you to do with his output data): {feededInstruction}")}";
 
         public bool hasCatchedThrow(IChaineable previous)
         {
             _runner = previous.Drop();
 
             _runner.OnDropTo(this, previous);
-            
-            //_runner.onSupportRequest += previous.OnRunnerCall;
 
             onRunNotify += _runner.OnRunnerNotification;
-
+            
             checkCanForge(previous);
+
+            //'what is the play about!'
+
+            _request.GuidanceMessage += getContextMessageHeader();
 
             _passCatchTimestamp = DateTime.Now;
 
@@ -278,7 +289,8 @@ description (wrapped with parenthesis) to understand what deas it represent and 
         {
             //build report
             var report = new ReplayLog(_forgeLog);
-
+            report.RunnersLog = _instructionsLog; //cada miembro de la subchain hace append de SU instruction. si es sub-sub chain, contiene el log ya formateado (porque se hace report de pieza main) 
+                                                                                                                  //ej: sub-> [- do X] [ - do Y] [-TAP\n-SUBCHAIN:\n-Do Z\n-SUBCHAIN:\n-Do ETC] - [- do ..]
             report.FeededMessage = _request.GuidanceMessage;
             report.PassCatchTimestamp = _passCatchTimestamp;
 
@@ -295,5 +307,15 @@ description (wrapped with parenthesis) to understand what deas it represent and 
             if (_id == id)
                 onSupportIncoming(this);
         }
+
+        public void FollowRunner(IChaineable current)
+        {
+            if (!current.IsRunning) return;
+
+            onSupportIncoming += current.Runner.OnSupporterResponse;
+            onReportReplay += current.Runner.OnReplayReport;
+        }
+
+        public bool IsReady() => IsRunning && _runner.CanRun();
     }
 }

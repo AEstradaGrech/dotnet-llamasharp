@@ -42,22 +42,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
                 Prompt = request.Prompt,
                 System = withInstruction ? await getPromptInstruction(request.GuidanceMessage) : string.Empty,
                 Stream = false,
-                Options = requestSettings()
+                Options = _settings.ToOllamaRequest()
             };
-        protected RequestOptions requestSettings()
-            => new RequestOptions {
-                NumCtx = _settings.ContextLength ?? 4096,
-                NumPredict = _settings.MaxTokens ?? 300,
-                Temperature = _settings.Temperature ?? 0f,
-                TopP = _settings.TopP ?? .1f,
-                TopK = _settings.TopK ?? 10,
-                RepeatPenalty = _settings.RepeatPenalty,
-                RepeatLastN = _settings.RepeatLastN,
-                MiroStat = _settings.MiroStat,
-                MiroStatEta = _settings.MiroStatEta,
-                MiroStatTau = _settings.MiroStatTau,
-            };
-
        
         public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction= false, string? preInstruction = null)
         {

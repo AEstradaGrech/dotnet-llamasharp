@@ -14,6 +14,7 @@
             Prompt = forgeLog.Prompt;
             ForgeTimestamp = forgeLog.ForgeTimestamp;
             JsonResult = forgeLog.JsonResult;
+            JsonSchema = forgeLog.JsonSchema;
         }
         public DateTime PassCatchTimestamp { get; set; }
 
