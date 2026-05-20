@@ -30,6 +30,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         TStep ExpandTo<TStep, TCommand, TResult>(string instruction, ChainPromptRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new() where TStep : ChainStep;
         SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, ChainPromptRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
         TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class;
+        public void BoostWith(List<string> feeds, string? feedMsg);
         public IChaineable Previous { get; }
         public IChaineable Next { get; }
         public List<IJsoneable> Commands { get; }

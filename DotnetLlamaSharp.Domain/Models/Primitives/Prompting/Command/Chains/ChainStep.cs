@@ -209,14 +209,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             // Es decir: se pasa el instructions log que es el step-by-step lite que ya funciona. sirve como sumary para Steps si hace falta.
             //           opcionalmente se puede pedir el reporte completo ordenado por fecha de ejecucion con todos los mensajes internos (StepLogs con instrucciones)
-            _request.Prompt = IsFirstStep() && _runner.RunnedInstructions.Count == 0 ? _runner.UserPrompt : "Complete the specified instruction";
+            _request.Prompt = IsFirstStep() && _runner.RunnedInstructions.Count == 0 ? _runner.UserPrompt : "Complete the specified instruction. Do not chat with the user, just output the requested data as described.";
             
             if (_request.Settings == null)
                 _request.Settings = _request.Settings != null ?_request.Settings : _runner.DefaultSettings.ToOllamaRequest();
             
             var sb = new StringBuilder();
             
-            _request.ForwardChainFeeds.ForEach(runnerId =>
+            _request.ChainFeeds.ForEach(runnerId =>
             {
                 if (_runner.TryFindForged(runnerId, out var forged))
                     sb.AppendLine()
@@ -226,6 +226,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                         forged.JsonSchema,
                         forged.FeedForwardMessage));
             });
+
+            if(_request.Boosters.Count > 0)
+                sb.AppendLine()
+                  .AppendLine(_request.BoostersFeedText());
 
             _request.GuidanceMessage += $"\n{sb.ToString()}".Trim();
 
@@ -320,5 +324,7 @@ description (wrapped in parenthesis) to understand what does it represent and ho
         }
 
         public bool IsReady() => IsRunning && _runner.CanRun();
+
+        public void BoostWith(List<string> feeds, string? feedMessage) => _request.WithDataBoost(feedMessage, feeds);
     }
 }

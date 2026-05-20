@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using DocumentFormat.OpenXml.EMMA;
+using Dotnet.LangSearch.SDK;
+using Dotnet.LangSearch.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
@@ -25,13 +27,14 @@ namespace DotnetLlamaSharp.Services.Prompting
     {
         //private readonly IOllamaInferenceService _ollamaService;
         private readonly IPromptCommandsFactory _promptsFactory;
-
+        private readonly ILangSearchService _langSearch;
         private readonly RequestOptions _settings;
         private readonly ILogger<OllamaSharpService> _logger;
 
-        public OllamaSharpService( IPromptCommandsFactory promptsFactory, IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger)
+        public OllamaSharpService( IPromptCommandsFactory promptsFactory, ILangSearchService langSearch, IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger)
         {
             _promptsFactory = promptsFactory;
+            _langSearch = langSearch;
             _settings = settings.Value ?? new RequestOptions();
             _logger = logger;
 
@@ -205,35 +208,6 @@ namespace DotnetLlamaSharp.Services.Prompting
             //        stepRequest: new ChainPromptRequest())
             //   .ThenExecuteAsync(withFinalMessage: true);
 
-            return await FluentChainExtensions
-              .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                       instruction: request.Instructions.First(),
-                       request.Settings),
-                   userPrompt: request.Prompt,
-                   finalSysmessage: request.SystemMessage,
-                   chainIntent: "Create game character",
-                   feedFwd: "Use the name and the age to develop you part of the character"),
-                   defaultSettings: request.Settings)
-              .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                  instruction: request.Instructions.Skip(1).First(), 
-                  request.Settings),new ChainPromptRequest(), 
-                feedFwdInstruction: "Use this character typical scene as a character concept to inspire your creations")
-              .WithRebujito([/*api call to LangSearch, some loaded pdfs about X, DB_DATA of some kind, whatever*/], guidance: "Do X with this")
-              .ExposeThisId(out var thenId)
-              .Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings),
-                        feedFwd: "Use this game related data to ground your profile to the game lore"),
-                     new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings),
-                        feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
-                    stepRequest: new ChainPromptRequest())
-              .ExposeThisId(out var tapId)
-              .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                       instruction: request.Instructions.Skip(4).First(),
-                       request.Settings),
-                   feedFwd: ""),
-                   stepRequest: new ChainPromptRequest()
-                    .FeedFrom(thenId))
-              .ThenExecuteAsync(withFinalMessage: true, withReplay: true);
-
             //return await FluentChainExtensions
             //  .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
             //           instruction: request.Instructions.First(),
@@ -244,8 +218,8 @@ namespace DotnetLlamaSharp.Services.Prompting
             //       feedFwd: "Use the name and the age to develop you part of the character"),
             //       defaultSettings: request.Settings)
             //  .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-            //      instruction: request.Instructions.Skip(1).First(),
-            //      request.Settings), new ChainPromptRequest(),
+            //      instruction: request.Instructions.Skip(1).First(), 
+            //      request.Settings),new ChainPromptRequest(), 
             //    feedFwdInstruction: "Use this character typical scene as a character concept to inspire your creations")
             //  .WithRebujito([/*api call to LangSearch, some loaded pdfs about X, DB_DATA of some kind, whatever*/], guidance: "Do X with this")
             //  .ExposeThisId(out var thenId)
@@ -261,7 +235,37 @@ namespace DotnetLlamaSharp.Services.Prompting
             //       feedFwd: ""),
             //       stepRequest: new ChainPromptRequest()
             //        .FeedFrom(thenId))
-            //  .ThenExecuteAsync(withFinalMessage: true);
+            //  .ThenExecuteAsync(withFinalMessage: true, withReplay: true);
+
+            var langSearchRebujito = await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 3, Query = "Dunwich alike horror stories in the style of H.P Lovecraft o The Mist by Stephen King" });
+            return await FluentChainExtensions
+              .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+                       instruction: request.Instructions.First(),
+                       request.Settings),
+                   userPrompt: request.Prompt,
+                   finalSysmessage: request.SystemMessage,
+                   chainIntent: "Create game character",
+                   feedFwd: "Use the name and the age to develop you part of the character"),
+                   defaultSettings: request.Settings)
+              .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+                  instruction: request.Instructions.Skip(1).First(),
+                  request.Settings), new ChainPromptRequest(),
+                feedFwdInstruction: "Use this character typical scene as a character concept to inspire your creations")
+              .WithRebujito(langSearchRebujito, guidance: "Use the below data to get inspiration and capture the desired style and mood for your character")
+              .ExposeThisId(out var thenId)
+              .Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings),
+                        feedFwd: "Use this game related data to ground your profile to the game lore"),
+                     new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings),
+                        feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
+                    stepRequest: new ChainPromptRequest())
+              .ExposeThisId(out var tapId)
+              .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+                       instruction: request.Instructions.Skip(4).First(),
+                       request.Settings),
+                   feedFwd: ""),
+                   stepRequest: new ChainPromptRequest()
+                    .FeedFrom(thenId))
+              .ThenExecuteAsync(withFinalMessage: true);
         }
 
 

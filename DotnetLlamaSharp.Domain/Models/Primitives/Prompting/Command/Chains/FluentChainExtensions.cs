@@ -149,7 +149,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// Injects a random / uncontrolled amount of context data (with optional guidance) in the system message of 
         /// the step at runtime
         /// 
-        /// Work for both SingleThrow and Splitter steps
+        /// SingleThrow Chain Adapter
         /// </summary>
         /// <param name="step"></param>
         /// <param name="sources"></param>
@@ -157,16 +157,16 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <returns></returns>
         public static SingleThrowStep WithRebujito(this SingleThrowStep step, List<string> sources, string? guidance = null)
         {
-            //step.ChainStringFeeds = sources
+            step.BoostWith(sources, guidance);
+
             return step;
         }
-
 
         /// <summary>
         /// Injects a random / uncontrolled amount of context data (with optional guidance) in the system message of 
         /// the step at runtime
         /// 
-        /// Work for both SingleThrow and Splitter steps
+        /// Splitter Chain Adapter
         /// </summary>
         /// <param name="step"></param>
         /// <param name="sources"></param>
@@ -174,7 +174,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <returns></returns>
         public static SplitterStep WithRebujito(this SplitterStep step, List<string> sources, string? guidance = null)
         {
-            //step.ChainStringFeeds = sources
+            step.BoostWith(sources, guidance);
+            
             return step;
         }
         // Sequence (N, returnMaxTokens: 1000) --> opt = input * N & collect? (for N -> opt = N * input) equivalente a loop esto es .For() con el collect incorporado
@@ -207,7 +208,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         //}
         public static TypedOutput<TResult> Then<TResult>(this TypedOutput<TResult> step, IPrompteable<TResult> cmd /*IPromptCommand<TResult> cmd*/, ChainPromptRequest? stepRequest = null) where TResult : class
         {
-           
+            
             return step;
             //return nextStep;
         }
