@@ -57,13 +57,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (_next == null)
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> BAD CHAIN CONFIGURATION >> A CHAIN cannot end up in a SplitterStep and the current has no NEXT assigned >> CHAIN CANNOT BE CLOSED");
 
-            
-
             if(_commands.Count == 1)
             {
                 _instructionsLog.Add($"- SPLITTER: {_id}");
 
-                var splitted = ThrowTo(swapRunner: false, _commands.First(), _request, _feedForwardInstruction);
+                var splitted = ThrowTo(swapRunner: false, _commands.First(), isBoostedThrow: false, _request, _feedForwardInstruction);
 
                 splitted.Link(previous, isForward: false, isTwoWay: false);
                 
@@ -81,7 +79,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             
             else _instructionsLog.Add($"- TAP: {_id}");
 
-            _pluggedInstructions.ForEach(i => _branches.Add(ThrowTo(swapRunner: true, i.Command, _request, i.FeedFwdInstruction)));
+            _pluggedInstructions.ForEach(i => _branches.Add(ThrowTo(swapRunner: true, i.Command, isBoostedThrow: true, _request, i.FeedFwdInstruction)));
 
             var chainResults = new List<IChaineable>();
 
@@ -91,25 +89,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             }))));
 
             //It is a .TAP with no command for the main command (this)
-            if (string.IsNullOrEmpty(_promptedInstruction))
-            {
-                var promptSb = new StringBuilder();
-                var feedFwdSb = new StringBuilder();
-                _branches.SelectMany(branch => 
-                    branch.Outputs.Select(link => 
-                        new { link.Instruction, link.GuidanceMessage }))
-                        .ToList()
-                        .ForEach(item => { 
-                            promptSb.AppendLine(item.Instruction);
-                            feedFwdSb.AppendLine(item.GuidanceMessage);
-                        });
-                
-                _promptedInstruction = promptSb.ToString().Trim();
-                _feedForwardInstruction = feedFwdSb.ToString().Trim();
-
-                if (_runner.TryFindForged(previous.Id, out var log))
-                    _request.GuidanceMessage += guidanceMessageFrom(log.CommandInstruction, log.JsonResult, log.JsonSchema, log.FeedForwardMessage);
-            }
+            handleNonSplittedStepData(previous.Id);
 
             submitForgeLog();
 
@@ -159,6 +139,29 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 _subChainReplays.Add(chaineable.Id, replays);
             });
+        }
+
+        protected void handleNonSplittedStepData(Guid previousId)
+        {
+            if (string.IsNullOrEmpty(_promptedInstruction))
+            {
+                var promptSb = new StringBuilder();
+                var feedFwdSb = new StringBuilder();
+                _branches.SelectMany(branch =>
+                    branch.Outputs.Select(link =>
+                        new { link.Instruction, link.GuidanceMessage }))
+                        .ToList()
+                        .ForEach(item => {
+                            promptSb.AppendLine(item.Instruction);
+                            feedFwdSb.AppendLine(item.GuidanceMessage);
+                        });
+
+                _promptedInstruction = promptSb.ToString().Trim();
+                _feedForwardInstruction = feedFwdSb.ToString().Trim();
+
+                if (_runner.TryFindForged(previousId, out var log))
+                    _request.GuidanceMessage += guidanceMessageFrom(log.CommandInstruction, log.JsonResult, log.JsonSchema, log.FeedForwardMessage);
+            }
         }
 
         protected override ReplayLog replayFromLog()

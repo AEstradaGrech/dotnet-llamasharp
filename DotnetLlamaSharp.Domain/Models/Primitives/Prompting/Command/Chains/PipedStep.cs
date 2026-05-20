@@ -29,7 +29,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 outputs[key].ForEach(link =>
                 {
-                    var branch = ThrowTo(swapRunner: true, _commands.First(), _request, _feedForwardInstruction);
+                    var branch = ThrowTo(swapRunner: true, _commands.First(), isBoostedThrow: true, _request, _feedForwardInstruction);
 
                     _branches.Add(branch);
 
@@ -41,7 +41,9 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 branch.Link(prevsMap[branch.Id], isForward: false, isTwoWay: false);
                 return branch.Forge(prevsMap[branch.Id]);  
             }))));
-            
+
+            handleNonSplittedStepData(previous.Id);
+
             submitForgeLog();
 
             return await _next.Forge(this);

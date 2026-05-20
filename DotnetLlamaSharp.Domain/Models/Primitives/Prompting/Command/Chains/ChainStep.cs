@@ -131,7 +131,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             onRunNotify(log, updateRunnersLog);
         }
-        public SingleThrowStep ThrowTo(bool swapRunner, IJsoneable command, ChainPromptRequest? request = null, string? feedForwardInstruction = null)
+        public SingleThrowStep ThrowTo(bool swapRunner, IJsoneable command, bool isBoostedThrow, ChainPromptRequest? request = null, string? feedForwardInstruction = null)
         {
             if (!IsRunning)
                 throw new InvalidOperationException($"{nameof(ChainStep)} >> {nameof(ThrowTo)} >> This method is to instantiate steps with a copy of the chain runner and the current caller is not the runner");
@@ -141,7 +141,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             //every step of this sub chain gets a new nullable runner with the previous log, but they subscribe to their own runner
             // this is to run chains in parallel. The last runner of each subChain has the report for the original Multithrow Step so they can be appended
             // to the original / main runner and deleted
-            return Activator.CreateInstance(typeof(SingleThrowStep), command, newRunner, feedForwardInstruction) as SingleThrowStep;
+            var reciever = Activator.CreateInstance(typeof(SingleThrowStep), command, newRunner, feedForwardInstruction) as SingleThrowStep;
+
+            if (isBoostedThrow && request.Boosters.Count > 0)
+                request.Boosters.ForEach(feed => reciever.BoostWith(feed.Value, feed.Key));
+
+            return reciever;
         }
         public SingleThrowStep ExpandTo(IJsoneable command, ChainPromptRequest? request, string? feedForwardInstruction = null)
             => Activator.CreateInstance(typeof(SingleThrowStep), command, request, feedForwardInstruction) as SingleThrowStep;
