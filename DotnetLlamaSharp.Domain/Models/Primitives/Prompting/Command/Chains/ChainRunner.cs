@@ -19,7 +19,9 @@
 
         public ChainRunner(ChainRunner cloned, bool cloneRunnedInstructions) : this(cloned.UserPrompt, cloned.DefaultSettings, cloned.FwdSystemMessage,cloned.Intent)
         {
-            RunnedInstructions = cloneRunnedInstructions ? cloned.RunnedInstructions : new List<string>();
+            RunnedInstructions = cloneRunnedInstructions ? new List<string>(cloned.RunnedInstructions) : new List<string>();
+            onReplayRequest = null;
+            onSupportRequest = null;
         }
         public delegate void OnSupporterRequest(Guid runnedId);
         public event OnSupporterRequest onSupportRequest; // v2 -> Reviewer --> comprueba estos outputs vs sus inputs, evalua si el resultado es lo que le habian pedido, si no -> Re-run = onSupportRequest(id) triggers -> [spporter] onSupport(this) = _runner.OnSupportReceived(IChaineable) -> ThrowTo(supporter)
@@ -122,7 +124,8 @@
         /// </summary>
         /// <param name="withRunnedInstructions"></param>
         /// <returns></returns>
-        public ChainRunner Clone(bool withRunnedInstructions = true) => new ChainRunner(this, withRunnedInstructions);
+        public ChainRunner Clone(bool withRunnedInstructions = true) 
+            => Activator.CreateInstance(typeof(ChainRunner), this, withRunnedInstructions) as ChainRunner;
 
         
         public List<ChainLink> OutputsFromRunned(Guid id)

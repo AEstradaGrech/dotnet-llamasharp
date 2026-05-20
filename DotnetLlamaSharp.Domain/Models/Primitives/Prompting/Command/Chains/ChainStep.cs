@@ -32,7 +32,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         protected List<ChainLink> _outputs = new List<ChainLink>();
         protected ChainRunner? _runner = null;
         protected DateTime _passCatchTimestamp;
-
         public Guid Id => _id;
         public IChaineable Next => _next;
         public IChaineable Previous => _prev;
@@ -51,9 +50,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public bool IsChained(bool? isForwardCheck = true)
             => isForwardCheck == null ? _next != null || _prev != null : isForwardCheck.Value ? _next != null : _prev != null;
 
-        public bool IsFirstStep()
-            => IsChained(isForwardCheck: null) && _prev == null;
+        public bool IsFirstStep() => _next != null && _prev == null;
 
+        // It has a copy of the ChainRunner && IsChainedAsFirst() && HasMainInstructionsLog && HasNotRunnedYet
+        public bool IsFirstSubstep()
+            => IsReady() && _prev != null && _runner.RunnedInstructions.Count > 0 && _runner.ForgedLogs.Count == 0;
+       
         //Checks that _cmds.Count > 0 & the input type of step to ensure that the pieces match (single from single, collector from multi or pipe, multi from single, pipe from multi or pipe
         public abstract bool CanBeForged(IChaineable previous);
         //protected abstract Task forgeLink(IChaineable previous); // this makes the request and add the resulting link to the outputs list (allows multi-socket)
@@ -306,8 +308,7 @@ description (wrapped in parenthesis) to understand what does it represent and ho
 
         // 19-05-2026 --> esto realmente rompe el patron rugby (info al runner y solo un runner)
         //                si tengo que llamar a esto en algun sitio es que lo estoy haciendo mal
-        public IChaineable OnRunnerCall()
-            => this;
+        public IChaineable OnRunnerCall() => this;
 
         public void OnRunnerSupport(Guid id)
         {

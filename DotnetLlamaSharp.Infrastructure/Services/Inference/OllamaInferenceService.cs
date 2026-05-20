@@ -41,7 +41,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.Inference
                 if (!string.IsNullOrEmpty(part?.Response))
                     sb.Append(part.Response);
 
-            return new Message(ChatRole.Assistant.ToString(), sb.ToString());
+           return new Message(ChatRole.Assistant.ToString(), sb.ToString());
         }
 
         public async Task<Message> ChatPrompt(ChatRequest request)

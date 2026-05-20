@@ -10,6 +10,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         Guid Id { get; }
         bool IsChained(bool? checkNextOnly = true);
         bool IsFirstStep();
+        bool IsFirstSubstep();
         public bool CanBeForged(IChaineable previous);
         bool IsMultiSocket { get; }
         public bool IsForged { get; }

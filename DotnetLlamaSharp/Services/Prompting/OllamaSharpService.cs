@@ -237,7 +237,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             //        .FeedFrom(thenId))
             //  .ThenExecuteAsync(withFinalMessage: true, withReplay: true);
 
-            var langSearchRebujito = await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 3, Query = "Dunwich alike horror stories in the style of H.P Lovecraft o The Mist by Stephen King" });
+            var langSearchRebujito = await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 2, Query = "Dunwich alike horror stories in the style of H.P Lovecraft o The Mist by Stephen King" }, returnSnippet: true);
             return await FluentChainExtensions
               .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                        instruction: request.Instructions.First(),
@@ -265,7 +265,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                    feedFwd: ""),
                    stepRequest: new ChainPromptRequest()
                     .FeedFrom(thenId))
-              .ThenExecuteAsync(withFinalMessage: true);
+              .ThenExecuteAsync(withFinalMessage: true, withReplay: true);
         }
 
 

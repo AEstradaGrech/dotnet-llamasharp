@@ -93,11 +93,19 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             //It is a .TAP with no command for the main command (this)
             if (string.IsNullOrEmpty(_promptedInstruction))
             {
-                var sb = new StringBuilder();
-
-                _branches.SelectMany(branch => branch.Outputs.Select(link => link.Instruction)).ToList().ForEach(instruction => { sb.AppendLine(instruction); });
-
-                _promptedInstruction = sb.ToString().Trim();
+                var promptSb = new StringBuilder();
+                var feedFwdSb = new StringBuilder();
+                _branches.SelectMany(branch => 
+                    branch.Outputs.Select(link => 
+                        new { link.Instruction, link.GuidanceMessage }))
+                        .ToList()
+                        .ForEach(item => { 
+                            promptSb.AppendLine(item.Instruction);
+                            feedFwdSb.AppendLine(item.GuidanceMessage);
+                        });
+                
+                _promptedInstruction = promptSb.ToString().Trim();
+                _feedForwardInstruction = feedFwdSb.ToString().Trim();
 
                 if (_runner.TryFindForged(previous.Id, out var log))
                     _request.GuidanceMessage += guidanceMessageFrom(log.CommandInstruction, log.JsonResult, log.JsonSchema, log.FeedForwardMessage);

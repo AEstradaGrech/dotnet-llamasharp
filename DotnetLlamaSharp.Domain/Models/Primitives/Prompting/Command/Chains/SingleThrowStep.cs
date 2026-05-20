@@ -102,12 +102,13 @@ Try to preserve the provided content information unless instructed to give the f
 
         public override async Task<IChaineable> Forge(IChaineable previous)
         {
-            if (!IsFirstStep())
+            if (!IsFirstStep() && !IsFirstSubstep())
             {
-                if(!IsRunning && !hasCatchedThrow(previous))
-                    throw new InvalidOperationException($"{nameof(SingleThrowStep)} >> {nameof(Forge)} >> {_commands.First().GetType().Name} >> {nameof(hasCatchedThrow)} >> AN ERROR HAS OCCURED WHILE PASSING THE CHAIN RUNNER FROM PREVIOUS STEP");
+                    if (!IsRunning && !hasCatchedThrow(previous))
+                        throw new InvalidOperationException($"{nameof(SingleThrowStep)} >> {nameof(Forge)} >> {_commands.First().GetType().Name} >> {nameof(hasCatchedThrow)} >> AN ERROR HAS OCCURED WHILE PASSING THE CHAIN RUNNER FROM PREVIOUS STEP");
+                // else //is a FIRST SUBRUNNER --> Recieves the ChainRunner clone that will handle the subchain in the ThrowTo(), but then is Linked() to the previous runner in the main chain and has to skip the Drop + OnDrop pass   
             }
-
+            
             else _passCatchTimestamp = DateTime.Now;
 
             await forgeLinkForPlug(previous);
