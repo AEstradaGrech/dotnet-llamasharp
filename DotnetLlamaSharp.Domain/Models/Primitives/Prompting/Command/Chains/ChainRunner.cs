@@ -109,7 +109,8 @@
 
         public void OnReplayReport(ReplayLog log)
         {
-            _replays.Add(log);
+            if(!_replays.Any(replay => replay.RunnerId == log.RunnerId))
+                _replays.Add(log);
         }
 
 
@@ -128,16 +129,14 @@
         {
             var results = new List<ChainLink>();
 
-            if (tryRequestSupport(id, out var runned))
+            if (TryCallSupporter(id, out var runned))
                 results.AddRange(runned.Outputs);
 
             return results;
         }
-        private bool tryRequestSupport(Guid id, out IChaineable supporter)
+        public bool TryCallSupporter(Guid id, out IChaineable supporter)
         {
             supporter = Supporters.ContainsKey(id) ? Supporters[id]() : null;
-
-            //onSupportRequest(id);
 
             return supporter != null;
         }

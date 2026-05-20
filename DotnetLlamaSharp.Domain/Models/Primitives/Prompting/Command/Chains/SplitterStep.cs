@@ -1,4 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
+using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
@@ -9,6 +10,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         protected List<IChaineable> _branches = new List<IChaineable>();
         protected Dictionary<IChaineable, Guid> _forgedSubSteps;
 
+        // This stores all the replays that are ALWAYS called because they are
+        // required to build the _runner.RunnedInstructions and, in case the user
+        // requests the Chain Replay, they are added to this Splitter.ReplayLog BranchLogs so
+        // the data hierarchy is already configured
+        protected Dictionary<Guid, List<ReplayLog>> _subChainReplays = null;
         public SplitterStep() : base() { }
         // Constructor for Tap (execute N commands with the PREV OUT) (foreach branch, forge(branch))
         public SplitterStep(List<StepInstruction> instructions, ChainPromptRequest request, string? feedFwdMessage) : base(request, feedFwdMessage)
@@ -63,7 +69,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 
                 var splittedOut = await splitted.Forge(previous);
 
+                _instructionsLog.AddRange(splittedOut.InstructionsLog);
+
                 _runner = splittedOut.Drop();
+
+                if (_runner.TryFindForged(splittedOut.Id, out var log))
+                    _promptedInstruction = log.CommandInstruction;
 
                 previous = splittedOut;
             }
@@ -79,10 +90,25 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 return branch.Forge(previous); 
             }))));
 
+            //It is a .TAP with no command for the main command (this)
+            if (string.IsNullOrEmpty(_promptedInstruction))
+            {
+                var sb = new StringBuilder();
+
+                _branches.SelectMany(branch => branch.Outputs.Select(link => link.Instruction)).ToList().ForEach(instruction => { sb.AppendLine(instruction); });
+
+                _promptedInstruction = sb.ToString().Trim();
+
+                if (_runner.TryFindForged(previous.Id, out var log))
+                    _request.GuidanceMessage += guidanceMessageFrom(log.CommandInstruction, log.JsonResult, log.JsonSchema, log.FeedForwardMessage);
+            }
+
             submitForgeLog();
 
             return await _next.Forge(this);
         }
+
+        public IChaineable GetForgedSubStep(Guid stepId) => _forgedSubSteps.Keys.FirstOrDefault(step => step.Id == stepId);
 
         public IChaineable GetPluggedById(Guid stepId)
         {
@@ -106,6 +132,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         // en el _instructionLog de ESTE runner (que indica si es SPLITTER | TAP | PIPE y las subcadenas ejecutadas AKA el principal)
         public void processBranchResults(IChaineable[] results)
         {
+            _subChainReplays = new Dictionary<Guid, List<ReplayLog>>();
             results.ToList().ForEach(chaineable =>
             {
                 var replays = chaineable.Runner.GetReplays();
@@ -121,10 +148,18 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 _instructionsLog.Add($"- SUB CHAIN {firstStepId}: ");
                 _instructionsLog.AddRange(replays.SelectMany(rep => rep.RunnersLog));
                 _instructionsLog.Add($"- END SUB CHAIN -");
+
+                _subChainReplays.Add(chaineable.Id, replays);
             });
         }
 
-        public IChaineable GetForgedSubStep(Guid stepId)
-            => _forgedSubSteps.Keys.FirstOrDefault(step => step.Id == stepId);
+        protected override ReplayLog replayFromLog()
+        {
+            var report = base.replayFromLog();
+
+            report.BranchLogs = _subChainReplays;
+
+            return report;
+        }
     }
 }

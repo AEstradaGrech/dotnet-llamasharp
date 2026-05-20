@@ -10,6 +10,7 @@
             PrevId = forgeLog.PrevId;
             NextId = forgeLog.NextId;
             CommandInstruction = forgeLog.CommandInstruction;
+            StepInstruction = forgeLog.StepInstruction;
             FeedForwardMessage = forgeLog.FeedForwardMessage;
             Prompt = forgeLog.Prompt;
             ForgeTimestamp = forgeLog.ForgeTimestamp;
@@ -20,6 +21,6 @@
 
         public string FeededMessage { get; set; }
 
-        public Dictionary<Guid, ReplayLog> BranchLogs { get; set; }
+        public Dictionary<Guid, List<ReplayLog>> BranchLogs { get; set; }
     }
 }

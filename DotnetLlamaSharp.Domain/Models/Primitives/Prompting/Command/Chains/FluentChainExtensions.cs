@@ -37,7 +37,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                  START   TAP  PIPE   PIPE    JOIN   THEN          
              */
 
-            var nextStep = step.ExpandTo(command, request);
+            var nextStep = step.ExpandTo(command, request, feedFwdInstruction);
 
             step.Link(nextStep, isForward: true, isTwoWay: true);
 
@@ -185,8 +185,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         // .WithRelay(prompteable, voltageCondition) <- se activa si true, si no bypass
         // .AddCapacitor(1k tokens) <- si el sysmessage llega a valor de carga lo mantiene (con sumarizaciones o algo asi)
         // .Choke<TVal>(3 validations) where TVal : JsonValidatorCommand  <-- Request.CommandValidations + ChokeVals?
-        public static async Task<ChainResult> ThenExecuteAsync(this SingleThrowStep step, bool withFinalMessage = true)
-            => await step.ExecuteChainAsync(withFinalMessage);
+        public static async Task<ChainResult> ThenExecuteAsync(this SingleThrowStep step, bool withFinalMessage = true, bool withReplay = false)
+            => await step.ExecuteChainAsync(withFinalMessage, withReplay);
        
         public static ChainStep Then<TCommand, TResult>(this ChainStep step, string? instruction, ChainPromptRequest? stepRequest = null, string? feedFwdInstruction = null) 
             where TCommand : BasePromptCommand<TResult>, new() 

@@ -67,7 +67,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public override bool CanBeForged(IChaineable previous)
             => IsRunning && previous == null ? _commands.Count > 0 : !previous.IsMultiSocket;
 
-        public override async Task<ChainResult> ExecuteChainAsync(bool withUserFriendlyMessage = true)
+        public async Task<ChainResult> ExecuteChainAsync(bool withUserFriendlyMessage = true, bool withReplay = false)
         {
             var firstStep = getFirstStep(current: this);
 
@@ -97,7 +97,7 @@ Try to preserve the provided content information unless instructed to give the f
 
             else finalRunner = finalStep.Drop();
 
-            return new ChainResult(finalRunner.ForgedLogs, jsonResult: typedResult, finalStep.Outputs.First().JsonSchema, chainInput: firstStep.Input, stepsLog: finalRunner.RunnedInstructions, processedResult: finalMessage);
+            return new ChainResult(withReplay ? finalRunner.GetReplays() : [], jsonResult: typedResult, finalStep.Outputs.First().JsonSchema, chainInput: firstStep.Input, stepsLog: finalRunner.RunnedInstructions, processedResult: finalMessage);
         }
 
         public override async Task<IChaineable> Forge(IChaineable previous)
@@ -116,5 +116,6 @@ Try to preserve the provided content information unless instructed to give the f
 
             return _next != null ? await _next.Forge(this) : this;
         }
+
     }
 }

@@ -20,6 +20,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         protected readonly Guid _id;
         protected readonly ForgeLog _forgeLog;
+                                                                      
         protected IChaineable _next;
         protected IChaineable _prev;
         protected string preInstructionTag = "# INSTRUCTION: ";
@@ -98,8 +99,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             _runner = null;
             return reference;
         }
-        public virtual async Task<ChainResult> ExecuteChainAsync(bool withUserFriendlyMessage = true) { throw new NotImplementedException(); }
-
+        
         public abstract Task<IChaineable> Forge(IChaineable previous);
 
         protected virtual void submitForgeLog()
@@ -115,9 +115,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if(_next != null)
                 _forgeLog.NextId = _next.Id;
 
-            _forgeLog.RunnersLog = _instructionsLog;
-            _forgeLog.FeedForwardMessage = _feedForwardInstruction;
+            _forgeLog.CommandInstruction = _promptedInstruction;
+            _forgeLog.StepInstruction = _promptedInstruction + (string.IsNullOrEmpty(_request.GuidanceMessage) ? "" : $"\n{_request.GuidanceMessage}");
 
+            _forgeLog.Prompt = _request.Prompt;
+            _forgeLog.FeedForwardMessage = _feedForwardInstruction;
+            _forgeLog.RunnersLog = _instructionsLog;
+            
             onRunNotify(_forgeLog);
         }
 
@@ -183,7 +187,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 // The guidance message is appended to the command final system message in this way: _systemMessage (optional. guidance. on constructor) + dbMessage (optional. main msg. on construction) | defaultInstruction(optional. main msg. hardcoded) + _request.Guidance
                 sb.AppendLine()
                   .AppendLine(guidanceMessageFrom(
-                    previous.PromptedInstruction,
+                    previous.Outputs.First().Instruction,
                     previous.Outputs.First().SerializedResult,
                     previous.Outputs.First().SchemaForMessage(), // deberia ser opcional
                     previous.Outputs.First().GuidanceMessage));
@@ -231,16 +235,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
             _instructionsLog.Add(_promptedInstruction);
 
-            var link = new ChainLink(_id, jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), jsonResult.Type, feedForwardMessage: _feedForwardInstruction);
+            var link = new ChainLink(_id, _promptedInstruction, jsonResult.RawJson, JsonSerializerOptions.Default.GetJsonSchemaAsNode(jsonResult.Type), jsonResult.Type, feedForwardMessage: _feedForwardInstruction);
 
             _outputs.Add(link);
 
             _forgeLog.ForgeTimestamp = DateTime.Now;
             _forgeLog.JsonResult = jsonResult.RawJson;
             _forgeLog.JsonSchema = link.SchemaForMessage();
-            _forgeLog.Prompt = _request.Prompt;
-            _forgeLog.CommandInstruction = _promptedInstruction + (string.IsNullOrEmpty(_request.GuidanceMessage) ? "" : $"\n{_request.GuidanceMessage}");
-            // important: CommandInstruction lleva CONTEXT, onSendForgeLog lleva RunnersLog (this._instructionsLog) con instruccion unica 'limpia' de step O el log ya formateado si es MultiThrow
         }
 
         public string getContextMessageHeader()
@@ -284,13 +285,15 @@ description (wrapped in parenthesis) to understand what does it represent and ho
             return IsRunning;
         }
 
+        protected virtual ReplayLog replayFromLog() => new ReplayLog(_forgeLog);
         // override in Multi-Socket to include subchain results
         public void SendReplay()
         {
             //build report
-            var report = new ReplayLog(_forgeLog);
+            var report = replayFromLog();
+            
             report.RunnersLog = _instructionsLog; //cada miembro de la subchain hace append de SU instruction. si es sub-sub chain, contiene el log ya formateado (porque se hace report de pieza main) 
-                                                                                                                  //ej: sub-> [- do X] [ - do Y] [-TAP\n-SUBCHAIN:\n-Do Z\n-SUBCHAIN:\n-Do ETC] - [- do ..]
+                                                                                                      //ej: sub-> [- do X] [ - do Y] [-TAP\n-SUBCHAIN:\n-Do Z\n-SUBCHAIN:\n-Do ETC] - [- do ..]
             report.FeededMessage = _request.GuidanceMessage;
             report.PassCatchTimestamp = _passCatchTimestamp;
 

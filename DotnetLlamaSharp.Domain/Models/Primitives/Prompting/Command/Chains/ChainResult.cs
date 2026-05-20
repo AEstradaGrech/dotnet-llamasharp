@@ -25,7 +25,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                     SystemInstructions.Content += $"\n{stepsLog[i]}";
         }
 
-        public ChainResult( List<ForgeLog> logs, string jsonResult, JsonNode resultSchema, string chainInput, List<string> stepsLog, ChatMessage? processedResult = null) 
+        public ChainResult( List<ReplayLog> logs, string jsonResult, JsonNode resultSchema, string chainInput, List<string> stepsLog, ChatMessage? processedResult = null) 
             : this(jsonResult, resultSchema, chainInput, stepsLog, processedResult)
         {
             ChainLogs = logs;
@@ -36,7 +36,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public JsonNode Schema { get; set; }
         public string InputPrompt { get; set; }
         public List<string> ChainStepsLog { get; set; }
-        public List<ForgeLog> ChainLogs { get; set; }
+        public List<ReplayLog> ChainLogs { get; set; }
 
     }
 }
