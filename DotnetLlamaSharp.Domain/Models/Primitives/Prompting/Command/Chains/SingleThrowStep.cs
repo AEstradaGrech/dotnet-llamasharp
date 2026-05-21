@@ -8,11 +8,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     {
         public SingleThrowStep() : base() { }
 
-        public SingleThrowStep(StepInstruction instruction, ChainPromptRequest request) : base(request, instruction.FeedFwdInstruction)
+        public SingleThrowStep(StepInstruction instruction, StepSettings request) : base(request, instruction.FeedFwdInstruction)
         {
             _commands.Add(instruction.Command);
         }
-        public SingleThrowStep(IJsoneable command, ChainPromptRequest request, string? feedFwdInstruction = null) : base(request, feedFwdInstruction)
+        public SingleThrowStep(IJsoneable command, StepSettings request, string? feedFwdInstruction = null) : base(request, feedFwdInstruction)
         {
             _commands.Add(command);
 
@@ -44,19 +44,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="command"> The initial chain command</param>
         /// <param name="runner">A data structure containing the initial data and store the generated data to pass it along the chain</param>
         /// <param name="feedFwdInstruction">This is like 'what you want to tell the next one about the instruction output' </param>
-        public SingleThrowStep(IJsoneable command, ChainRunner runner, string? feedFwdInstruction = null) 
-            : base()
+        public SingleThrowStep(StepInstruction instruction, ChainRunner runner) 
+            : this(instruction.Command, instruction.StepSettings, instruction.FeedFwdInstruction)
         {
-            //validateRunner.UserInput ONLY (the rest are optional)
-
-            _request = new ChainPromptRequest(); // just to avoid crashes since the FIRST RUNNER does not recieve a previous guidance message (stored in the previous output and passed with the _request)
-            _commands.Add(command);
-            _feedForwardInstruction = feedFwdInstruction;
             _runner = runner;
             _passCatchTimestamp = DateTime.Now;
             
             if(_runner.RunnedInstructions.Count != 0) //It is recieving a Throw with the original ChainRunner or a clone (it is a FIRST SUBRUNNER, then has 'prev guidance')
-                _request.GuidanceMessage += getContextMessageHeader(); // IF the request has a Guidance from the instantiation it will be inserted in-between the CMD.Instruction (maps to cmd._systemMessage) and the STEP.Context
+                Request.GuidanceMessage += getContextMessageHeader(); // IF the request has a Guidance from the instantiation it will be inserted in-between the CMD.Instruction (maps to cmd._systemMessage) and the STEP.Context
 
             onRunNotify += _runner.OnRunnerNotification; // write stuff to runner. This is always triggered AFTER forgeLink or when appending subchain results
             onReportReplay += _runner.OnReplayReport;
@@ -67,7 +62,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public override bool CanBeForged(IChaineable previous)
             => IsRunning && previous == null ? _commands.Count > 0 : !previous.IsMultiSocket;
 
-        public async Task<ChainResult> ExecuteChainAsync(bool withUserFriendlyMessage = true, bool withReplay = false)
+        public async Task<ChainResult> ExecuteChainAsync(bool withFinalMessage = false, bool withReplay = false, CommandSettings? finalMsgSettings = null)
         {
             var firstStep = getFirstStep(current: this);
 
@@ -81,12 +76,17 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             var finalMessage = new ChatMessage(ChatRole.Assistant.ToString(), string.Empty);
 
             ChainRunner finalRunner = null;
-            if (withUserFriendlyMessage)
+            if (withFinalMessage)
             {
+                var finalInstruction = getDefaultFinalInstruction();
                 var finalizer = ExpandTo<MessagePromptCommand, ChatMessage>(
-                    instruction: @"Your task is to analyze the provided context data from the previous outputs and return a 'user-friendly' text version of it in order to keep chatting with the user about the output results.
-Try to preserve the provided content information unless instructed to give the final result a specific mood, tone or whatever extra instruction you are commanded to apply over the results",
-                    new ChainPromptRequest($"> Analyze the provided content and generate a final message as instructed", finalStep.Runner.FwdSystemMessage, null, _request.Model));
+                    instruction: finalInstruction.SystemMessage, // Esto es algo asi como una feature del SDK, el usuario no deberia poder cambiarlo, solo enriquecerlo (finalSysMsg)
+                    finalMsgSettings ?? finalStep.Runner.DefaultSettings,
+                    new StepSettings(new PromptCommandRequest(
+                        message: finalInstruction.Prompt,
+                        guidanceMessage: finalStep.Runner.FwdSystemMessage) // esto es lo mismo que _runner.Default y lo mismo que dejarlo a null. v2 -> ChainReqDto.FinalMessageSettings (con settings mas creativos o diferentes del input y ya esta)
+                    )
+                );
 
                 var jsonMessage = await finalizer.Forge(finalStep);
 
@@ -117,6 +117,10 @@ Try to preserve the provided content information unless instructed to give the f
 
             return _next != null ? await _next.Forge(this) : this;
         }
+
+        private Instruction getDefaultFinalInstruction()
+            => new Instruction("Review and analyze carefully the previous output and return the content in text format as stated in your instruction",@"Your task is to analyze the provided context data from the previous outputs and return a 'user-friendly' text version of it in order to keep chatting with the user about the output results.
+Try to preserve the provided content information unless instructed to give the final result a specific mood, tone or whatever extra instruction you are commanded to apply over the results");
 
     }
 }

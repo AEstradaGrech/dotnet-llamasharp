@@ -47,12 +47,15 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
        
         public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction= false, string? preInstruction = null)
         {
-            if (!string.IsNullOrEmpty(preInstruction))
-                _systemMessage = $"{preInstruction} {_systemMessage}";
+            var sysmsg = _systemMessage;
+
+            _systemMessage = string.IsNullOrEmpty(preInstruction) ? _systemMessage : $"{preInstruction} {_systemMessage}";
 
             var promptInstruction = await getPromptInstruction(returnFullInstruction ? request.GuidanceMessage : null);
 
             var commandPrompt = await Prompt(request);
+
+            _systemMessage = sysmsg;
 
             return new JsonPromptResult(promptInstruction, commandPrompt, commandPrompt.GetType(), JsonSerializer.Serialize(commandPrompt), JsonSerializerOptions.Default.GetJsonSchemaAsNode(commandPrompt.GetType()));
         }

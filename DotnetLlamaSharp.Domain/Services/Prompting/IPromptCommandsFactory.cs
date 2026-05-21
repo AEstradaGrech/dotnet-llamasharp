@@ -11,7 +11,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
     {
         TCommand GetCommand<TCommand, TResult>(string? systemMessage = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new();
         MessagePromptCommand GetMessagePromptCommand(string? systemMessage = null, PromptSettings? settings = null);
-        TCommand GetCommand<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new();
+        TCommand GetChromaCommand<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new();
         EnumPromptCommand<TEnum> GetEnumChoiceCommand<TEnum>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TEnum : struct, Enum;
         BoolPromptCommand GetBoolPromptCommand(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null);
         StringChoiceCommand GetStringChoiceCommand(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null);
@@ -21,7 +21,8 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         IPrompteable<TResult> GetAsPrompteable<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null);
         IPrompteable<ChatMessage> GetPrompteableMessage(string? systemMessage = null, PromptSettings? settings = null);
 
-        IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new();
+        IJsoneable GetAsJsoneable<TCommand, TResult>(string instruction) where TCommand : BasePromptCommand<TResult>, new();
+        IJsoneable GetAsJsoneable<TCommand, TResult>(string instruction, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new();
         IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, string? dbMessageName = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new();
     }
 }

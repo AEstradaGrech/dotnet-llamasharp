@@ -5,7 +5,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
     public class PipedStep : SplitterStep
     {
         public PipedStep() : base() { }
-        public PipedStep(StepInstruction piped, ChainPromptRequest request) : base(piped, request) { }
+        public PipedStep(StepInstruction piped, StepSettings request) : base(piped, request) { }
 
         public override bool CanBeForged(IChaineable previous)
             => previous != null && previous.IsMultiSocket && _commands.Count == 1;
@@ -27,7 +27,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                 outputs[key].ForEach(link =>
                 {
-                    var branch = ThrowTo(swapRunner: true, _commands.First(), isBoostedThrow: true, _request, _feedForwardInstruction);
+                    var branch = ThrowTo(swapRunner: true, _commands.First(), _stepSettings, _feedForwardInstruction);
 
                     _branches.Add(branch);
 

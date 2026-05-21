@@ -15,7 +15,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         bool IsMultiSocket { get; }
         public bool IsForged { get; }
         public ChainRunner? Runner { get; }
-        public ChainPromptRequest StepRequest { get; }
+        public PromptCommandRequest Request { get; }
         public bool IsRunning { get; }
         public void Link(IChaineable next, bool isForward, bool isTwoWay = false);
         Task<IChaineable> Forge(IChaineable previous);
@@ -26,11 +26,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         IChaineable OnRunnerCall();
         void OnRunnerSupport(Guid id);
         void FollowRunner(IChaineable current);
-        TStep ExpandTo<TStep>(IJsoneable command, ChainPromptRequest request, string? feedForwardInstruction = null) where TStep : ChainStep;
-        SingleThrowStep ExpandTo(IJsoneable command, ChainPromptRequest request, string? feedForwardInstruction = null);
-        SplitterStep Plug(List<StepInstruction> commands, ChainPromptRequest request, string? splitterFeedFwd = null);
-        TStep ExpandTo<TStep, TCommand, TResult>(string instruction, ChainPromptRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new() where TStep : ChainStep;
-        SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, ChainPromptRequest request, string? feedForwardInstruction = null) where TCommand : BasePromptCommand<TResult>, new();
+        TStep ExpandTo<TStep>(IJsoneable command, StepSettings settings, string? feedForwardInstruction = null) where TStep : ChainStep;
+        SingleThrowStep ExpandTo(IJsoneable command, StepSettings settings, string? feedForwardInstruction = null);
+        SplitterStep Plug(List<StepInstruction> commands, StepSettings settings, string? splitterFeedFwd = null);
+        TStep ExpandTo<TStep, TCommand, TResult>(string instruction, CommandSettings commandSettings, StepSettings settings, string? feedForwardInstruction = null) 
+            where TCommand : BasePromptCommand<TResult>, new() where TStep : ChainStep;
+        SingleThrowStep ExpandTo<TCommand, TResult>(string instruction, CommandSettings commandSettings, StepSettings settings, string? feedForwardInstruction = null) 
+            where TCommand : BasePromptCommand<TResult>, new();
         TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class;
         public void BoostWith(List<string> feeds, string? feedMsg);
         public IChaineable Previous { get; }

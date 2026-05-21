@@ -1,20 +1,16 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
-using DotnetLlamaSharp.Domain.Models.Request;
-
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public static class FluentChainExtensions
     {
-        public static SingleThrowStep StartWith(FirstInstruction firstInstruction, CommandSettings defaultSettings)
-            => Activator.CreateInstance(typeof(SingleThrowStep), 
-                    firstInstruction.Command, 
-                    new ChainRunner(firstInstruction.UserPrompt, defaultSettings, firstInstruction.FinalMessageGuidance, firstInstruction.ChainIntent), 
-                    firstInstruction.FeedFwdInstruction) 
+        public static SingleThrowStep StartWith(StepInstruction firstInstruction, CommandSettings defaultSettings, string? finalSysMessage = null, string? chainIntent = null)
+            => Activator.CreateInstance(typeof(SingleThrowStep), firstInstruction, 
+                new ChainRunner(firstInstruction.StepSettings.CommandRequest.Prompt, defaultSettings, finalSysMessage, chainIntent)) 
                 as SingleThrowStep;
         
-        public static SingleThrowStep Then(this SingleThrowStep step, IJsoneable command, ChainPromptRequest request, string? feedFwdInstruction = null)
+        public static SingleThrowStep Then(this SingleThrowStep step, IJsoneable command, StepSettings request, string? feedFwdInstruction = null)
         {
             /*
                 BASIC API:
@@ -76,20 +72,20 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// </summary>
         /// <param name="step"></param>
         /// <param name="instructions"></param>
-        /// <param name="stepRequest"></param>
+        /// <param name="plugSettings">Common settings to be used (if any) for all plugged commands instead of each instruction.Settings. Works like: inst.Settings ?? plug.Settings ?? _runner.DefaultSettings (from reqDto)</param>
         /// <returns></returns>
-        public static SplitterStep Tap(this SingleThrowStep step, List<StepInstruction> instructions, ChainPromptRequest? stepRequest = null)
+        public static SplitterStep Tap(this SingleThrowStep step, List<StepInstruction> instructions, StepSettings? plugSettings = null)
         {
-            var split = step.Plug(instructions, stepRequest);
+            var split = step.Plug(instructions, plugSettings);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
             return split;
         }
 
-        public static SplitterStep SplitThrough(this SingleThrowStep step, StepInstruction splitted, List<StepInstruction> instructions, ChainPromptRequest? stepRequest = null)
+        public static SplitterStep SplitThrough(this SingleThrowStep step, StepInstruction splitted, List<StepInstruction> instructions)
         {
-            var split = step.SplitTo(splitted, instructions, stepRequest);
+            var split = step.SplitTo(splitted, instructions);
 
             step.Link(split, isForward: true, isTwoWay: true);
 
@@ -106,7 +102,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="instructions"></param>
         /// <param name="stepRequest"></param>
         /// <returns></returns>
-        public static SingleThrowStep Feed(this SingleThrowStep step, StepInstruction instruction, List<StepInstruction> instructions, ChainPromptRequest? stepRequest = null)
+        public static SingleThrowStep Feed(this SingleThrowStep step, StepInstruction instruction, List<StepInstruction> instructions, StepSettings? stepRequest = null)
         {
             var split = step.Plug(instructions, stepRequest);
 
@@ -127,18 +123,18 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="command"></param>
         /// <param name="pipeFeedFwd"></param>
         /// <returns></returns>
-        public static PipedStep Pipe(this SplitterStep step, IJsoneable command, string? pipeFeedFwd = null, ChainPromptRequest? stepRequest = null)
+        public static PipedStep Pipe(this SplitterStep step, IJsoneable command, string? pipeFeedFwd = null, StepSettings? pipedSettings = null)
         {
-            var split = step.ExpandTo<PipedStep>(new StepInstruction(command, pipeFeedFwd), stepRequest);
+            var split = step.ExpandTo<PipedStep>(new StepInstruction(command, pipedSettings, pipeFeedFwd));
 
             step.Link(split, isForward: true, isTwoWay: true);
 
             return split;
         }
         
-        public static SingleThrowStep Join( this SplitterStep step, StepInstruction instruction, ChainPromptRequest? stepRequest = null)
+        public static SingleThrowStep Join( this SplitterStep step, StepInstruction instruction)
         {
-            var next = step.ExpandTo<JunctionStep>(instruction.Command, stepRequest, instruction.FeedFwdInstruction);
+            var next = step.ExpandTo<JunctionStep>(instruction.Command, instruction.StepSettings, instruction.FeedFwdInstruction);
             
             step.Link(next, isForward: true, isTwoWay: true);
             
@@ -192,14 +188,14 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         // .WithRelay(prompteable, voltageCondition) <- se activa si true, si no bypass
         // .AddCapacitor(1k tokens) <- si el sysmessage llega a valor de carga lo mantiene (con sumarizaciones o algo asi)
         // .Choke<TVal>(3 validations) where TVal : JsonValidatorCommand  <-- Request.CommandValidations + ChokeVals?
-        public static async Task<ChainResult> ThenExecuteAsync(this SingleThrowStep step, bool withFinalMessage = true, bool withReplay = false)
-            => await step.ExecuteChainAsync(withFinalMessage, withReplay);
-       
-        public static ChainStep Then<TCommand, TResult>(this ChainStep step, string? instruction, ChainPromptRequest? stepRequest = null, string? feedFwdInstruction = null) 
+        public static async Task<ChainResult> ThenExecuteAsync(this SingleThrowStep step, bool withFinalMessage = false, bool withReplay = false, CommandSettings finalMsgSettings = null)
+            => await step.ExecuteChainAsync(withFinalMessage, withReplay, finalMsgSettings);
+
+        public static ChainStep Then<TCommand, TResult>(this ChainStep step, string? instruction, CommandSettings commandSettings, StepSettings? stepRequest = null, string? feedFwdInstruction = null) 
             where TCommand : BasePromptCommand<TResult>, new() 
             where TResult : class
         {
-            var nextStep = step.ExpandTo<TCommand, TResult>(instruction, stepRequest);
+            var nextStep = step.ExpandTo<TCommand, TResult>(instruction, commandSettings, stepRequest);
 
             step.Link(nextStep, isForward: true, isTwoWay: true);
 
@@ -212,7 +208,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         //    return step;
         //}
-        public static TypedOutput<TResult> Then<TResult>(this TypedOutput<TResult> step, IPrompteable<TResult> cmd /*IPromptCommand<TResult> cmd*/, ChainPromptRequest? stepRequest = null) where TResult : class
+        public static TypedOutput<TResult> Then<TResult>(this TypedOutput<TResult> step, IPrompteable<TResult> cmd /*IPromptCommand<TResult> cmd*/, StepSettings? stepRequest = null) where TResult : class
         {
             
             return step;

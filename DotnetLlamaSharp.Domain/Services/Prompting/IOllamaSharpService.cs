@@ -11,8 +11,8 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         Task<ChatPrompt> SimplePrompt(SimplePromptRequest request);
         Task<ChatPrompt> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate = false);
         Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request);
-        Task<ChatPrompt> GuidedBatchChainPrompt(GuidedBatchRequest request);
-        Task<ChainResult> GuidedBatchChain(GuidedBatchRequest request);
+        Task<ChatPrompt> GuidedBatchChainPrompt(ChainTestRequest request);
+        Task<ChainResult> GuidedBatchChain(ChainTestRequest request);
         //Task<ChatPrompt> BooleanQuestion(SimplePromptRequest request);
     }
 }

@@ -3,6 +3,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
+using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
 {
@@ -19,8 +20,13 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             validateInputRequest<StringChoiceRequest>(request);
 
+            var choices = string.Empty;
+
+            var sb = new StringBuilder();
             foreach (var choice in ((StringChoiceRequest)request).Choices)
-                promptReq.System += $"\n- {choice}";
+                sb.AppendLine($"- {choice}");
+
+            promptReq.System = promptReq.System.Replace("<<CHOICES>>", sb.ToString());
 
             var response = await _ollama.CommandPrompt<StringChoiceResponse>(promptReq, _settings.CommandValidations, _settings.ValidationType, validatorFor<StringChoiceResponse>());
 
@@ -28,6 +34,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
         }
 
         protected override string getDefaultInstruction()
-            => "Analyze the provided list of choices and select the value that matches the best with the user request. Output your selected choice according to the provided JSON schema.\n> CHOICES:";
+            => "Analyze the provided list of choices and select the value that matches the best with the user request. Output your selected choice according to the provided JSON schema.\n> CHOICES:\n<<CHOICES>>";
     }
 }

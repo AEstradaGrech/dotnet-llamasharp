@@ -22,7 +22,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         public TCommand GetCommand<TCommand, TResult>(string? systemMessage = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new()
             => Activator.CreateInstance(typeof(TCommand), _ollama, systemMessage, settings) as TCommand;
 
-        public TCommand GetCommand<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
+        public TCommand GetChromaCommand<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
             => Activator.CreateInstance(typeof(TCommand), _ollama, _systemRepo, dbMessageName, guidanceMessage, settings) as TCommand;
 
         //Domain object command helpers
@@ -51,9 +51,11 @@ namespace DotnetLlamaSharp.Services.Prompting
         public IPrompteable<ChatMessage> GetPrompteableMessage(string? systemMessage = null, PromptSettings? settings = null)
             => Activator.CreateInstance(typeof(MessagePromptCommand), _ollama, systemMessage, settings) as IPrompteable<ChatMessage>;
 
+        public IJsoneable GetAsJsoneable<TCommand, TResult>(string instruction) where TCommand : BasePromptCommand<TResult>, new()
+           => GetCommand<TCommand, TResult>(instruction, settings: null);
         public IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, PromptSettings? settings = null) where TCommand : BasePromptCommand<TResult>, new()
            => GetCommand<TCommand, TResult>(instruction, settings);
         public IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, string? dbMessageName = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
-           =>  GetCommand<TCommand, TResult>(dbMessageName, instruction, settings);
+           =>  GetChromaCommand<TCommand, TResult>(dbMessageName, instruction, settings);
     }
 }

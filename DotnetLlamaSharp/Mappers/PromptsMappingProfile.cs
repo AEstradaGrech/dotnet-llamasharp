@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests.Chains;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -123,8 +124,12 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Model, opt => opt.MapFrom(dest => dest.RankingModel));
             CreateMap<LangSearchRankedRequestDto, RankedSearchRequest>()
                 .ForMember(dest => dest.QueriedDocuments, opt => opt.MapFrom(dest => dest.Sources));
-            CreateMap<GuidedBatchRequestDto, GuidedBatchRequest>()
-                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
+
+            CreateMap<InstructionDto, Instruction>().ReverseMap();
+
+            CreateMap<ChainTestRequestDto, ChainTestRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>()
+                .ForMember(dest => dest.FinalMessageSettings, opt => opt.MapFrom(src => src.FinalMessageSettings));
         }
     }
 }

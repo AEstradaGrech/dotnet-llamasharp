@@ -15,6 +15,7 @@
             RunnedInstructions = new List<string>();
             _forgedSteps = new List<ForgeLog>();
             _replays = new List<ReplayLog>();
+            _chainFeeds = new List<ForgeLog>();
         }
 
         public ChainRunner(ChainRunner cloned, bool cloneRunnedInstructions) : this(cloned.UserPrompt, cloned.DefaultSettings, cloned.FwdSystemMessage,cloned.Intent)
@@ -22,17 +23,28 @@
             RunnedInstructions = cloneRunnedInstructions ? new List<string>(cloned.RunnedInstructions) : new List<string>();
             onReplayRequest = null;
             onSupportRequest = null;
+
+            //Enable chain feeds for subchains
+            //the pattern recursively does 'tryCheckThisForged - requestFromPrevChain' until the log is found in any cloned ChainRunner
+            // WG: check mulithreading-shared-objects
+            onChainFeedRequest += cloned.OnFeedRequest;
+
+            cloned.onChainFeedResponse += OnFeedResponse;
         }
         public delegate void OnSupporterRequest(Guid runnedId);
         public event OnSupporterRequest onSupportRequest; // v2 -> Reviewer --> comprueba estos outputs vs sus inputs, evalua si el resultado es lo que le habian pedido, si no -> Re-run = onSupportRequest(id) triggers -> [spporter] onSupport(this) = _runner.OnSupportReceived(IChaineable) -> ThrowTo(supporter)
 
+        public delegate void OnChainFeedResponse(ForgeLog feedLog);
+        public event OnChainFeedResponse onChainFeedResponse;
+        public delegate void OnChainFeedRequest(Guid runnerLogId);
+        public event OnChainFeedRequest onChainFeedRequest;
         public delegate void OnReplay();
         public event OnReplay onReplayRequest;
 
         private IChaineable _current;
-        public List<ForgeLog> _forgedSteps;
-        public List<ReplayLog> _replays;
-
+        private List<ForgeLog> _forgedSteps;
+        private List<ReplayLog> _replays;
+        private List<ForgeLog> _chainFeeds;
         public void OnSupporterResponse(IChaineable supporter)
         {
             // Runner.ThrowTo(supporter)
@@ -93,6 +105,22 @@
 
         public bool CanRun() => _current != null && !string.IsNullOrEmpty(UserPrompt) && DefaultSettings != null;
 
+        public void OnFeedRequest(Guid id)
+        {
+            if (TryFindForged(id, out var log))
+                onChainFeedResponse(log);
+
+
+        }
+
+        public void OnFeedResponse(ForgeLog feedLog)
+        {
+            if (_current != null) return;
+
+            if (!_chainFeeds.Any(log => log.RunnerId == feedLog.RunnerId))
+                _chainFeeds.Add(feedLog);
+        }
+
         public void OnRunnerNotification(ForgeLog log, bool updateRunnersLog = true)
         {
 
@@ -101,6 +129,7 @@
             if (updateRunnersLog)
                 RunnedInstructions.AddRange(log.RunnersLog);
         }
+
         public List<ReplayLog> GetReplays()
         {
             if (_replays.Count == 0)
@@ -115,7 +144,6 @@
             if(!_replays.Any(replay => replay.RunnerId == log.RunnerId))
                 _replays.Add(log);
         }
-
 
         /// <summary>
         /// Use this to clone and swap the ChainRunner in FIRST SUBRUNNERS
@@ -146,14 +174,31 @@
         }
         // IChaineable handleSupporter(reported)
 
-        public bool TryFindForged(Guid id, out ForgeLog log)
+        public bool TryFindForged(Guid id, out ForgeLog forgedLog)
         {
-            log = null;
+            forgedLog = null;
 
-            if (_forgedSteps.Any(log => log.RunnerId == id))
-                log = _forgedSteps.SingleOrDefault(log => log.RunnerId == id);
-            
-            return log != null;
+            if (!_forgedSteps.Any(log => log.RunnerId == id))
+            {
+                if (TryGetChainFeed(id, out var feedLog))
+                    forgedLog = feedLog;
+            }
+            else forgedLog = _forgedSteps.SingleOrDefault(log => log.RunnerId == id);            
+            //else es una subcadena que necesita info (logs) de la principal...
+            return forgedLog != null;
+        }
+
+        public bool TryGetChainFeed(Guid id, out ForgeLog feedLog)
+        {
+            feedLog = null;
+
+            if (!_chainFeeds.Any(log => log.RunnerId == id))
+                onChainFeedRequest(id);
+
+            if(_chainFeeds.Any(log => log.RunnerId == id))
+                feedLog = _chainFeeds.SingleOrDefault(log => log.RunnerId == id);
+
+            return feedLog != null;
         }
     }
 }

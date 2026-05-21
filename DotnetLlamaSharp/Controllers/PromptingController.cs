@@ -283,11 +283,12 @@ namespace DotnetLlamaSharp.Controllers
             => Ok(JsonSerializer.Serialize(JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(RagChatRequestDto))));
 
         [HttpPost("/chains/test")]
-        public async Task<IActionResult> ChaiTests([FromBody] GuidedBatchRequestDto request)
+        public async Task<IActionResult> ChaiTests([FromBody] ChainTestRequestDto request)
         {
             //var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.GuidedBatchChainPrompt(_mapper.Map<GuidedBatchRequestDto, GuidedBatchRequest>(request)));
 
-            var response = await _ollamaService.GuidedBatchChain(_mapper.Map<GuidedBatchRequestDto, GuidedBatchRequest>(request));
+
+            var response = await _ollamaService.GuidedBatchChain(_mapper.Map<ChainTestRequestDto, ChainTestRequest>(request));
 
             if (response != null)
                 return Ok(response);

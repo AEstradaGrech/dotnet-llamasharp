@@ -36,20 +36,20 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// #WG : RunThen VS LoadNext 
         private void Execute(SimpleCommandRequest request, ChainStep initial, Queue<IJsoneable> q)
         {
-            var firstCommand = q.Dequeue();
+            //var firstCommand = q.Dequeue();
 
-            var cmdReq = new ChainPromptRequest { Prompt = request.Prompt, Model = request.Settings.Model };
+            //var cmdReq = new StepSettings { Prompt = request.Prompt, Model = request.Settings.Model };
 
-            var firstStep = new SingleThrowStep(firstCommand, new ChainRunner(userInput: request.Prompt,  request.Settings, finalSysMessage: request.SystemMessage)); 
+            //var firstStep = new SingleThrowStep(firstCommand, new ChainRunner(userInput: request.Prompt,  request.Settings, finalSysMessage: request.SystemMessage)); 
 
-            var currentStep = firstStep;
+            //var currentStep = firstStep;
 
-            while (q.Count > 0)
-            {
-                currentStep = currentStep.Then(q.Dequeue(), cmdReq);
+            //while (q.Count > 0)
+            //{
+            //    currentStep = currentStep.Then(q.Dequeue(), cmdReq);
 
-                if (q.Count == 0) break;
-            }
+            //    if (q.Count == 0) break;
+            //}
 
             
         }

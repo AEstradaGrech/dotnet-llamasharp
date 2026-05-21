@@ -18,7 +18,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         protected Dictionary<Guid, List<ReplayLog>> _subChainReplays = null;
         public SplitterStep() : base() { }
         // Constructor for Tap (execute N commands with the PREV OUT) (foreach branch, forge(branch))
-        public SplitterStep(List<StepInstruction> instructions, ChainPromptRequest request, string? feedFwdMessage) : base(request, feedFwdMessage)
+        public SplitterStep(List<StepInstruction> instructions, StepSettings request, string? feedFwdMessage) : base(request, feedFwdMessage)
         {
             _forgedSubSteps = new Dictionary<IChaineable, Guid>();
             _pluggedInstructions = instructions;
@@ -26,7 +26,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         // Constructor for Split<TComm>([]) <- executes the command and SPLITS the result over the plugged subchains passing the splitFeedFwd (forge(this) then Branches)
        
-        public SplitterStep(StepInstruction splittedCommand, List<StepInstruction> instructions, ChainPromptRequest request) : base(request, splittedCommand.FeedFwdInstruction)
+        public SplitterStep(StepInstruction splittedCommand, List<StepInstruction> instructions, StepSettings request) : base(request, splittedCommand.FeedFwdInstruction)
         {
             _forgedSubSteps = new Dictionary<IChaineable, Guid>();
             _commands.Add(splittedCommand.Command);
@@ -34,7 +34,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         }
 
         // Constructor for .Pipe<TComm> <- executes the command ON EACH input (foreach PREV OUT forge(this))
-        public SplitterStep(StepInstruction pipedCommand, ChainPromptRequest request) : this(pipedCommand, [], request) { }
+        public SplitterStep(StepInstruction pipedCommand, StepSettings request) : this(pipedCommand, [], request) { }
         
         // It is not the first step of a chain (prev != null)
         // The previous is a SPST
@@ -61,7 +61,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if(_commands.Count == 1)
             {
                 // All commands boosted because it is the only combination that can't be covered with .Then() / .Tap() + .WithRebujito()
-                var splitted = ThrowTo(swapRunner: false, _commands.First(), isBoostedThrow: true, _request, _feedForwardInstruction);
+                // If is splitter, then the splitter Settings it is for the splitted command (boost
+                var splitted = ThrowTo(swapRunner: false, _commands.First(), _stepSettings, _feedForwardInstruction);
 
                 splitted.Link(previous, isForward: false, isTwoWay: false);
                 
@@ -76,7 +77,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
                     // This is for logging / summarization purposes. MultiThrow steps have no 'forge' with GuidanceMessage
                     // and the result is taken from the Outputs.GuidanceMessage
-                    _request.GuidanceMessage = splittedOut.StepRequest.GuidanceMessage;
+                    Request.GuidanceMessage = splittedOut.Request.GuidanceMessage;
                     //_feedFwd is passed to splitted. splitted returns that msg or the las of its chain when it becomes the previous
 
                     _feedForwardInstruction = splittedOut.FeedForwardInstruction;
@@ -85,7 +86,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             }
             
 
-            _pluggedInstructions.ForEach(i => _branches.Add(ThrowTo(swapRunner: true, i.Command, isBoostedThrow: true, _request, i.FeedFwdInstruction)));
+            _pluggedInstructions.ForEach(i => _branches.Add(ThrowTo(swapRunner: true, i.Command, i.StepSettings, i.FeedFwdInstruction)));
 
             var chainResults = new List<IChaineable>();
 
@@ -164,7 +165,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             _feedForwardInstruction += $"\n{feedFwdSb.ToString().Trim()}";
 
             if (_runner.TryFindForged(previousId, out var log))
-                _request.GuidanceMessage += guidanceMessageFrom(log.CommandInstruction, log.JsonResult, log.JsonSchema, log.FeedForwardMessage);
+                Request.GuidanceMessage += guidanceMessageFrom(log.CommandInstruction, log.JsonResult, log.JsonSchema, log.FeedForwardMessage);
         }
 
         protected override ReplayLog replayFromLog()

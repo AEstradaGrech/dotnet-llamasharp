@@ -23,6 +23,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
         public DbPromptCommand() : base() { }
         public DbPromptCommand(IOllamaInferenceService ollama) : base(ollama){ }
         public DbPromptCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
+        //                                                     Func<string,string> getDbMessage() <- se enchufa una lambda y se desacoplan los DBCommand
+        //                                                     ConnectorsFactory --> Func<IChromaRepo, string>Get() | Func<IMongoRepo,string> a medida que añado integraciones, aumento la factoria
+        //                                                     ISysMessageable -> interfaz comun para que todos los connectors tengan un mismo "GetSysMessage(name)", que es lo mas comun (casi lo unico que hace el repo)
+        //                                                     SysMessageLambda para AtomicValues (se quita la dependencia a Chroma, funcionan con default o lo que venga en la Lambda)
+        //                                                     Commandos que reciben un repo (dependencia) pasan a ser DbXCommands
+        //                                                     v3 -> Factoria Cool para reutilizar command de DbX en DbA | B | C
         public DbPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, guidanceMessage, settings) 
         { 
             _repo = repo;

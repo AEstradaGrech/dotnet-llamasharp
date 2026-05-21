@@ -81,7 +81,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             return null; //TODO: EMBEDDINGS COMMAND await _ollamaService.GetEmbeddings(request);
         }
 
-        public async Task<ChatPrompt> GuidedBatchChainPrompt(GuidedBatchRequest request)
+        public async Task<ChatPrompt> GuidedBatchChainPrompt(ChainTestRequest request)
         {
 
             // TODO: request.Instructions = new Dictionary<ECommandType, string>() -> [ECommandType.GUIDED] = "Do blah blah", [ECommandType.DB] = "db-messsage-name"
@@ -141,46 +141,48 @@ namespace DotnetLlamaSharp.Services.Prompting
             //    .ThenExecuteAsync(withFinalMessage: true);
 
 
-            var chainResult = await FluentChainExtensions
-               .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                        instruction: request.Instructions.First(),
-                        request.Settings),
-                        userPrompt: request.Prompt,
-                    finalSysmessage: request.SystemMessage,
-                    chainIntent: "",
-                    feedFwd: ""), 
-                    defaultSettings: request.Settings)
-               .SplitThrough(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Reduce the previous output if necessary to ensure it only includes the requested name and the age, remove the rest", request.Settings), feedFwd: "Use the name and age to develop your character part"),
-                [
-                    new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
-                    new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")
-                ],
-                new ChainPromptRequest())
-               .ExposeThisId(out var id)
-               //.Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
-               //      new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
-               //      inputCommandReq)
-               .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                        instruction: "Review the output so far, the input and the goal or expected output and modify it if necessary to ensure it is adapted to the provided game lore", request.Settings), 
-                        pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
-               .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                        instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary", request.Settings), 
-                        pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
-               //.WithFeedsFrom([id1, id2]) // añade 'id1.FeedFwd, id2.FeedFwd' a SU feedFwd. ES LO QUE SE LE AÑADE AL SIGUIENTE SIEMPRE. Se guardan los IDs y se busca msg OnRun en ChainRunner
-               .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings), feedFwd: ""), 
-                     stepRequest: new ChainPromptRequest())
-               .ThenExecuteAsync(withFinalMessage: true);
+            //var chainResult = await FluentChainExtensions
+            //   .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //            instruction: request.Instructions.First(),
+            //            request.Settings),
+            //            userPrompt: request.Prompt,
+            //        finalSysmessage: request.SystemMessage,
+            //        chainIntent: "",
+            //        feedFwd: ""), 
+            //        defaultSettings: request.Settings)
+            //   .SplitThrough(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Reduce the previous output if necessary to ensure it only includes the requested name and the age, remove the rest", request.Settings), feedFwd: "Use the name and age to develop your character part"),
+            //    [
+            //        new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
+            //        new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")
+            //    ],
+            //    new StepSettings())
+            //   .ExposeThisId(out var id)
+            //   //.Tap([new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(1).First(), request.Settings), feedFwd: "Use this game related data to ground your profile to the game lore"),
+            //   //      new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(2).First(), request.Settings), feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")],
+            //   //      inputCommandReq)
+            //   .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //            instruction: "Review the output so far, the input and the goal or expected output and modify it if necessary to ensure it is adapted to the provided game lore", request.Settings), 
+            //            pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+            //   .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //            instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary", request.Settings), 
+            //            pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+            //   //.WithFeedsFrom([id1, id2]) // añade 'id1.FeedFwd, id2.FeedFwd' a SU feedFwd. ES LO QUE SE LE AÑADE AL SIGUIENTE SIEMPRE. Se guardan los IDs y se busca msg OnRun en ChainRunner
+            //   .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: request.Instructions.Skip(3).First(), request.Settings), feedFwd: ""), 
+            //         stepRequest: new StepSettings())
+            //   .ThenExecuteAsync(withFinalMessage: true);
 
 
-            return new ChatPrompt { 
-                Model = request.Settings.Model ?? "app-default",
-                Input = request.Prompt, 
-                Output = chainResult.Json, 
-                ChatHistory = [chainResult.SystemInstructions, new ChatMessage(ChatRole.User.ToString(), request.Prompt), chainResult.Message] };
+            //return new ChatPrompt { 
+            //    Model = request.Settings.Model ?? "app-default",
+            //    Input = request.Prompt, 
+            //    Output = chainResult.Json, 
+            //    ChatHistory = [chainResult.SystemInstructions, new ChatMessage(ChatRole.User.ToString(), request.Prompt), chainResult.Message] };
+
+            return new ChatPrompt();
         }
 
 
-        public async Task<ChainResult> GuidedBatchChain(GuidedBatchRequest request)
+        public async Task<ChainResult> GuidedBatchChain(ChainTestRequest request)
         {
             var inputCommandReq = new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt };
 
@@ -332,44 +334,109 @@ namespace DotnetLlamaSharp.Services.Prompting
             //       .FeedFrom(thenId))
             // .ThenExecuteAsync(withFinalMessage: true, withReplay: true);
 
+            //return await FluentChainExtensions
+            // .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //          instruction: request.Instructions.First(),
+            //          request.Settings),
+            //      userPrompt: request.Prompt,
+            //      finalSysmessage: request.SystemMessage,
+            //      chainIntent: "Create game character",
+            //      feedFwd: ""),
+            //      defaultSettings: request.Settings)
+            // .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //     instruction: "Reduce the previous output to ensure it only contains the requested name and age, remove the rest",
+            //     request.Settings), new ChainPromptRequest(),
+            //   feedFwdInstruction: "Use the name and the age to develop you part of the character")
+            // .ExposeThisId(out var thenId)
+            // .SplitThrough(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //        instruction: request.Instructions.Skip(1).First(), request.Settings),
+            //        feedFwd: "Use this character typical scene as a character concept to inspire your creations"), [
+            //            new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //                    instruction: request.Instructions.Skip(2).First(),
+            //                    request.Settings),
+            //                feedFwd: "Use this game related data to ground your profile to the game lore"),
+            //            new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //                    instruction: request.Instructions.Skip(3).First(),
+            //                    request.Settings),
+            //                feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")
+            //        ],
+            //    new ChainPromptRequest())
+            // .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //        instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary", request.Settings),
+            //        pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+            // .WithRebujito(langSearchRebujito, guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 800) // En SplitThrough el rebujito va para el splitted y fan-out al resto con el resultado
+            // .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+            //          instruction: request.Instructions.Skip(4).First(),
+            //          request.Settings),
+            //      feedFwd: ""),
+            //      stepRequest: new ChainPromptRequest()
+            //       .FeedFrom(thenId))
+            // .ThenExecuteAsync(withFinalMessage: true, withReplay: true);
+
+            //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            // Cada step tiene un command que recibe unos settings propios o ningunos (y usa _runner.Default)
+            // y el step lleva la request del comando configurada
+            //      > Nota: NUNCA PASAR PromptCommandRequest.Settings (si null los lee del comando, que son los buenos con 'CommandValidations' etc
+
+            // Tambien tienen una Instruction asignada que mapea a 'prompt propio + _systemMessage' para el comando (excepto el primero, que lee req.Prompt y req.SystemMessage)
+            // Y un FeedFwd para guiar al siguiente con sus resultados
+            // Tambien se puede pedir un mensaje opcional que intenta devolver el resultado de la cadena en forma de ChatMessage
+            // Ese mensaje se puede guiar con el req.FinalSysMessage que viaja en el ChainRunner. Tambien puede ejecutarse con unos settings propios o con los default
             return await FluentChainExtensions
-             .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                      instruction: request.Instructions.First(),
-                      request.Settings),
-                  userPrompt: request.Prompt,
-                  finalSysmessage: request.SystemMessage,
-                  chainIntent: "Create game character",
-                  feedFwd: ""),
-                  defaultSettings: request.Settings)
+             .StartWith(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+                      instruction: request.Instructions.First().SystemMessage, settings: request.Settings), // _sysMsg        "FirstCmd = userPrompt
+                      settings: new StepSettings(new PromptCommandRequest(
+                          message: request.Prompt, // esto y Instructions.First().Prompt es lo mismo ->  
+                          guidanceMessage: request.SystemMessage // initial step guidance
+                       )),
+                      feedFwd: ""),
+                  defaultSettings: request.Settings,
+                  finalSysMessage: request.FinalSystemMessage, // Esto deberia ser propio de un ChainRequestDto.cs
+                  chainIntent: "Create game character") // use as 'Overall goal' (appended to Step.ContextMessage to guide the llm).
+             .ExposeThisId(out var startId)
              .Then(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                  instruction: "Reduce the previous output to ensure it only contains the requested name and age, remove the rest",
-                 request.Settings), new ChainPromptRequest(),
+                 request.Settings), new StepSettings(new PromptCommandRequest("")), //StepInstruction (& sons) llevan Icommand, step Feed y la TCommReq
                feedFwdInstruction: "Use the name and the age to develop you part of the character")
              .ExposeThisId(out var thenId)
              .SplitThrough(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                    instruction: request.Instructions.Skip(1).First(), request.Settings),
+                    instruction: request.Instructions.Skip(1).First().SystemMessage, settings: request.Settings), // Instruction[N].SystemMessage
+                    settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(1).First().Prompt)), // Instruction[N].Prompt  Instruction (instruction ,prompt) = (_system, prompt) --> STEP = instruction + Guidance (prev_ctx) & prompt ?? default 'Complete task'
                     feedFwd: "Use this character typical scene as a character concept to inspire your creations"), [
+                        new StepInstruction(_promptsFactory.GetStringChoiceCommand( 
+                                dbMessageName: "", //Whatever command you want to execute. It is 'paired' to its specific request using the next param. Stored in step until inference
+                                guidanceMessage: request.Instructions.Skip(2).First().SystemMessage), //THIS MAPS TO COMMAND._systemMessage (cmd.guidance is generated for the next inside the steps on runtime
+                            new StepSettings(new StringChoiceRequest(
+                                choices: [ // Specific StepCommand request configuration
+                                    "Miguelianos",
+                                    "SGAE",
+                                    "Panaderia y Reposteria Nuestra Señora del Carmen"
+                                ], 
+                                message: request.Instructions.Skip(2).First().Prompt, // A clear user prompt for the command. Step.Hardcoded message if none
+                                settings: null, // specific settings for this command, otherwise _runner.DefaultSettings = reqDto.Settings
+                                model: null)) // some specific model for this step command
+                                .FeedFrom(startId), 
+                            feedFwd: "Use this game related data to ground your profile to the game lore"),// STEP FeedForwardMessage for the next one (next._request.GuidanceMessage) with instructions & context for the next 
                         new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                                instruction: request.Instructions.Skip(2).First(),
-                                request.Settings),
-                            feedFwd: "Use this game related data to ground your profile to the game lore"),
-                        new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                                instruction: request.Instructions.Skip(3).First(),
-                                request.Settings),
+                                instruction: request.Instructions.Skip(3).First().SystemMessage),
+                                settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(3).First().Prompt)),
                             feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")
-                    ],
-                new ChainPromptRequest())
-             .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                    instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary", request.Settings),
-                    pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
-             .WithRebujito(langSearchRebujito, guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 800) // En SplitThrough el rebujito va para el splitted y fan-out al resto con el resultado
+                    ])
+             //.Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+                    //instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary"),
+                    //pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+             //.WithRebujito(langSearchRebujito, guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 800) // En SplitThrough el rebujito va para el splitted y fan-out al resto con el resultado
              .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                      instruction: request.Instructions.Skip(4).First(),
-                      request.Settings),
-                  feedFwd: ""),
-                  stepRequest: new ChainPromptRequest()
-                   .FeedFrom(thenId))
-             .ThenExecuteAsync(withFinalMessage: true, withReplay: true);
+                      instruction: request.Instructions.Skip(4).First().SystemMessage),
+                      settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(4).First().SystemMessage))
+                        .FeedFrom(thenId),
+                      feedFwd: ""))
+             .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings);
+
+            //1 - esto con StringSelection y EnumSelector y SDK
+            //2 - probar el sistema con ChromaCommands
+            //3 - nuget PersistentAPI
+            //4 - release PoC llama sharp y tirar con otros proyectos (BotVille Sharp o PeopleVSSharp AKA LLamaVSCorporation) o ng-LameChromaDB
         }
 
 

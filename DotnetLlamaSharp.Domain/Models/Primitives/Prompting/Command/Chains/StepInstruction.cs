@@ -1,17 +1,20 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
+using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
     public class StepInstruction
     {
         public StepInstruction() { }
-        public StepInstruction(IJsoneable command, string? feedFwd = null) 
+        public StepInstruction(IJsoneable command, StepSettings settings, string? feedFwd = null) 
         {
             Command = command;
+            StepSettings = settings;
             FeedFwdInstruction = feedFwd;
         }
-        public IJsoneable Command { get; set; }
-        public string? FeedFwdInstruction { get; set; }
+        public IJsoneable Command { get; }
+        public StepSettings StepSettings { get; }
+        public string? FeedFwdInstruction { get; }
 
         //TODO: FeedAlsoFrom[] recuperar results de eslabones mas alla del anterior
         //      - tambien recupera el FeedFwd de ese eslablon de esa forma se puede

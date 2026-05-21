@@ -35,13 +35,13 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<TResult> DbPromptCommand<TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null)
            where TRequest : PromptCommandRequest
            where TResult : class
-               => await _factory.GetCommand<ChromaStructuredPrompt<TResult>, TResult>(dbInstructionName, instruction, settings).Prompt( request);
+               => await _factory.GetChromaCommand<ChromaStructuredPrompt<TResult>, TResult>(dbInstructionName, instruction, settings).Prompt( request);
 
         // All subclasses or custom types that should work as a DbCommand (have a message name and a IChromaRepo instance)
         public async Task<TResult> DbPromptCommand<TCommand, TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null)
             where TCommand : DbPromptCommand<TResult>, new()
             where TRequest : PromptCommandRequest
-                => await _factory.GetCommand<TCommand, TResult>(dbInstructionName, instruction, settings).Prompt(request);
+                => await _factory.GetChromaCommand<TCommand, TResult>(dbInstructionName, instruction, settings).Prompt(request);
 
         //TODO: DefaultMessageVersion for:
         public async Task<TEnum?> EnumChoice<TEnum>(string prompt, string? instruction = null, CommandSettings settings = null) where TEnum : struct, Enum
@@ -53,7 +53,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<string> StringChoice(string prompt, List<string> choices, string? instruction = null, CommandSettings settings = null)
         {
-            var command = _factory.GetCommand<StringChoiceCommand, string>("string-choice-resp", instruction, settings);
+            var command = _factory.GetChromaCommand<StringChoiceCommand, string>("string-choice-resp", instruction, settings);
 
             var response = await command.Prompt(new StringChoiceRequest(choices, prompt, _settings,  settings.Model));
 
@@ -62,7 +62,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<List<string>> MultiChoice(string prompt, List<string> choices, int maxChoices, string? instruction = null, CommandSettings settings = null)
         {
-            var command = _factory.GetCommand<MultiChoiceCommand, List<string>>("multi-choice-resp", instruction, settings);
+            var command = _factory.GetChromaCommand<MultiChoiceCommand, List<string>>("multi-choice-resp", instruction, settings);
 
             var response = await command.Prompt(new MultiChoiceRequest(maxChoices, choices, prompt, _settings, settings.Model));
 
@@ -71,7 +71,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<bool> BooleanChoice(string prompt, string? instruction = null, CommandSettings settings = null)
         {
-            var command = _factory.GetCommand<BoolPromptCommand, bool>("bool-resp", instruction, settings);
+            var command = _factory.GetChromaCommand<BoolPromptCommand, bool>("bool-resp", instruction, settings);
 
             return await command.Prompt(new PromptCommandRequest(prompt, _settings, settings.Model));
         }
@@ -95,6 +95,6 @@ namespace DotnetLlamaSharp.Services.Prompting
                 new StringChoiceRequest(choices, prompt, _settings, settings.Model), dbInstructionName: "scored-choice-resp", instruction: instruction, settings);
 
         public TCommand GetCommand<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
-                => _factory.GetCommand<TCommand, TResult>(dbMessageName, guidanceMessage, settings);
+                => _factory.GetChromaCommand<TCommand, TResult>(dbMessageName, guidanceMessage, settings);
     }
 }
