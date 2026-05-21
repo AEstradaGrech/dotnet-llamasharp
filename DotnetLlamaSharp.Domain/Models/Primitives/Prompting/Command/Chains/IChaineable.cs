@@ -15,6 +15,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         bool IsMultiSocket { get; }
         public bool IsForged { get; }
         public ChainRunner? Runner { get; }
+        public ChainPromptRequest StepRequest { get; }
         public bool IsRunning { get; }
         public void Link(IChaineable next, bool isForward, bool isTwoWay = false);
         Task<IChaineable> Forge(IChaineable previous);

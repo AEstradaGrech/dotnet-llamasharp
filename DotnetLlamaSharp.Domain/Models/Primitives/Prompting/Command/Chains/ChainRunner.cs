@@ -95,6 +95,7 @@
 
         public void OnRunnerNotification(ForgeLog log, bool updateRunnersLog = true)
         {
+
             _forgedSteps.Add(log);
 
             if (updateRunnersLog)

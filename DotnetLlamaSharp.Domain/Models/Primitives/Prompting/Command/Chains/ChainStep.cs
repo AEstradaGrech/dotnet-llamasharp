@@ -40,6 +40,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public string Input => _request.Prompt;
         public bool IsRunning => _runner != null;
         public ChainRunner? Runner => _runner;
+        public ChainPromptRequest StepRequest => _request;
         public string? FeedForwardInstruction => _feedForwardInstruction;
         public string? PromptedInstruction => _promptedInstruction;
         public List<string> InstructionsLog => _instructionsLog;
@@ -214,8 +215,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         {
             if (idx >= _commands.Count) return;
 
-            // Es decir: se pasa el instructions log que es el step-by-step lite que ya funciona. sirve como sumary para Steps si hace falta.
-            //           opcionalmente se puede pedir el reporte completo ordenado por fecha de ejecucion con todos los mensajes internos (StepLogs con instrucciones)
+            //TODO: v2 -> If FIRST RUNNER -> user prompt ELSE _request.Prompt ?? default 'Complete the specfified... ' <- Si se pasa algo en el StepRequest, pues eso. Si no esto y que haga lo que pueda
             _request.Prompt = IsFirstStep() && _runner.RunnedInstructions.Count == 0 ? _runner.UserPrompt : "Complete the specified instruction. Do not chat with the user, just output the requested data as described.";
             
             if (_request.Settings == null)
@@ -238,7 +238,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
                 sb.AppendLine()
                   .AppendLine(_request.BoostersFeedText());
 
-            _request.GuidanceMessage += $"\n{sb.ToString()}".Trim();
+            _request.GuidanceMessage += $"\n\n{sb.ToString()}".Trim();
 
             var jsonResult = await _commands[idx].JsonPrompt(_request, returnFullInstruction: false, preInstruction: preInstructionTag); //Skip GuidanceMessage, return only instruction for this step
 
