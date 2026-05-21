@@ -15,8 +15,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             if (!hasCatchedThrow(previous))
                 throw new InvalidOperationException($"{nameof(SplitterStep)} >> {nameof(Forge)} >> {nameof(hasCatchedThrow)} >> An error has occured while passing the runner. STEP CANNOT BE FORGED");
 
-            _runner.RunnedInstructions.Add($"- PIPE: {_id}");
-
             var castedPrev = (SplitterStep)previous;
 
             var outputs = castedPrev.GrouppedOutputs();

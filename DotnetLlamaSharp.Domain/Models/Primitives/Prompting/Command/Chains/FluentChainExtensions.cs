@@ -155,9 +155,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="sources"></param>
         /// <param name="guidance"></param>
         /// <returns></returns>
-        public static SingleThrowStep WithRebujito(this SingleThrowStep step, List<string> sources, string? guidance = null)
+        public static SingleThrowStep WithRebujito(this SingleThrowStep step, List<string> sources, string? guidance = null, int? feedDose = null)
         {
-            step.BoostWith(sources, guidance);
+            if (feedDose != null)
+                step.BoostWith(sources.Select(source => feedDose != null && feedDose > 0 && source.Length > feedDose ? source.Substring(0, feedDose.Value) : source).ToList(), guidance);
+
+            else step.BoostWith(sources, guidance);
 
             return step;
         }
@@ -172,9 +175,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="sources"></param>
         /// <param name="guidance"></param>
         /// <returns></returns>
-        public static SplitterStep WithRebujito(this SplitterStep step, List<string> sources, string? guidance = null)
+        public static SplitterStep WithRebujito(this SplitterStep step, List<string> sources, string? guidance = null, int? feedDose = null)
         {
-            step.BoostWith(sources, guidance);
+            if(feedDose != null)
+                step.BoostWith(sources.Select(source => feedDose != null && feedDose > 0 && source.Length > feedDose ? source.Substring(0, feedDose.Value) : source).ToList(), guidance);
+
+            else step.BoostWith(sources, guidance);
             
             return step;
         }

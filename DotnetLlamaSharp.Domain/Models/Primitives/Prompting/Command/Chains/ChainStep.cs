@@ -68,7 +68,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 
         public ChainStep(ChainPromptRequest request, string? feedForwardMessage = null) : this() 
         { 
-            _request = request; 
+            _request = request ?? new ChainPromptRequest(); 
             _feedForwardInstruction = feedForwardMessage;
         }
         public void Link(IChaineable step, bool isForward, bool isTwoWay)
