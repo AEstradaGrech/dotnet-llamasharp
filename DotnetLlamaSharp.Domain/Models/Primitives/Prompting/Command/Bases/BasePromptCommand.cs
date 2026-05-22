@@ -4,6 +4,7 @@ using DotnetLlamaSharp.Domain.Services.Inference;
 using OllamaSharp.Models;
 using System.Text.Json;
 using System.Text.Json.Schema;
+using System.Text.Json.Serialization;
 
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
@@ -45,7 +46,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
                 Options = _settings.ToOllamaRequest()
             };
        
-        public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction= false, string? preInstruction = null)
+        public async Task<JsonPromptResult> JsonPrompt(PromptCommandRequest request, bool returnFullInstruction= false, string? preInstruction = null, bool withStringEnums = true)
         {
             var sysmsg = _systemMessage;
 
@@ -57,7 +58,19 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
 
             _systemMessage = sysmsg;
 
-            return new JsonPromptResult(promptInstruction, commandPrompt, commandPrompt.GetType(), JsonSerializer.Serialize(commandPrompt), JsonSerializerOptions.Default.GetJsonSchemaAsNode(commandPrompt.GetType()));
+            string jsonResult = string.Empty;
+
+            if (withStringEnums) 
+            {
+                var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+                options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+                
+                jsonResult = JsonSerializer.Serialize(commandPrompt, options);
+            }
+            else jsonResult = JsonSerializer.Serialize(commandPrompt);
+
+            return new JsonPromptResult(promptInstruction, commandPrompt, commandPrompt.GetType(), jsonResult, JsonSerializerOptions.Default.GetJsonSchemaAsNode(commandPrompt.GetType()));
         }
 
         // Validators with defaultInstruction & no guidanceMessage

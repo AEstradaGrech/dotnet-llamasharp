@@ -417,9 +417,14 @@ namespace DotnetLlamaSharp.Services.Prompting
                                 model: null)) // some specific model for this step command
                                 .FeedFrom(startId), 
                             feedFwd: "Use this game related data to ground your profile to the game lore"),// STEP FeedForwardMessage for the next one (next._request.GuidanceMessage) with instructions & context for the next 
+                        new StepInstruction(_promptsFactory.GetEnumChoiceCommand<EGameLocations>(
+                            dbMessageName: string.Empty,
+                            guidanceMessage: request.Instructions.Skip(3).First().SystemMessage), 
+                            new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(3).First().Prompt)), 
+                            feedFwd: "Use the selected location as the character's born place"),
                         new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                                instruction: request.Instructions.Skip(3).First().SystemMessage),
-                                settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(3).First().Prompt)),
+                                instruction: request.Instructions.Skip(4).First().SystemMessage),
+                                settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(4).First().Prompt)),
                             feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")
                     ])
              //.Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
@@ -427,8 +432,8 @@ namespace DotnetLlamaSharp.Services.Prompting
                     //pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
              //.WithRebujito(langSearchRebujito, guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 800) // En SplitThrough el rebujito va para el splitted y fan-out al resto con el resultado
              .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                      instruction: request.Instructions.Skip(4).First().SystemMessage),
-                      settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(4).First().SystemMessage))
+                      instruction: request.Instructions.Skip(5).First().SystemMessage),
+                      settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(5).First().SystemMessage))
                         .FeedFrom(thenId),
                       feedFwd: ""))
              .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings);

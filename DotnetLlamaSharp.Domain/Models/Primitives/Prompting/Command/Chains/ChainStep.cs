@@ -3,6 +3,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Schema;
+using System.Text.Json.Serialization;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
 {
@@ -165,10 +166,18 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public SplitterStep SplitTo(StepInstruction splitted, List<StepInstruction> instructions)
           => Activator.CreateInstance(typeof(SplitterStep),  splitted, instructions, splitted.StepSettings) as SplitterStep;
         public TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class
-            => IsForged ? JsonSerializer.Deserialize<TDeserialized>(Outputs.First().SerializedResult) ??
+            => IsForged ? JsonSerializer.Deserialize<TDeserialized>(Outputs.First().SerializedResult,getSerializerOptions()) ??
                 throw new InvalidOperationException($"Failed to deserialize JSON to type {typeof(TDeserialized).Name}") :
                 throw new InvalidOperationException("The chain step has not been forged and has no output value");
 
+        private JsonSerializerOptions getSerializerOptions()
+        {
+            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+            options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+
+            return options;
+        }
         protected IChaineable getFirstStep(IChaineable current)
             => current.IsFirstStep() ? current : getFirstStep(current.Previous);
 

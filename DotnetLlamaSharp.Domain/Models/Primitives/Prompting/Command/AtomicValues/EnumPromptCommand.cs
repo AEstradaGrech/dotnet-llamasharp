@@ -3,6 +3,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
+using System.Text;
 
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues
@@ -24,8 +25,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
 
             var promptRequest = await getGenerateRequest(request);
 
+            var sb = new StringBuilder();
             foreach (var value in values)
-                promptRequest.System += $"\n{(int)Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(TEnum)))} = {value}";
+                sb.AppendLine($"{(int)Convert.ChangeType(value, Enum.GetUnderlyingType(typeof(TEnum)))} = {value}");
+
+            promptRequest.System = promptRequest.System.Replace("<<CHOICES>>", sb.ToString().Trim());
 
             var response = await _ollama.CommandPrompt<IntegerChoiceResponse>(promptRequest, _settings.CommandValidations, _settings.ValidationType, validatorFor<IntegerChoiceResponse>());
 
@@ -38,6 +42,7 @@ Select ONLY the NUMERIC KEY of the provided Key-Value-Pair list the DEFAULT key 
 Output your selected choice according to the provided JSON schema.
 
 > CHOICES:
+<<CHOICES>>
 ";
     }
 }
