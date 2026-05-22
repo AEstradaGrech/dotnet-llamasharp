@@ -123,7 +123,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         /// <param name="command"></param>
         /// <param name="pipeFeedFwd"></param>
         /// <returns></returns>
-        public static PipedStep Pipe(this SplitterStep step, IJsoneable command, string? pipeFeedFwd = null, StepSettings? pipedSettings = null)
+        public static PipedStep Pipe(this SplitterStep step, IJsoneable command, StepSettings pipedSettings, string? pipeFeedFwd = null)
         {
             var split = step.ExpandTo<PipedStep>(new StepInstruction(command, pipedSettings, pipeFeedFwd));
 

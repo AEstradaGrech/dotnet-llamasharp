@@ -155,7 +155,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public TStep ExpandTo<TStep>(IJsoneable command, StepSettings? request, string? feedForwardInstruction = null) where TStep : ChainStep
             => Activator.CreateInstance(typeof(TStep), command, request, feedForwardInstruction) as TStep;
         public TStep ExpandTo<TStep>(StepInstruction instruction) where TStep : ChainStep
-            => Activator.CreateInstance(typeof(TStep), instruction.Command, instruction.StepSettings) as TStep;
+            => Activator.CreateInstance(typeof(TStep), instruction) as TStep;
+
         public TStep ExpandTo<TStep, TCommand, TResult>(string instruction, CommandSettings commandSettings, StepSettings settings, string? feedForwardInstruction = null)
             where TCommand : BasePromptCommand<TResult>, new()
             where TStep : ChainStep
@@ -164,7 +165,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
         public SplitterStep Plug(List<StepInstruction> instructions, StepSettings? request, string? splitterFeedFwd = null)
           => Activator.CreateInstance(typeof(SplitterStep), instructions, request, splitterFeedFwd) as SplitterStep;
         public SplitterStep SplitTo(StepInstruction splitted, List<StepInstruction> instructions)
-          => Activator.CreateInstance(typeof(SplitterStep),  splitted, instructions, splitted.StepSettings) as SplitterStep;
+          => Activator.CreateInstance(typeof(SplitterStep),  splitted, instructions) as SplitterStep;
         public TDeserialized GetOutputAs<TDeserialized>() where TDeserialized : class
             => IsForged ? JsonSerializer.Deserialize<TDeserialized>(Outputs.First().SerializedResult,getSerializerOptions()) ??
                 throw new InvalidOperationException($"Failed to deserialize JSON to type {typeof(TDeserialized).Name}") :

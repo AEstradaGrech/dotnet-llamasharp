@@ -424,24 +424,24 @@ namespace DotnetLlamaSharp.Services.Prompting
                             feedFwd: "Use the selected location as the character's born place"),
                         new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                                 instruction: request.Instructions.Skip(4).First().SystemMessage),
-                                settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(4).First().Prompt)),
+                                settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(4).First().Prompt))
+                                    .WithDataBoost("Use the below data to bias your final response towards that style, ambience, topic or vibe", 
+                                        await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 6, Query = "Summary of the Horror of Dunwich, by H.P. Lovecraft. Summary of The Mist, by Stephen King" }, returnSnippet: true)),
                             feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore")
                     ])
-             //.Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                    //instruction: "Review the content so far and ensure that the character original town is Madriz. Rewrite the content to adapt it to this requirement if necessary"),
-                    //pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
-             //.WithRebujito(langSearchRebujito, guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 800) // En SplitThrough el rebujito va para el splitted y fan-out al resto con el resultado
+             .Pipe(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
+                    instruction: "Review the content so far and combine it with the provided sources in a very short story plot (around 50 words)", settings: request.Settings),
+                    pipedSettings: new StepSettings(new PromptCommandRequest(message:"")),
+                    pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+             .WithRebujito(await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 4, 
+                 Query = "1984, George Orwell. The Terror, Dan Simmons. A Brave New World, Aldous Huxley" }, returnSnippet: false),
+                guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 600)
              .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                       instruction: request.Instructions.Skip(5).First().SystemMessage),
                       settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(5).First().SystemMessage))
                         .FeedFrom(thenId),
                       feedFwd: ""))
              .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings);
-
-            //1 - esto con StringSelection y EnumSelector y SDK
-            //2 - probar el sistema con ChromaCommands
-            //3 - nuget PersistentAPI
-            //4 - release PoC llama sharp y tirar con otros proyectos (BotVille Sharp o PeopleVSSharp AKA LLamaVSCorporation) o ng-LameChromaDB
         }
 
 
