@@ -1,5 +1,4 @@
-﻿using DotnetLlamaSharp.Domain.Repositories.Chroma;
-using DotnetLlamaSharp.Domain.Services.Inference;
+﻿using DotnetLlamaSharp.Domain.Services.Inference;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
 {
@@ -17,57 +16,64 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
     /// <typeparam name="T"></typeparam>
     public abstract class DbPromptCommand<T> : BasePromptCommand<T>
     {
-        protected readonly IChromaSysChunksRepository _repo;
-        protected readonly string _messageName;
-        protected readonly string _defaultMessage = string.Empty;
+        protected readonly string _messageName = string.Empty; // messageId to pass to the message retriever
+        protected readonly string _dbSourceName = string.Empty; // Collection | Table name to pass to the retriever
+
+        protected readonly Func<string, string, Task<string>> _retrieverLambda; 
+
+        public bool IsDefaultSetup => string.IsNullOrEmpty(_dbSourceName) && string.IsNullOrEmpty(_messageName) && _retrieverLambda ==  null;
         public DbPromptCommand() : base() { }
         public DbPromptCommand(IOllamaInferenceService ollama) : base(ollama){ }
+
+        //This constructor is meant to support the usage of AtomicValueCommands w/DefaultInstruction and commands like the JsonRefiner (no instruction but orchestrates DB commands)
         public DbPromptCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
-        //                                                     Func<string,string> getDbMessage() <- se enchufa una lambda y se desacoplan los DBCommand
-        //                                                     ConnectorsFactory --> Func<IChromaRepo, string>Get() | Func<IMongoRepo,string> a medida que añado integraciones, aumento la factoria
-        //                                                     ISysMessageable -> interfaz comun para que todos los connectors tengan un mismo "GetSysMessage(name)", que es lo mas comun (casi lo unico que hace el repo)
-        //                                                     SysMessageLambda para AtomicValues (se quita la dependencia a Chroma, funcionan con default o lo que venga en la Lambda)
-        //                                                     Commandos que reciben un repo (dependencia) pasan a ser DbXCommands
-        //                                                     v3 -> Factoria Cool para reutilizar command de DbX en DbA | B | C
-        public DbPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, guidanceMessage, settings) 
-        { 
-            _repo = repo;
-            _messageName = dbMessageName;
+
+        public DbPromptCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, guidanceMessage, settings)
+        {
+            _retrieverLambda = retrieverLambda;
+            _messageName = messageName;
+            _dbSourceName = messageSourceName;
         }
 
-        //Validator that might read the instruction from Chroma or use the defaultInstruction
-        protected override JsonOutputRefinerCommand<T> validatorFor<T>() where T : class => new JsonOutputRefinerCommand<T>(_ollama, _repo, _messageName, null, _settings);
-        protected virtual string getDefaultInstruction() => _defaultMessage;
-        protected override async Task<string> getPromptInstruction(string? guidanceMessage = null)
+        // Methor overload for validators that retrieve the validator message from DB (or any other source from the factory method stored in the lambda)
+        protected virtual JsonOutputRefinerCommand<T> validatorFor<T>(string messageSource, string name, Func<string, string, Task<string>> retriever) 
+            where T : class => new JsonOutputRefinerCommand<T>(_ollama, messageSource,name, retriever, null, _settings);
+
+        protected override async Task<string> getPromptInstruction(string? additionalData = null, bool isAfterCore = true)
         {
             try
             {
                 //if prefer default instruction, try get instruction
                 string systemMessage = string.Empty;
 
+                //TODO: review option & remove
                 if(_settings.UseDefaultCommandMessage)
-                    systemMessage = getDefaultInstruction();
+                    systemMessage = getDefaultInstruction(); // default core message
                 // else try db msg
-                if(string.IsNullOrEmpty(systemMessage))
+                if(string.IsNullOrEmpty(systemMessage) && !IsDefaultSetup) // db core message
                 {
-                    var sysMessageChunk = await _repo.GetByName("system-messages", _messageName);
+                    var dbInstruction = await _retrieverLambda(_dbSourceName, _messageName);
 
-                    if (string.IsNullOrEmpty(sysMessageChunk.Text))
-                        throw new InvalidDataException($"{nameof(DbPromptCommand<T>)} >> no system message text has been found for message: '{_messageName}'");
+                    if (string.IsNullOrEmpty(dbInstruction))
+                        throw new InvalidDataException($"{nameof(DbPromptCommand<T>)} >> No message found with name {_messageName} in source: {_dbSourceName}");
 
-                    systemMessage = sysMessageChunk.Text;
+                    systemMessage = dbInstruction;
                 }
                 // if no db message and/or !defaultInstruction throw ex & try defaultInstruction (if db fail) + _system (request guidance msg)
                 if (string.IsNullOrEmpty(systemMessage))
                     throw new InvalidDataException($"{nameof(DbPromptCommand<T>)} >> NO SYSTEM MESSAGE FOUND >> TRYING DEFAULT MESSAGES");
                 
-                if (!string.IsNullOrEmpty(guidanceMessage))
-                    systemMessage = $"{systemMessage}\n\n{guidanceMessage}";
+                if (!string.IsNullOrEmpty(additionalData))
+                    systemMessage = isAfterCore ? 
+                        $"{systemMessage}\n\n{additionalData}" :
+                        $"{additionalData}\n\n{systemMessage}"; // enhanced core message
 
-                // default | dbSys
-                // guidance + (default | dbSys)
-                // instruction + (default | dbSys)
-                // instruction + guidance + (default | dbSys)
+                // default | dbSys -------------------------------------------------------------------------------------------> core message for simplest 'sysmsg-prompt' usage
+                // (default | dbSys) + guidance (as additional info) ---------------------------------------------------------> enhanced | prompt-guided (isAfterCore) core message
+                // instruction + (default | dbSys) (no guidance) -------------------------------------------------------------> guided core message
+                // afterCore = true --> instruction (as guidance for) + (default | dbSys) + guidance (as additional info) ----> guided enhanced-core-message
+                // afterCore = false --> instruction + guidance (as additional info) + (default | dbSys) ---------------------> enhanced-instruction guided core message
                 return string.IsNullOrEmpty(_systemMessage) ? systemMessage : $"{_systemMessage}\n{systemMessage}";
             }
             catch (Exception ex)
@@ -78,8 +84,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
                 if (string.IsNullOrEmpty(defaultMessage))
                     throw ex;
 
-                if (!string.IsNullOrEmpty(guidanceMessage))
-                    defaultMessage = $"{defaultMessage}\n{guidanceMessage}";
+                if (!string.IsNullOrEmpty(additionalData))
+                    defaultMessage = $"{defaultMessage}\n{additionalData}";
 
                 return defaultMessage;
             }

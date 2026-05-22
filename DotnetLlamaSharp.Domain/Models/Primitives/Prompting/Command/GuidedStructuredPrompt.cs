@@ -17,7 +17,5 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
         public GuidedStructuredPrompt(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings){ }
         public override async Task<TJson> Prompt(PromptCommandRequest request)
             => await _ollama.CommandPrompt<TJson>(await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType, validatorFor<TJson>());
-
-        protected override async Task<string> getPromptInstruction(string? guidanceMessage = null) => string.IsNullOrEmpty(_systemMessage) ? guidanceMessage ?? string.Empty : _systemMessage + (guidanceMessage ?? string.Empty); 
     }
 }

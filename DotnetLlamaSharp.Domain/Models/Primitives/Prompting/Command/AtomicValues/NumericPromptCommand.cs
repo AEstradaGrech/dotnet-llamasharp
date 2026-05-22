@@ -14,8 +14,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
     {
         public NumericPromptCommand() : base() { }
         public NumericPromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
-        public NumericPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
+        public NumericPromptCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
 
         public override async Task<float?> Prompt(PromptCommandRequest request)
         {

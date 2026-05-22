@@ -28,10 +28,11 @@ namespace DotnetLlamaSharp.Services.Prompting
         //private readonly IOllamaInferenceService _ollamaService;
         private readonly IPromptCommandsFactory _promptsFactory;
         private readonly ILangSearchService _langSearch;
+        private readonly IChromaSysChunksRepository _sysRepo;
         private readonly RequestOptions _settings;
         private readonly ILogger<OllamaSharpService> _logger;
 
-        public OllamaSharpService( IPromptCommandsFactory promptsFactory, ILangSearchService langSearch, IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger)
+        public OllamaSharpService( IPromptCommandsFactory promptsFactory, ILangSearchService langSearch, IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger, IChromaSysChunksRepository sysRepo)
         {
             _promptsFactory = promptsFactory;
             _langSearch = langSearch;
@@ -40,6 +41,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             if (settings.Value == null)
                 _logger.LogWarning("-- No RequestOptions injected from app settings. Using default OllamaSharp request options --");
+            _sysRepo = sysRepo;
         }
 
         // call to '/api/generate' endpoint for single Q&A inference
@@ -83,7 +85,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<ChatPrompt> GuidedBatchChainPrompt(ChainTestRequest request)
         {
-
+           
             // TODO: request.Instructions = new Dictionary<ECommandType, string>() -> [ECommandType.GUIDED] = "Do blah blah", [ECommandType.DB] = "db-messsage-name"
             //       new ChainStep(req.Key == ECommandType.GUIDED ? 
             //          _promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(guidanceMessage: request.Instructions.First().Value, request.Settings) :                      [JSONEABLE BASE]
@@ -184,6 +186,10 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<ChainResult> GuidedBatchChain(ChainTestRequest request)
         {
+            var dbCommand = _promptsFactory.GetDbCommand<ScoredChoiceCommand, ScoredStringChoice>("system-messages", "scored-choice-resp", _sysRepo.GetSystemMessage, guidanceMessage: "#INSTRUCTION: Select the best action for a videogame NPC for the given user prompt", request.Settings);
+
+            var x = await dbCommand.JsonPrompt(new StringChoiceRequest(["FIGHT", "TRADE", "CASUAL TALK"], message: "Ahoy mate!"));
+
             var inputCommandReq = new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt };
 
             //return await FluentChainExtensions

@@ -1,7 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
-using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using System.Text;
 
@@ -11,8 +10,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
     {
         public StringChoiceCommand() : base() { }
         public StringChoiceCommand(IOllamaInferenceService ollama) : base(ollama) { }
-        public StringChoiceCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) {}
+        public StringChoiceCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
 
         public override async Task<string> Prompt(PromptCommandRequest request)
         {

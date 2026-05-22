@@ -35,7 +35,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<TResult> DbPromptCommand<TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null)
            where TRequest : PromptCommandRequest
            where TResult : class
-               => await _factory.GetChromaCommand<ChromaStructuredPrompt<TResult>, TResult>(dbInstructionName, instruction, settings).Prompt( request);
+               => await _factory.GetChromaCommand<DbStructuredPrompt<TResult>, TResult>(dbInstructionName, instruction, settings).Prompt( request);
 
         // All subclasses or custom types that should work as a DbCommand (have a message name and a IChromaRepo instance)
         public async Task<TResult> DbPromptCommand<TCommand, TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null)

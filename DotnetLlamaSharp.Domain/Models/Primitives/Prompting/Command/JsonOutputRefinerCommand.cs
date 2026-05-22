@@ -2,7 +2,6 @@
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
-using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using System.Text.Json;
 
@@ -12,8 +11,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     {
         public JsonOutputRefinerCommand() : base() { }
         public JsonOutputRefinerCommand(IOllamaInferenceService ollama) : base(ollama) { }
-        public JsonOutputRefinerCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
-        public JsonOutputRefinerCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
+        public JsonOutputRefinerCommand(IOllamaInferenceService ollama, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, guidanceMessage, settings) { }
+
+        //The refiner itself makes no use of the passed messageName, but the messaageSourceName is used for the subValidators (for now. There might be a refiner constructor acceptin source-name KvP's in future releases)
+        public JsonOutputRefinerCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
 
         public override async Task<TRefined> Prompt(PromptCommandRequest request)
         {
@@ -25,10 +27,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
             switch(validationReq.ValidationType)
             {
                 case (EPromptValidation.REVIEW_ONLY):
-                    return await reviewResponse(_repo, _ollama, validationReq);
+                    return await reviewResponse(_ollama, validationReq);
 
                 case (EPromptValidation.BOOL_AND_RETRY):
-                    boolValidation = await validateResponse(_repo, _ollama, validationReq);
+                    boolValidation = await validateResponse(_ollama, validationReq);
 
                     if (!boolValidation.Answer)
                         throw new InvalidDataException($"{nameof(JsonOutputRefinerCommand<TRefined>)} >> {nameof(validateResponse)} >> VALIDATION FAIL - REASON: {boolValidation.Justification} >> CONFIDENCE: {boolValidation.Score}");
@@ -36,10 +38,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                     else return JsonSerializer.Deserialize<TRefined>(validationReq.RawOutput);
                 
                 case (EPromptValidation.BOOL_AND_REVIEW):
-                    return await validateAndReview(_repo, _ollama, validationReq);
+                    return await validateAndReview(_ollama, validationReq);
 
                 case (EPromptValidation.DOUBLE_BOOL):
-                    return await doubleBool(_repo, _ollama, validationReq);
+                    return await doubleBool(_ollama, validationReq);
 
                 default: return null;
             }
@@ -55,10 +57,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
             switch (validationReq.ValidationType)
             {
                 case (EPromptValidation.REVIEW_ONLY):
-                    return reviewResponse(_repo, _ollama, validationReq);
+                    return reviewResponse(_ollama, validationReq);
 
                 case (EPromptValidation.BOOL_AND_RETRY):
-                    boolValidation = validateResponse(_repo, _ollama, validationReq).Result;
+                    boolValidation = validateResponse(_ollama, validationReq).Result;
 
                     if (!boolValidation.Answer)
                         throw new InvalidDataException($"{nameof(JsonOutputRefinerCommand<TRefined>)} >> {nameof(validateResponse)} >> VALIDATION FAIL - REASON: {boolValidation.Justification} >> CONFIDENCE: {boolValidation.Score}");
@@ -66,49 +68,49 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
                     else return Task.FromResult(JsonSerializer.Deserialize<TRefined>(validationReq.RawOutput));
 
                 case (EPromptValidation.BOOL_AND_REVIEW):
-                    return validateAndReview(_repo, _ollama, validationReq);
+                    return validateAndReview(_ollama, validationReq);
 
                 case (EPromptValidation.DOUBLE_BOOL):
-                    return doubleBool(_repo, _ollama, validationReq);
+                    return doubleBool(_ollama, validationReq);
 
                 default: return null;
             }
         }
 
-        private Task<TRefined> reviewResponse(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
+        private Task<TRefined> reviewResponse(IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
         {
-            var command = _repo == null ?
+            var command = _retrieverLambda == null ?
                 new JsonOutputReviewCommand<TRefined>(ollama, guidanceMessage, _settings):
-                new JsonOutputReviewCommand<TRefined>(ollama, repo, "json-review", guidanceMessage, _settings);
+                new JsonOutputReviewCommand<TRefined>(ollama, _dbSourceName, "json-review", _retrieverLambda, guidanceMessage, _settings);
 
             return command.PromptSync(toValidationRequest<TRefined>(request));
         }
 
-        private Task<ScoredBoolResponse> validateResponse(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
+        private Task<ScoredBoolResponse> validateResponse(IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
         {
-            var command = _repo == null ?
+            var command = _retrieverLambda == null ?
                 new JsonOutputValidationCommand<ScoredBoolResponse>(ollama, guidanceMessage, _settings) :
-                new JsonOutputValidationCommand<ScoredBoolResponse>(ollama, repo, "json-validate", guidanceMessage, _settings);
+                new JsonOutputValidationCommand<ScoredBoolResponse>(ollama, _dbSourceName, "json-validate", _retrieverLambda, guidanceMessage, _settings);
 
             return command.PromptSync(toValidationRequest<ScoredBoolResponse>(request));
         }
 
-        private Task<TRefined> validateAndReview(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
+        private Task<TRefined> validateAndReview(IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
         {
-            var validation = validateResponse(_repo, ollama, request).Result;
+            var validation = validateResponse(ollama, request).Result;
 
             if (validation.Answer) 
                 return Task.FromResult(JsonSerializer.Deserialize<TRefined>(request.RawOutput));
 
-            return reviewResponse(_repo, ollama, request, $"# WARNING: a previous reviewer has marked the response as INVALID. Take into account the reason to have a better understanding of the problem. Reason: {validation.Justification}");
+            return reviewResponse(ollama, request, $"# WARNING: a previous reviewer has marked the response as INVALID. Take into account the reason to have a better understanding of the problem. Reason: {validation.Justification}");
         }
-        private Task<TRefined> doubleBool(IChromaSysChunksRepository repo, IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
+        private Task<TRefined> doubleBool(IOllamaInferenceService ollama, JsonRefineRequest<TRefined> request, string? guidanceMessage = null)
         {
-            var review = validateAndReview(repo, ollama, request, guidanceMessage).Result;
+            var review = validateAndReview(ollama, request, guidanceMessage).Result;
 
             request.RawOutput = JsonSerializer.Serialize<TRefined>(review);
 
-            var validation = validateResponse(_repo, ollama, request).Result;
+            var validation = validateResponse(ollama, request).Result;
 
             if(!validation.Answer)
                 throw new InvalidDataException($"{nameof(JsonOutputRefinerCommand<TRefined>)} >> {nameof(validateResponse)} >> VALIDATION FAIL - REASON: {validation.Justification} >> CONFIDENCE: {validation.Score}");

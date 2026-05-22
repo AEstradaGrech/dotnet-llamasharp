@@ -180,5 +180,10 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         public async Task<List<ChromaChatsCollection>> GetAllChatCollections()
             => await _chatsRepo.CollectionsOf((int)EChunkType.CHAT);
+
+        public Task<string> GetSystemInstruction(string collectionName, string messageName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -29,8 +29,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
         }
 
         //TODO: if _dbMessageName == null, este message
-        protected override async Task<string> getPromptInstruction(string? guidanceMessage = null)
-            => @"Analyze the user prompt and try to determine the user intent. Pay attention to what is the user trying to do, what does the user expect you to do, 
-what's the user query about or the scope of the user request (in case is chatting or role-playing) and output a short description (10 words maximum) of the user intent" + (guidanceMessage ?? string.Empty);
+        protected override async Task<string> getPromptInstruction(string? additionalData = null, bool isAfterCore = true)
+            => isAfterCore ? getDefaultInstruction() + $"\n{additionalData}" : additionalData + $"\n{getDefaultInstruction()}";
+
+        protected virtual string getDefaultInstruction() => @"Analyze the user prompt and try to determine the user intent. Pay attention to what is the user trying to do, what does the user expect you to do, 
+            what's the user query about or the scope of the user request (in case is chatting or role-playing) and output a short description (10 words maximum) of the user intent";
     }
 }

@@ -98,6 +98,14 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 return query.First();
             }
         }
+
+        public async Task<string> GetSystemMessage(string collectionName, string name)
+        {
+            var message = await GetByName(collectionName, name);
+
+            return message.Text;
+        }
+
         public Task<ChromaSysChunk> UpdateMessage(string collectionName, string name, string message, ReadOnlyMemory<float> embedding)
         {
             throw new NotImplementedException();

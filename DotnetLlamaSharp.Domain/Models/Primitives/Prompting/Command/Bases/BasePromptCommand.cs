@@ -11,7 +11,10 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
 {
     public abstract class BasePromptCommand<T> : IPrompteable<T>, IJsoneable
     {
-        protected string? _systemMessage = null;
+        protected string? _systemMessage = null;// setted on construction from params
+        // overriden if necessary to use a hardcoded message as core message (usage for empty base _systemMessage (instruction) + hardcoded + promptGuidance(afterCore Y/N)
+        // check the 'UserIntentCommand (with _default) : MessageCommand (without _default)' to see an example of that
+       
         protected IOllamaInferenceService _ollama = null;
         protected CommandSettings _settings = null;
         public string? SystemMessage => _systemMessage;
@@ -28,8 +31,18 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
 
         public abstract Task<T> Prompt(PromptCommandRequest request);
         public virtual Task<T> PromptSync(PromptCommandRequest request) { throw new NotImplementedException("This method is meant to be overriden whenever required"); }
-        protected virtual async Task<string> getPromptInstruction(string? guidanceMessage = null) => string.IsNullOrEmpty(guidanceMessage) ? _systemMessage : $"{_systemMessage}\n\n{guidanceMessage}";
-        
+
+        protected virtual string getDefaultInstruction() => "";
+        protected virtual async Task<string> getPromptInstruction(string? additionalData = null, bool isAfterCore = true)
+        {
+            var defaultMessage = getDefaultInstruction();
+
+            return string.IsNullOrEmpty(defaultMessage) ?
+                string.IsNullOrEmpty(additionalData) ? _systemMessage : isAfterCore ? $"{_systemMessage}\n\n{additionalData}" : $"{additionalData}\n\n{_systemMessage}" :
+                string.IsNullOrEmpty(_systemMessage) ? 
+                string.IsNullOrEmpty(additionalData) ? defaultMessage : isAfterCore ? $"{defaultMessage}\n\n{additionalData}" : $"{additionalData}\n\n{defaultMessage}" :
+                $"{_systemMessage}\n" + (string.IsNullOrEmpty(additionalData) ? defaultMessage : isAfterCore ? $"{defaultMessage}\n\n{additionalData}" : $"{additionalData}\n\n{defaultMessage}");
+        }
         
         protected void validateInputRequest<TReq>(PromptCommandRequest request) where TReq : PromptCommandRequest
         {
@@ -73,7 +86,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases
             return new JsonPromptResult(promptInstruction, commandPrompt, commandPrompt.GetType(), jsonResult, JsonSerializerOptions.Default.GetJsonSchemaAsNode(commandPrompt.GetType()));
         }
 
-        // Validators with defaultInstruction & no guidanceMessage
-        protected virtual JsonOutputRefinerCommand<T> validatorFor<T>() where T : class => new JsonOutputRefinerCommand<T>(_ollama, null, _settings);
+        // Validators with defaultInstruction & optional guidanceMessage
+        protected virtual JsonOutputRefinerCommand<T> validatorFor<T>(string? guidanceMessage = null, CommandSettings? settings = null) 
+            where T : class => new JsonOutputRefinerCommand<T>(_ollama, guidanceMessage, settings ?? _settings);
     }
 }

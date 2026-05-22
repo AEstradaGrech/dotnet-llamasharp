@@ -1,6 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
-using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
 using System.Text.Json;
 using System.Text.Json.Schema;
@@ -13,8 +12,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
         public JsonOutputReviewCommand() : base() { }
         public JsonOutputReviewCommand(IOllamaInferenceService ollama) : base(ollama) {}
         public JsonOutputReviewCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
-        public JsonOutputReviewCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null)
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
+        public JsonOutputReviewCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
 
         public override async Task<TReviewed> Prompt(PromptCommandRequest request)
         {

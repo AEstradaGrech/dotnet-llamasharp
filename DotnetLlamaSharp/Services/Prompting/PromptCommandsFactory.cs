@@ -57,5 +57,8 @@ namespace DotnetLlamaSharp.Services.Prompting
            => GetCommand<TCommand, TResult>(instruction, settings);
         public IJsoneable GetAsJsoneable<TCommand, TResult>(string? instruction = null, string? dbMessageName = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
            =>  GetChromaCommand<TCommand, TResult>(dbMessageName, instruction, settings);
+
+        public TCommand GetDbCommand<TCommand, TResult>(string source, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new()
+            => Activator.CreateInstance(typeof(TCommand), _ollama, source, messageName, retrieverLambda, guidanceMessage, settings) as TCommand;
     }
 }

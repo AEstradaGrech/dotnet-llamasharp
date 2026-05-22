@@ -1,8 +1,6 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
-using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Inference;
-using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
@@ -12,7 +10,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
         public MessagePromptCommand() : base() { }
         public MessagePromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
         public MessagePromptCommand(IOllamaInferenceService ollama, string? systemMessage, CommandSettings? settings) : base(ollama, systemMessage, settings) { }
-
         public override async Task<ChatMessage> Prompt(PromptCommandRequest request)
         {
             bool isChat = request.GetType() == typeof(ChatCommandRequest);
@@ -26,8 +23,6 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             return new ChatMessage(message.Role.ToString(), message.Content);
         }
-
-        protected override async Task<string> getPromptInstruction(string? guidanceMessage = null) => string.IsNullOrEmpty(_systemMessage) ? guidanceMessage ?? string.Empty :  _systemMessage + (guidanceMessage ?? string.Empty);
 
         protected ChatRequest getChatRequest(ChatCommandRequest request)
         {

@@ -12,8 +12,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
     {
         public EnumPromptCommand() : base() { }
         public EnumPromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
-        public EnumPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
+        public EnumPromptCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
 
         public override async Task<TEnum> Prompt(PromptCommandRequest request)
         {

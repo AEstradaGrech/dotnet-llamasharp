@@ -12,8 +12,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
         public QueryAugmentationCommand() : base() { }
         public QueryAugmentationCommand(IOllamaInferenceService ollama) : base(ollama) { }
 
-        public QueryAugmentationCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
+        public QueryAugmentationCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retriever, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, messageSourceName, messageName, retriever, guidanceMessage, settings) { }
 
         public override async Task<ChatMessage> Prompt(PromptCommandRequest request)
         {

@@ -11,8 +11,8 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
     {
         public MultiChoiceCommand() { }
         public MultiChoiceCommand(IOllamaInferenceService ollama) : base(ollama) { }
-        public MultiChoiceCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
-
+        public MultiChoiceCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
         public override async Task<List<string>> Prompt(PromptCommandRequest request)
         {
             validateInputRequest<MultiChoiceRequest>(request);

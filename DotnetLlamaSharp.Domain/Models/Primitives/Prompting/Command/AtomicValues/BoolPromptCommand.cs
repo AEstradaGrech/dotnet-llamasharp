@@ -12,11 +12,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValu
         public BoolPromptCommand() : base() { }
         public BoolPromptCommand(IOllamaInferenceService ollama) : base(ollama) { }
         // Values from factory injected services
-        public BoolPromptCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
+        public BoolPromptCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
 
         public override async Task<bool> Prompt(PromptCommandRequest request)
         {
+            //TODO: --> ValidateWith(sourceName, validatorMsgName) --> DB validator support >> validatorFor<BooleanResponse>(sourceName, validatorMsgName, _retrieverLambda)
             var response = await _ollama.CommandPrompt<BooleanResponse>(await getGenerateRequest(request), _settings.CommandValidations, _settings.ValidationType, validatorFor<BooleanResponse>());
 
             return response.Answer;

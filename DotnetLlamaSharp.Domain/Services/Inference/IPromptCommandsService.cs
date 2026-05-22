@@ -21,5 +21,7 @@ namespace DotnetLlamaSharp.Domain.Services.Inference
         Task<TResult> DbPromptCommand<TRequest, TResult>(TRequest request, string dbInstructionName, string? instruction = null, CommandSettings settings = null) where TRequest : PromptCommandRequest where TResult : class;
 
         TCommand GetCommand<TCommand, TResult>(string dbMessageName, string? guidanceMessage = null, PromptSettings? settings = null) where TCommand : DbPromptCommand<TResult>, new();
+
+
     }
 }

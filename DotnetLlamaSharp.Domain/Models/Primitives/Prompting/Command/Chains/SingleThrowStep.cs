@@ -80,11 +80,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains
             {
                 var finalInstruction = getDefaultFinalInstruction();
                 var finalizer = ExpandTo<MessagePromptCommand, ChatMessage>(
-                    instruction: finalInstruction.SystemMessage, // Esto es algo asi como una feature del SDK, el usuario no deberia poder cambiarlo, solo enriquecerlo (finalSysMsg)
+                    instruction: finalInstruction.SystemMessage, 
                     finalMsgSettings ?? finalStep.Runner.DefaultSettings,
                     new StepSettings(new PromptCommandRequest(
                         message: finalInstruction.Prompt,
-                        guidanceMessage: string.IsNullOrEmpty(finalStep.Runner.FwdSystemMessage) ? string.Empty : $"## USER PREFERENCES: {finalStep.Runner.FwdSystemMessage}\n") // esto es lo mismo que _runner.Default y lo mismo que dejarlo a null. v2 -> ChainReqDto.FinalMessageSettings (con settings mas creativos o diferentes del input y ya esta)
+                        guidanceMessage: string.IsNullOrEmpty(finalStep.Runner.FwdSystemMessage) ? string.Empty : $"## USER PREFERENCES: {finalStep.Runner.FwdSystemMessage}\n") 
                     )
                 );
 

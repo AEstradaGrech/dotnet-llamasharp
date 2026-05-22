@@ -4,6 +4,7 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Inference;
+using System.Text;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 {
@@ -11,8 +12,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     {
         public ScoredChoiceCommand() : base() { }
         public ScoredChoiceCommand(IOllamaInferenceService ollama) : base(ollama) { }
-        public ScoredChoiceCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) {}
+        public ScoredChoiceCommand(IOllamaInferenceService ollama, string? guidanceMessage = null, CommandSettings? settings = null) 
+            : base(ollama, guidanceMessage, settings) {}
+
+        public ScoredChoiceCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+           : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
+
 
         public override async Task<ScoredStringChoice> Prompt(PromptCommandRequest request)
         {
@@ -20,8 +25,12 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
 
             var promptReq = await getGenerateRequest(request);
 
+            var sb = new StringBuilder();
+
             foreach (var choice in ((StringChoiceRequest)request).Choices)
-                promptReq.System += $"\n- {choice}";
+                sb.AppendLine($"- {choice}");
+
+            promptReq.System = promptReq.System.Replace("<<CHOICES>>", sb.ToString().Trim());
 
             return await _ollama.CommandPrompt<ScoredStringChoice>(promptReq, _settings.CommandValidations, _settings.ValidationType, validatorFor<ScoredStringChoice>());
         }
@@ -32,6 +41,7 @@ Your task is not only to select the best choice but reason why to add a 'confide
 Output your response according to the provided JSON schema.
 
 > CHOICES:
+<<CHOICES>>
 ";
     }
 }

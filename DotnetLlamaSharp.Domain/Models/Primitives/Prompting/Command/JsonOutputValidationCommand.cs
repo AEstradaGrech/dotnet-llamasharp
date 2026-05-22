@@ -13,9 +13,11 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command
     {
         public JsonOutputValidationCommand() : base() { }
         public JsonOutputValidationCommand(IOllamaInferenceService ollama) : base(ollama) { }
-        public JsonOutputValidationCommand(IOllamaInferenceService ollama, string? systemMessage = null, CommandSettings? settings = null) : base(ollama, systemMessage, settings) { }
-        public JsonOutputValidationCommand(IOllamaInferenceService ollama, IChromaSysChunksRepository repo, string dbMessageName, string? guidanceMessage = null, CommandSettings? settings = null) 
-            : base(ollama, repo, dbMessageName, guidanceMessage, settings) { }
+        //USAGE WITH DEFAULT INSTRUCTION
+        public JsonOutputValidationCommand(IOllamaInferenceService ollama, string? guidanceMessage = null, CommandSettings? settings = null) : base(ollama, guidanceMessage, settings) { }
+        //USAGE WITH DB RETRIEVED INSTRUCTION
+        public JsonOutputValidationCommand(IOllamaInferenceService ollama, string messageSourceName, string messageName, Func<string, string, Task<string>> retrieverLambda, string? guidanceMessage = null, CommandSettings? settings = null)
+            : base(ollama, messageSourceName, messageName, retrieverLambda, guidanceMessage, settings) { }
 
         public override async Task<ScoredBoolResponse> Prompt(PromptCommandRequest request)
         {
