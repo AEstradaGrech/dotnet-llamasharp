@@ -48,7 +48,6 @@ namespace DotnetLlamaSharp.Extensions
         
         public static IServiceCollection AddConfigurations(this IServiceCollection services, IConfiguration configuration)
         {
-            services.Configure<RequestOptions>(configuration.GetSection("OllamaSettings"));
             services.Configure<ApiSettings>(configuration.GetSection(nameof(ApiSettings)));
             return services;
         }
@@ -102,40 +101,7 @@ namespace DotnetLlamaSharp.Extensions
         }
 
         // Default Ollamasharp registration.
-        public static IServiceCollection AddOllamaSharpApiClient(this IServiceCollection services, IConfiguration appConfig)
-            => services.AddScoped<IOllamaApiClient, OllamaApiClient>(sp => {
-                var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
-                var settings = new Configuration
-                {
-                    Uri = new Uri(config.EndpointByKey("ollama")),
-                    Model = config.DefaultModel
-                };
-                return new OllamaApiClient(settings);
-            });
-
-        public static IServiceCollection AddOllamaEmbeddingsGenerator(this IServiceCollection services, IConfiguration appConfig)
-            => services.AddScoped<IEmbeddingGenerator<string, Embedding<float>>, OllamaApiClient>(sp => {
-                    var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
-                    var settings = new Configuration
-                    {
-                        Uri = new Uri(config.EndpointByKey("ollama")),
-                        Model = config.DefaultEmbedder
-                    };
-                    return new OllamaApiClient(settings);
-                });
-
         
-        // IChatClient is for Microsoft.Extensions.AI, IOllamaApiClient is for OllamaSharp, you can register both if you want to use them side by side
-        public static IServiceCollection AddOllamaIChatClient(this IServiceCollection services, IConfiguration appConfig)
-            => services.AddScoped<IChatClient>(sp => {
-                var config = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
-                var settings = new Configuration
-                {
-                    Uri = new Uri(config.EndpointByKey("ollama")),
-                    Model = config.DefaultModel
-                };
-                return new OllamaApiClient(settings);
-            });
 
 
         //TODO: KernelImpl -> IChatCompletionService is for Semantic Kernel, you can register it side by side with the other two if you want to use them together

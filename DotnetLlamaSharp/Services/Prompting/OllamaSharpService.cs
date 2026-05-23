@@ -1,24 +1,23 @@
-﻿using AutoMapper;
-using DocumentFormat.OpenXml.EMMA;
-using Dotnet.LangSearch.SDK;
+﻿using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
+using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Step.ValueObjects;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.AtomicValues;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Bases;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests.Chains;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
-using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
-using System.Text;
-using MicrosoftAI = Microsoft.Extensions.AI;
 
 namespace DotnetLlamaSharp.Services.Prompting
 {
@@ -83,7 +82,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             return null; //TODO: EMBEDDINGS COMMAND await _ollamaService.GetEmbeddings(request);
         }
 
-        public async Task<ChatPrompt> GuidedBatchChainPrompt(ChainTestRequest request)
+        public async Task<ChatPrompt> GuidedBatchChainPrompt(ChainedPrompt request)
         {
            
             // TODO: request.Instructions = new Dictionary<ECommandType, string>() -> [ECommandType.GUIDED] = "Do blah blah", [ECommandType.DB] = "db-messsage-name"
@@ -184,7 +183,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         }
 
 
-        public async Task<ChainResult> GuidedBatchChain(ChainTestRequest request)
+        public async Task<ChainResult> GuidedBatchChain(ChainedPrompt request)
         {
             var dbCommand = _promptsFactory.GetDbCommand<ScoredChoiceCommand, ScoredStringChoice>("system-messages", "scored-choice-resp", _sysRepo.GetSystemMessage, guidanceMessage: "#INSTRUCTION: Select the best action for a videogame NPC for the given user prompt", request.Settings);
 
@@ -388,7 +387,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             // Y un FeedFwd para guiar al siguiente con sus resultados
             // Tambien se puede pedir un mensaje opcional que intenta devolver el resultado de la cadena en forma de ChatMessage
             // Ese mensaje se puede guiar con el req.FinalSysMessage que viaja en el ChainRunner. Tambien puede ejecutarse con unos settings propios o con los default
-            return await FluentChainExtensions
+            return await LameChain
              .StartWith(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                       instruction: request.Instructions.First().SystemMessage, settings: request.Settings), // _sysMsg        "FirstCmd = userPrompt
                       settings: new StepSettings(new PromptCommandRequest(
@@ -410,7 +409,6 @@ namespace DotnetLlamaSharp.Services.Prompting
                     settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(1).First().Prompt)), // Instruction[N].Prompt  Instruction (instruction ,prompt) = (_system, prompt) --> STEP = instruction + Guidance (prev_ctx) & prompt ?? default 'Complete task'
                     feedFwd: "Use this character typical scene as a character concept to inspire your creations"), [
                         new StepInstruction(_promptsFactory.GetStringChoiceCommand( 
-                                dbMessageName: "", //Whatever command you want to execute. It is 'paired' to its specific request using the next param. Stored in step until inference
                                 guidanceMessage: request.Instructions.Skip(2).First().SystemMessage), //THIS MAPS TO COMMAND._systemMessage (cmd.guidance is generated for the next inside the steps on runtime
                             new StepSettings(new StringChoiceRequest(
                                 choices: [ // Specific StepCommand request configuration
@@ -424,7 +422,6 @@ namespace DotnetLlamaSharp.Services.Prompting
                                 .FeedFrom(startId), 
                             feedFwd: "Use this game related data to ground your profile to the game lore"),// STEP FeedForwardMessage for the next one (next._request.GuidanceMessage) with instructions & context for the next 
                         new StepInstruction(_promptsFactory.GetEnumChoiceCommand<EGameLocations>(
-                            dbMessageName: string.Empty,
                             guidanceMessage: request.Instructions.Skip(3).First().SystemMessage), 
                             new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(3).First().Prompt)), 
                             feedFwd: "Use the selected location as the character's born place"),

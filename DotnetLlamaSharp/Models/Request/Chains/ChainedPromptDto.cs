@@ -2,7 +2,7 @@
 
 namespace DotnetLlamaSharp.Models.Request.Chains
 {
-    public class ChainTestRequestDto : SimplePromptRequestDto
+    public class ChainedPromptDto : SimplePromptRequestDto
     {
         public bool WithReport { get; set; }
         public bool WithFinalMessage { get; set; }

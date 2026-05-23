@@ -1,4 +1,4 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 
 namespace DotnetLlamaSharp.Domain.Models.Request
 {

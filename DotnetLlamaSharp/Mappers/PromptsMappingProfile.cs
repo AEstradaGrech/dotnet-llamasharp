@@ -1,9 +1,10 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK.Models.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Chains;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests.Chains;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
@@ -127,9 +128,7 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<InstructionDto, Instruction>().ReverseMap();
 
-            CreateMap<ChainTestRequestDto, ChainTestRequest>()
-                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>()
-                .ForMember(dest => dest.FinalMessageSettings, opt => opt.MapFrom(src => src.FinalMessageSettings));
+            CreateMap<ChainedPromptDto, ChainedPrompt>();
         }
     }
 }

@@ -1,15 +1,18 @@
 ﻿using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
+using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
-using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
@@ -67,7 +70,8 @@ namespace DotnetLlamaSharp.Services.Prompting
                             Settings = _settings,
                         };
 
-                        var expansion = await _ollamaCommands.DbPromptCommand<RagExpansionCommand, RagExpansionRequest, ChatMessage>(expansionReq, dbInstructionName: "", null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
+                        var expansion = await _ollamaCommands.PromptCommand<RagExpansionCommand, RagExpansionRequest, ChatMessage>(
+                            expansionReq, instruction: null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
 
 
                         if (!string.IsNullOrEmpty(expansion.Content))
@@ -86,7 +90,8 @@ namespace DotnetLlamaSharp.Services.Prompting
                             Settings = _settings,
                         };
 
-                        var expansion = await _ollamaCommands.DbPromptCommand<QueryAugmentationCommand, RagExpansionRequest, ChatMessage>(expansionReq, dbInstructionName: "", null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
+                        var expansion = await _ollamaCommands.PromptCommand<QueryAugmentationCommand, RagExpansionRequest, ChatMessage>(
+                            expansionReq, instruction: null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
 
                         if (!string.IsNullOrEmpty(expansion.Content))
                             queryPrompt += $"\n{expansion.Content}";   
@@ -212,9 +217,9 @@ namespace DotnetLlamaSharp.Services.Prompting
         {
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            var userIntent = await _ollamaCommands.GuidedPromptCommand<UserIntentCommand, PromptCommandRequest, ChatMessage>(
-                new PromptCommandRequest(request.Prompt, null, request.Settings.Model),
-                null,
+            var userIntent = await _ollamaCommands.GuidedPromptCommand<PromptCommandRequest, ChatMessage>(
+                new PromptCommandRequest(request.Prompt, request.Settings.ToOllamaRequest(), request.Settings.Model),
+                guidanceMessage: null,
                 request.Settings);
 
             var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
@@ -250,7 +255,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query.";
 
-                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: request.MaxCollectionChoices, instruction: selectorGuidance, request.Settings);
+                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: request.MaxCollectionChoices, guidanceMessage: selectorGuidance, request.Settings);
 
                 ragReq.SystemMessage = null;
 

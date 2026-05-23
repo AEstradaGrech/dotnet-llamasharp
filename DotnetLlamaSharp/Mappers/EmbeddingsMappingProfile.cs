@@ -2,9 +2,9 @@
 using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Metadata;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
-using DotnetLlamaSharp.Domain.Models.Primitives.Embeddings;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Response;

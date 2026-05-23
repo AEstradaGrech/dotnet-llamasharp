@@ -1,12 +1,14 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests.Chains;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
 using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
@@ -109,7 +111,7 @@ namespace DotnetLlamaSharp.Controllers
 
             // Get the streaming enumerable from the service.
             // returns the _client.GenerateAsync(...) enumerable directly so the controller can iterate the stream.
-            var stream = _streamService.SimplePromptStream(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request));
+            var stream = _streamService.SimplePromptStream(_mapper.Map<ChatPromptRequestDto, Instruction>(request));
 
             try
             {
@@ -283,12 +285,12 @@ namespace DotnetLlamaSharp.Controllers
             => Ok(JsonSerializer.Serialize(JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(RagChatRequestDto))));
 
         [HttpPost("/chains/test")]
-        public async Task<IActionResult> ChaiTests([FromBody] ChainTestRequestDto request)
+        public async Task<IActionResult> ChaiTests([FromBody] ChainedPromptDto request)
         {
             //var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.GuidedBatchChainPrompt(_mapper.Map<GuidedBatchRequestDto, GuidedBatchRequest>(request)));
 
 
-            var response = await _ollamaService.GuidedBatchChain(_mapper.Map<ChainTestRequestDto, ChainTestRequest>(request));
+            var response = await _ollamaService.GuidedBatchChain(_mapper.Map<ChainedPromptDto, ChainedPrompt>(request));
 
             if (response != null)
                 return Ok(response);

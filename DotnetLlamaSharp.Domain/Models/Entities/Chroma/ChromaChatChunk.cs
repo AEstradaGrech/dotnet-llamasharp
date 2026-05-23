@@ -1,7 +1,7 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using OllamaSharp.Models.Chat;
 using System.Text.Json;
 

@@ -1,5 +1,4 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.Command.Requests;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting.StructuredOutput;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
 using System.ComponentModel;
 
 namespace DotnetLlamaSharp.Domain.Models.Request

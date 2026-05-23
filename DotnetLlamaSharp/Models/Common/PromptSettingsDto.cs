@@ -1,4 +1,4 @@
-﻿using DotnetLlamaSharp.Models.Common.Enums;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 
 namespace DotnetLlamaSharp.Models.Common
 {
@@ -55,7 +55,7 @@ namespace DotnetLlamaSharp.Models.Common
         public int? RepeatLastN { get; set; } = null;
 
         public int CommandValidations { get; set; } = 0;
-        public PromptValidation ValidationType { get; set; }
+        public EPromptValidation ValidationType { get; set; }
         public bool UseDefaultCommandMessage { get; set; }
     }
 }

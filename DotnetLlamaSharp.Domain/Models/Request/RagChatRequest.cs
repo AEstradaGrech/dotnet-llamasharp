@@ -1,7 +1,4 @@
-﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 
 namespace DotnetLlamaSharp.Domain.Models.Request
 {

@@ -1,5 +1,6 @@
 using Dotnet.Chroma.Repositories.Extensions;
 using Dotnet.LangSearch.SDK.Extensions;
+using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using DotnetLlamaSharp.Extensions;
 using DotnetLlamaSharp.Mappers;
 using Microsoft.Extensions.DependencyModel;
@@ -47,8 +48,8 @@ try
 
     builder.Services
         .AddConfigurations(builder.Configuration)
-        .AddOllamaSharpApiClient(builder.Configuration)
-        .AddOllamaEmbeddingsGenerator(builder.Configuration)
+        
+        .ConfigureLameChain(builder.Configuration, ServiceLifetime.Scoped)
         .ConfigureLangSearch(builder.Configuration)
         .AddChromaConfiguration(builder.Configuration)
         .AddDefaultChromaRepository()

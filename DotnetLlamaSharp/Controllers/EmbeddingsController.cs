@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using DotnetLlamaSharp.Domain.Models.Primitives.Embeddings;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;

@@ -1,4 +1,6 @@
 ﻿
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {
     public class ChatPrompt
