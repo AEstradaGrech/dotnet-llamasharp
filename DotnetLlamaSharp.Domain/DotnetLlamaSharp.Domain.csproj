@@ -13,4 +13,8 @@
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\dotnet-lamechain-sdk\Dotnet.OllamaSharp.LameChain.SDK\Dotnet.OllamaSharp.LameChain.SDK.csproj" />
+  </ItemGroup>
+
 </Project>

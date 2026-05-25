@@ -4,16 +4,19 @@ using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Step;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step.ValueObjects;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
+using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models;
@@ -28,15 +31,17 @@ namespace DotnetLlamaSharp.Services.Prompting
         private readonly IPromptCommandsFactory _promptsFactory;
         private readonly ILangSearchService _langSearch;
         private readonly IChromaSysChunksRepository _sysRepo;
+        private readonly IChromaService _chromaService;
         private readonly RequestOptions _settings;
         private readonly ILogger<OllamaSharpService> _logger;
 
-        public OllamaSharpService( IPromptCommandsFactory promptsFactory, ILangSearchService langSearch, IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger, IChromaSysChunksRepository sysRepo)
+        public OllamaSharpService( IPromptCommandsFactory promptsFactory, ILangSearchService langSearch, IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger, IChromaSysChunksRepository sysRepo, IChromaService chromaService)
         {
             _promptsFactory = promptsFactory;
             _langSearch = langSearch;
             _settings = settings.Value ?? new RequestOptions();
             _logger = logger;
+            _chromaService = chromaService;
 
             if (settings.Value == null)
                 _logger.LogWarning("-- No RequestOptions injected from app settings. Using default OllamaSharp request options --");
@@ -54,9 +59,9 @@ namespace DotnetLlamaSharp.Services.Prompting
                 new ChatMessage(ChatRole.User.ToString(), request.Prompt)
             };
 
-            var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage);
+            var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage, request.Settings);
 
-            var response = await command.Prompt(new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt, Settings = _settings });
+            var response = await command.Prompt(new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt });
 
             return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = messages };
         }
@@ -66,9 +71,9 @@ namespace DotnetLlamaSharp.Services.Prompting
         {
             var sb = new System.Text.StringBuilder();
 
-            var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage);
+            var command = _promptsFactory.GetMessagePromptCommand(request.SystemMessage, request.Settings);
 
-            var response = await command.Prompt(new ChatCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt, Settings = _settings, ChatHistory = request.ChatHistory, IncludeSystemMessage = bWithSysmsgUpdate });
+            var response = await command.Prompt(new ChatCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt, ChatHistory = request.ChatHistory, IncludeSystemMessage = bWithSysmsgUpdate });
 
             request.ChatHistory.Add(new ChatMessage(response.Role.ToString(), response.Content));
 
@@ -185,11 +190,11 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<ChainResult> GuidedBatchChain(ChainedPrompt request)
         {
-            var dbCommand = _promptsFactory.GetDbCommand<ScoredChoiceCommand, ScoredStringChoice>("system-messages", "scored-choice-resp", _sysRepo.GetSystemMessage, guidanceMessage: "#INSTRUCTION: Select the best action for a videogame NPC for the given user prompt", request.Settings);
+            var chromaQueryCmd = _promptsFactory.GetSimilaritySearchSourceable(_chromaService.SimilaritySearch);
 
-            var x = await dbCommand.JsonPrompt(new StringChoiceRequest(["FIGHT", "TRADE", "CASUAL TALK"], message: "Ahoy mate!"));
+            var simReq = new SimilaritySearchRequest("rags", "What can you tell me about AI gaming agents?", "nomic-embed-text", 512, 3);
 
-            var inputCommandReq = new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt };
+            var queryResults = await chromaQueryCmd.Prompt(simReq);
 
             //return await FluentChainExtensions
             //   .StartWith(new FirstInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
@@ -390,9 +395,10 @@ namespace DotnetLlamaSharp.Services.Prompting
             return await LameChain
              .StartWith(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                       instruction: request.Instructions.First().SystemMessage, settings: request.Settings), // _sysMsg        "FirstCmd = userPrompt
-                      settings: new StepSettings(new PromptCommandRequest(
-                          message: request.Prompt, // esto y Instructions.First().Prompt es lo mismo ->  
-                          guidanceMessage: request.SystemMessage // initial step guidance
+                      settings: new StepSettings(
+                          new PromptCommandRequest(
+                            message: request.Prompt, // esto y Instructions.First().Prompt es lo mismo ->  
+                            guidanceMessage: request.SystemMessage // initial step guidance
                        )),
                       feedFwd: ""),
                   defaultSettings: request.Settings,
@@ -417,7 +423,6 @@ namespace DotnetLlamaSharp.Services.Prompting
                                     "Panaderia y Reposteria Nuestra Señora del Carmen"
                                 ], 
                                 message: request.Instructions.Skip(2).First().Prompt, // A clear user prompt for the command. Step.Hardcoded message if none
-                                settings: null, // specific settings for this command, otherwise _runner.DefaultSettings = reqDto.Settings
                                 model: null)) // some specific model for this step command
                                 .FeedFrom(startId), 
                             feedFwd: "Use this game related data to ground your profile to the game lore"),// STEP FeedForwardMessage for the next one (next._request.GuidanceMessage) with instructions & context for the next 
@@ -436,9 +441,9 @@ namespace DotnetLlamaSharp.Services.Prompting
                     instruction: "Review the content so far and combine it with the provided sources in a very short story plot (around 50 words)", settings: request.Settings),
                     pipedSettings: new StepSettings(new PromptCommandRequest(message:"")),
                     pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
-             .WithRebujito(await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 4, 
+             .WithRebujito(await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 3, 
                  Query = "1984, George Orwell. The Terror, Dan Simmons. A Brave New World, Aldous Huxley" }, returnSnippet: false),
-                guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 600)
+                guidance: "Use the below data to bias your final response towards that style, ambience, topic or vibe", feedDose: 100)
              .Join(new StepInstruction(_promptsFactory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                       instruction: request.Instructions.Skip(5).First().SystemMessage),
                       settings: new StepSettings(new PromptCommandRequest(message: request.Instructions.Skip(5).First().SystemMessage))
@@ -447,6 +452,59 @@ namespace DotnetLlamaSharp.Services.Prompting
              .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings);
         }
 
+        // STASH ONE SOURCEABLE COMMAND
+        //public async Task<ChainResult> SmartRagChain(ChainedPrompt request)
+        //    => await LameChain
+        //        .StartWith(new StepInstruction(
+        //            _promptsFactory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
+        //            new StepSettings(new PromptCommandRequest("")),
+        //            feedFwd: ""),
+        //            request.Settings,
+        //            finalSysMessage: "",
+        //            chainIntent: "")
+        //        .StashIf(new StepInstruction(
+        //                _promptsFactory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(systemMessage: ""),
+        //                new StepSettings(new PromptCommandRequest(""))),
+        //            stashInstruction:
+        //                new StepInstruction(_promptsFactory.GetSourceable<RagExpansionCommand>(),
+        //                new StepSettings(new PromptCommandRequest("")),
+        //                feedFwd: ""),
+        //            isGreedy: true, 
+        //            isIsolated: true)
+        //        .Then(_promptsFactory.GetMessagePromptCommand(systemMessage: ""), new StepSettings(new PromptCommandRequest("")))
+        //        .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
+
+        // STASH A SOURCEABLE WITH SUBPROCESSES (instantiates the right type, chains N steps and forwards the firs step with type check)
+        public async Task<ChainResult> SmartRagChain(ChainedPrompt request)
+            => await LameChain
+                .StartWith(new StepInstruction(
+                    _promptsFactory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
+                    new StepSettings(new PromptCommandRequest("")),
+                    feedFwd: ""),
+                    request.Settings,
+                    finalSysMessage: "",
+                    chainIntent: "")
+                .StashIf(new StepInstruction(
+                    _promptsFactory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(systemMessage: ""),
+                    new StepSettings(new PromptCommandRequest("")),
+                    feedFwd: ""),
+                    trueBranch: LameChain.SubChainWith<StashedStep>(
+                        new StepInstruction(_promptsFactory.GetSourceable<RagExpansionCommand>(),
+                        new StepSettings(new PromptCommandRequest("")),
+                        feedFwd: ""),
+                        defaultSettings: request.Settings)
+                    .Stash(new StepInstruction(
+                        _promptsFactory.GetSourceable<QueryAugmentationCommand>(),
+                        new StepSettings(new PromptCommandRequest(""))),
+                        out var queryAugmentId,
+                        isGreedy: true,
+                        isIsolated: true)
+                    .Then(_promptsFactory.GetMessagePromptCommand(""), new StepSettings())
+                    .ChainFeedsFrom([queryAugmentId])
+                    .ForwardFirstType<StashedStep>()
+                 )
+                .Then(_promptsFactory.GetMessagePromptCommand(systemMessage: ""), new StepSettings(new PromptCommandRequest("")))
+                .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
         //public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)
         //{

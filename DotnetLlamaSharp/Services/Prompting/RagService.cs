@@ -66,16 +66,14 @@ namespace DotnetLlamaSharp.Services.Prompting
                             Results = smartSettings.RagExpansions,
                             Model = request.Settings.Model,
                             UsePrevAsExample = smartSettings.WithFewShotExpansion,
-                            MaxExamples = smartSettings.MaxExamples,
-                            Settings = _settings,
+                            MaxExamples = smartSettings.MaxExamples
                         };
 
-                        var expansion = await _ollamaCommands.PromptCommand<RagExpansionCommand, RagExpansionRequest, ChatMessage>(
+                        var expansion = await _ollamaCommands.PromptCommand<RagExpansionCommand, List<string>>(
                             expansionReq, instruction: null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
 
-
-                        if (!string.IsNullOrEmpty(expansion.Content))
-                            queryPrompt += $"\n{expansion.Content}";
+                        if(expansion.Count > 0)
+                            expansion.ForEach(item =>  queryPrompt += $"\n{item}");
                     }
 
                     if(smartSettings.WithQueryAugmentation)
@@ -86,15 +84,14 @@ namespace DotnetLlamaSharp.Services.Prompting
                             Results = smartSettings.QueryAugments,
                             Model = request.Settings.Model,
                             UsePrevAsExample = smartSettings.WithFewShotExpansion,
-                            MaxExamples = smartSettings.MaxExamples,
-                            Settings = _settings,
+                            MaxExamples = smartSettings.MaxExamples
                         };
 
-                        var expansion = await _ollamaCommands.PromptCommand<QueryAugmentationCommand, RagExpansionRequest, ChatMessage>(
+                        var expansion = await _ollamaCommands.PromptCommand<QueryAugmentationCommand, List<string>>(
                             expansionReq, instruction: null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
 
-                        if (!string.IsNullOrEmpty(expansion.Content))
-                            queryPrompt += $"\n{expansion.Content}";   
+                        if (expansion.Count > 0)
+                            expansion.ForEach(item => queryPrompt += $"\n{item}");
                     }
                 }
 
@@ -217,8 +214,8 @@ namespace DotnetLlamaSharp.Services.Prompting
         {
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            var userIntent = await _ollamaCommands.GuidedPromptCommand<PromptCommandRequest, ChatMessage>(
-                new PromptCommandRequest(request.Prompt, request.Settings.ToOllamaRequest(), request.Settings.Model),
+            var userIntent = await _ollamaCommands.GuidedPromptCommand<ChatMessage>(
+                new PromptCommandRequest(request.Prompt, request.Settings.Model),
                 guidanceMessage: null,
                 request.Settings);
 
@@ -234,7 +231,37 @@ namespace DotnetLlamaSharp.Services.Prompting
             var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, request.Settings);
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // Chain -->.StartWith<UserIntentCommand>()
+            //          .ThenIf<ScoredBoolCommand>("Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:{collectionsDescText?}\n\n",
+            //              MultiChoice("Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."
+            //              -------- ChromaRagQueryCommand("collections") juntar en un Select&Retrieve VS select values + keep feeding rag request --------------------
+            //              -------- SmartChromaQueryCommand && SmartMongoQueryCommand && SmartCONNECTORNAMEQueryCommand <-- siempre selecciona y busca en SU conector
+            //              
+            //              --------- VS SimpleRagQuery, que es lo que hay ahora y soy gilipollas porque lo que hay ahora es CHROMA_RAG_COMMAND --------------
+            //      
+            //              .Then(SimpleRagCommand, RagRequest, ChatMessage()
+            //              .WithRagExpansion(expansions: N)  // esto realmente se puede hacer con cualquier comando, no hace falta RagStep constraint
+            //              .WithQueryAguments(augments: N)
+            //          .ThenExecuteAsync(withUserMessage: false, withReplay: true)
 
+            //  .ThenIf<ScoredBoolCommand>(cmdToExe) <---------- expands chain to SingleThrowStep if evaluator.True BTW : if false && scored -> pass fail reason to next
+            //  .StashIf<ScoredBoolCommand>(dataRetrieverCmd) <- expands chain to StashedStep if evaluator.True
+
+            //  .Stash(Command) --> Executes the command but STORES THE RESULTS to feed other steps than the next) (for RagPurposes, for example. Execute a LameEmbeddingsCommand, store the text, use .ExposeThisId(out stashId) + .FeedFrom(stashId) to add the results to the current runner
+
+            // StartWith<UserIntentCommand>(req.UserPrompt)
+            //           // Tambien se puede enchufar despues de un splitter | pipe y ejecuta la busqueda con el prev del anterior para cubrir diferentes zonas de busca PERO NO PUEDE TERMINAR LA CADENA (no puede heredar de SingleThrowStep como Junction
+            //          .RagStashIf<ChromaSmartRetrieverCmd, ScoredBoolCommand>( where TCommand : VectorSearchCommand (que tiene toda la movida del queryLambda + ICommandEmbeddings)
+            //              evaluatorMessage: "Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:{collectionsDescText?}\n\n",
+            //              searchWithPrevious: Y/N <- usa los outputs anteriores para cubrir mas puntos o solamente el userPrompt con queryAguments y/o RagExpansions, que solo se `pueden encadenar a un RagStashedStep, que NO es un StashedStep [que es para texto puro sin VectorSearch, ej webSearch LangSearch)
+            //          .ExposeThisId(out stashId)
+            //          .StashIf<LangSearchSearchCmd, OtherCondition>(evaluatorMessage: "Enough sources?") // ESTO ES UN STASHED_STEP, PARA GUARDAR PURO TEXTO (parentClass de RagStashedStep
+            //          .ExposeThisId(out langId)
+            //          .WithRebujito([textToCoverMorePointsinSimilaritySearch])
+            //          .Then<SimpleRagQueryCmd, ChatResult>() <-- answer the use query using the provided sources etc (RagSysMsg) + FeedSource + (Mood / Tone? -> req.Guidance lleva PREV OPT + reqDto.SystemMessage)
+            //                                                     esto no devuelve ICommandEmbeddings. Ademas es.Then. ESTO NUNCA BUSCA EN DB NI EN NADA, RESPONDE ANALIZANDO FUENTES O COMO PUEDA (con lo que sepa la LLM del tema)
+            //          .FeedFrom([stashId, langId]) // no es booster -- no inyecta string[] en StepSettings, los lee como PreviousOutput / ChainFeed)
+            //          .ExecuteAsync(withFinalMessage: false, withReplay: ofCourse)
 
             var ragReq = _mapper.Map<SimpleCommandRequest, RagPromptRequest>(request);
 

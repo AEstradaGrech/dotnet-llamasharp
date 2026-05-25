@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
@@ -9,6 +11,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Services.Inference;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
@@ -22,7 +25,8 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IPromptCommandsService commandService, 
+    public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IPromptCommandsService commandService,
+        IOllamaInferenceService inferenceService,
         ILangSearchService langSearchService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
     {
         private readonly IOllamaSharpService _ollamaService = ollamaService;
@@ -32,6 +36,7 @@ namespace DotnetLlamaSharp.Controllers
         private readonly IRagService _ragService = ragService;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PromptingController> _logger = logger;
+        private readonly IOllamaInferenceService _inferenceService = inferenceService;
 
         [HttpPost("/langsearch/prompt")]
         public async Task<IActionResult> LangSearchWebData([FromBody] LangSearchWebSearchDto request)
@@ -298,5 +303,13 @@ namespace DotnetLlamaSharp.Controllers
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
         //JsonSerializerOptions.Default.GetJsonSchemaAsNode(typeof(T))
+
+        [HttpGet("/test-structured-attrs")]
+        public async Task<IActionResult> TestAtts()
+        {
+            var response = await _ollamaCommands.GuidedPromptCommand<GameCharacterResponse>(new PromptCommandRequest("afafdgdf"));
+
+            return Ok(response);
+        }
     }
 }
