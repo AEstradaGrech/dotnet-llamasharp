@@ -1,5 +1,4 @@
 ﻿using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
-using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;

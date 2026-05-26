@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
   <Project Path="../dotnet-lamechain-sdk/Dotnet.OllamaSharp.LameChain.SDK/Dotnet.OllamaSharp.LameChain.SDK.csproj" />
   <Project Path="../dotnet-langsearch-sdk/Dotnet.LangSearch.SDK/Dotnet.LangSearch.SDK.csproj" />
   <Project Path="DotnetLlamaSharp.Domain/DotnetLlamaSharp.Domain.csproj" />

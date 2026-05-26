@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
@@ -9,7 +10,6 @@ using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
-using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step.ValueObjects;
@@ -159,39 +159,6 @@ namespace DotnetLlamaSharp.Services.Prompting
             var evaluationInstruction = $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
 
             var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, request.Settings);
-
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // Chain -->.StartWith<UserIntentCommand>()
-            //          .ThenIf<ScoredBoolCommand>("Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:{collectionsDescText?}\n\n",
-            //              MultiChoice("Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."
-            //              -------- ChromaRagQueryCommand("collections") juntar en un Select&Retrieve VS select values + keep feeding rag request --------------------
-            //              -------- SmartChromaQueryCommand && SmartMongoQueryCommand && SmartCONNECTORNAMEQueryCommand <-- siempre selecciona y busca en SU conector
-            //              
-            //              --------- VS SimpleRagQuery, que es lo que hay ahora y soy gilipollas porque lo que hay ahora es CHROMA_RAG_COMMAND --------------
-            //      
-            //              .Then(SimpleRagCommand, RagRequest, ChatMessage()
-            //              .WithRagExpansion(expansions: N)  // esto realmente se puede hacer con cualquier comando, no hace falta RagStep constraint
-            //              .WithQueryAguments(augments: N)
-            //          .ThenExecuteAsync(withUserMessage: false, withReplay: true)
-
-            //  .ThenIf<ScoredBoolCommand>(cmdToExe) <---------- expands chain to SingleThrowStep if evaluator.True BTW : if false && scored -> pass fail reason to next
-            //  .StashIf<ScoredBoolCommand>(dataRetrieverCmd) <- expands chain to StashedStep if evaluator.True
-
-            //  .Stash(Command) --> Executes the command but STORES THE RESULTS to feed other steps than the next) (for RagPurposes, for example. Execute a LameEmbeddingsCommand, store the text, use .ExposeThisId(out stashId) + .FeedFrom(stashId) to add the results to the current runner
-
-            // StartWith<UserIntentCommand>(req.UserPrompt)
-            //           // Tambien se puede enchufar despues de un splitter | pipe y ejecuta la busqueda con el prev del anterior para cubrir diferentes zonas de busca PERO NO PUEDE TERMINAR LA CADENA (no puede heredar de SingleThrowStep como Junction
-            //          .RagStashIf<ChromaSmartRetrieverCmd, ScoredBoolCommand>( where TCommand : VectorSearchCommand (que tiene toda la movida del queryLambda + ICommandEmbeddings)
-            //              evaluatorMessage: "Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:{collectionsDescText?}\n\n",
-            //              searchWithPrevious: Y/N <- usa los outputs anteriores para cubrir mas puntos o solamente el userPrompt con queryAguments y/o RagExpansions, que solo se `pueden encadenar a un RagStashedStep, que NO es un StashedStep [que es para texto puro sin VectorSearch, ej webSearch LangSearch)
-            //          .ExposeThisId(out stashId)
-            //          .StashIf<LangSearchSearchCmd, OtherCondition>(evaluatorMessage: "Enough sources?") // ESTO ES UN STASHED_STEP, PARA GUARDAR PURO TEXTO (parentClass de RagStashedStep
-            //          .ExposeThisId(out langId)
-            //          .WithRebujito([textToCoverMorePointsinSimilaritySearch])
-            //          .Then<SimpleRagQueryCmd, ChatResult>() <-- answer the use query using the provided sources etc (RagSysMsg) + FeedSource + (Mood / Tone? -> req.Guidance lleva PREV OPT + reqDto.SystemMessage)
-            //                                                     esto no devuelve ICommandEmbeddings. Ademas es.Then. ESTO NUNCA BUSCA EN DB NI EN NADA, RESPONDE ANALIZANDO FUENTES O COMO PUEDA (con lo que sepa la LLM del tema)
-            //          .FeedFrom([stashId, langId]) // no es booster -- no inyecta string[] en StepSettings, los lee como PreviousOutput / ChainFeed)
-            //          .ExecuteAsync(withFinalMessage: false, withReplay: ofCourse)
 
             var ragReq = _mapper.Map<SimpleCommandRequest, RagPromptRequest>(request);
 
@@ -506,8 +473,8 @@ namespace DotnetLlamaSharp.Services.Prompting
                     _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
                     new StepSettings(new PromptCommandRequest(request.Prompt)),
                     feedFwd: "Use the generated User Intent to guide you in your task"),
-                    request.Settings, //Default Settings para toda la cadena
-                    finalSysMessage: "", // No hace falta porque esto es para UserFrendlyMessage
+                    request.Settings, //Default Settings for all the chains
+                    finalSysMessage: "", // There is no need to fill this since there is no user final message required
                     chainIntent: "")
                 .StashIf(new StepInstruction(
                     _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
@@ -523,7 +490,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                         false, //TODO: StashSettings : StepSettings & StepWithCustomParamsSettings : StepSettings y quitar esta guarrada
                         true
                      )
-                    .ExposeThisId(out var ragExpansionId)
+                    .ExposeThisStep(out var ragExpansion)
                     .Stash(new StepInstruction(
                         _factory.GetSourceable<QueryAugmentationCommand>(),
                         new StepSettings(new RagExpansionRequest(expansions: 3, request.Prompt, withFewShot: true, 2))),
@@ -539,16 +506,18 @@ namespace DotnetLlamaSharp.Services.Prompting
                             new SmartQueryRequest(
                                 request.Prompt,
                                 collectionChoices: await getChromaCollectionChoices(withChatCollections: false),
-                                maxChoices: 2,
+                                maxChoices: 1,
                                 resultsPerChoice: 3,
                                 guidanceMessage: string.Empty, // this is overwritten by prev_ctx so leave it empty
                                 dimensions: 512,
                                 model: "nomic-embed-text",
-                                filters: null) 
-                            )
+                                filters: null),
+                            withFullContext: false,
+                            withPrevSchema: false
+                            ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step
                         ), //Chroma metadata filters 
                         out var smartQueryId)
-                    .ChainFeedsFrom([ragExpansionId, queryAugmentId])
+                    .ChainFeedsFrom([ragExpansion.GetRunnerId, queryAugmentId])
                     .ForwardFirstType<StashedStep>()
                  )
                 .Then(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
@@ -601,10 +570,10 @@ namespace DotnetLlamaSharp.Services.Prompting
             var sb = new StringBuilder();
 
             sb.Append(string.IsNullOrEmpty(itemSplitMark) ? "" : itemSplitMark)
-                  .Append("- COLLECTION NAME = ")
-                  .Append(collection.Name)
-                  .AppendLine(string.IsNullOrEmpty(collection.Description) ? "" : $"\n> DESCRIPTION: {collection.Description}")
-                  .Append("> TOPICS: ")
+                  .AppendLine()
+                  .AppendLine($"## COLLECTION NAME = {collection.Name}")
+                  .AppendLine(string.IsNullOrEmpty(collection.Description) ? "" : $"\n> {collection.Name} DESCRIPTION: {collection.Description}")
+                  .Append($"> {collection.Name} TOPICS: ")
                   .Append(collection.GetMeta<FileCollectionMetadata>().TOPICS);
 
             return sb.ToString();
