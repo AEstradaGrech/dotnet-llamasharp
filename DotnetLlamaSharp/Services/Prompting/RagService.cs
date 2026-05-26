@@ -2,10 +2,17 @@
 using Dotnet.Chroma.Repositories.Models;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Step;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Step.ValueObjects;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
@@ -27,13 +34,14 @@ namespace DotnetLlamaSharp.Services.Prompting
         private readonly IOllamaSharpService _chatService;
         private readonly IChromaService _chromaService;
         private readonly IPromptCommandsService _ollamaCommands;
+        private readonly IPromptCommandsFactory _factory;
         private readonly IEmbeddingsService _embeddingsService;
         private readonly IChromaChatsRepository _chatsRepo;
         private readonly ILogger<RagService> _logger;
         private readonly IMapper _mapper;
         private readonly ApiSettings _apiSettings;
         private readonly RequestOptions _settings;
-        public RagService(IOllamaSharpService chatService, IChromaService chromaService, IChromaChatsRepository chatsRepo, IPromptCommandsService ollamaCommands,
+        public RagService(IOllamaSharpService chatService, IChromaService chromaService, IChromaChatsRepository chatsRepo, IPromptCommandsService ollamaCommands, IPromptCommandsFactory commandsFactory,
             IEmbeddingsService embeddingsService, ILogger<RagService> logger, IMapper mapper, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> settings)
         {
             _chatService = chatService;
@@ -45,6 +53,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             _embeddingsService = embeddingsService;
             _ollamaCommands = ollamaCommands;
             _settings = settings.Value;
+            _factory = commandsFactory;
         }
 
         public async Task<RagPrompt> SimpleRagQuery(RagPromptRequest request, SmartRagSettings? smartSettings = null)
@@ -58,7 +67,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 if (smartSettings != null)
                 {
-                    if(smartSettings.WithRagExpansion)
+                    if (smartSettings.WithRagExpansion)
                     {
                         var expansionReq = new RagExpansionRequest
                         {
@@ -72,11 +81,11 @@ namespace DotnetLlamaSharp.Services.Prompting
                         var expansion = await _ollamaCommands.PromptCommand<RagExpansionCommand, List<string>>(
                             expansionReq, instruction: null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
 
-                        if(expansion.Count > 0)
-                            expansion.ForEach(item =>  queryPrompt += $"\n{item}");
+                        if (expansion.Count > 0)
+                            expansion.ForEach(item => queryPrompt += $"\n{item}");
                     }
 
-                    if(smartSettings.WithQueryAugmentation)
+                    if (smartSettings.WithQueryAugmentation)
                     {
                         var expansionReq = new RagExpansionRequest
                         {
@@ -98,85 +107,6 @@ namespace DotnetLlamaSharp.Services.Prompting
                 collectionQueries = await QueryCollections(request.QueryCollections, queryPrompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
             }
 
-            ///////////////////////////////////////// RagCommand //////////////////////////////////////
-            /// aVeryBasicModel (simple secuencia en cadena. v1)
-            ///     .And(QueryAumentationCommand)
-            ///     .And(RagExpansionCommand)
-            ///     .And(LangSearchCommand)
-            /// ChatCommand.And(A)  ('enriquece' una peticion de chat)
-            ///            .And(B)
-            ///            .And(C)
-            /// ------- GameBot -------
-            /// ChatCommand.And(EvaluateSentimentCommand)
-            ///            .And(GetChatChistoyCommand)
-            ///            .And(GetLongTermMemosCommand)
-            ///            .And(EvaluateCurrentMoodComand)
-            ///            .And(EvaluateOutputActionCommand)
-            ///            .And(ChromaChatDumpCommand)
-            ///            
-            /// ChatCommand(req).And(EvaluateSentiment
-            ///                      .And(SelectMood))
-            ///                 .And(ExtractNewLoreCommand
-            ///                      .And(StoreLoreCommand)
-            ///                 .And(ChromaChatDumpCommand)
-            ///    
-            /// [esto seria v2 / encapsular commands en metodos de extension muy concretos. sigue siendo todo secuencial ]
-            /// aVeryBasicModelWithPromptAndGenerationSettings
-            ///     .Augment(req.QueryAugments)
-            ///     .Expand(req.RagExpansions)
-            ///     .LangSearch(req.ResultsNumber)
-            ///     .Rag(req) = Message 
-            ///     .ChromaDump()  (store & return) Message
-            ///     .ToPdf(path) | ToXFormat(path)
-            ///     
-            /// [SIEMPRE SE EMPIEZA POR CHAT | PROMPT COMMAND]
-            /// aVeryBasicModel     inpt = Quien era el Maestro Canches?
-            ///     .ExtractIntent() <- devuelve inpt + observacion / opt ("User wants to know who is Maestro Canches)
-            ///     .Evaluate()     <- IsItRelatedToCollections ?
-            ///     .Branch(out A = DoA() <- RagChain?
-            ///               .MoreStuff()
-            ///               .AndMoreStuff()
-            ///         ,out var B = DoB() <- Chat | LangSearch
-            ///                 .MoreBStuff()
-            ///     isTrueContinue: true / false) <-- BRANCH siempre devuelve A | B y CONTINUA con A | B segun el bool, pero siempre es 'continue | fallback', 
-            ///                                      y en fallback se pueden encadenar movidas para controlarlo
-            ///                                      y asi no hace falta 'ContinueIf | ContinueWith' (ContWith puede ser un 'ReturnToTap')
-            ///     .ContinueWith(A) <- esto depende del desarrollador, que sabe lo que quiere hacer si true / false y cual es cual (A, B)
-            ///         .ContinueIf(A | B) <- Y SI SE DA LA OTRA OPCION? EN VEZ DE _NEXT.PROMPT DEVUELVO OTRA_OPCION.PROMPT()
-            ///     .StoreResult() <- o pasa A o pasa B en ambos casos todo es MESSAGE -> opt-bridge = List<string>{input, opt1, opt2, opt3 ...} getFull() = es una instruccion acumulativa (SmartRag) | getOpt(idx)
-            ///     .Return() <- esto ejecuta ya todo o es el 'GO'. no hace  falta porque todo devuelve MESSAGE
-            ///     
-            ///     .For([commands]) // AKA FAN_OUT
-            ///     .DoXThatWillBeAppliedToEACHCommand()
-            ///     .AndEverythingFromHereIsAppliedToEachCommandUntil()
-            ///     .Collect(_nextCommand) <- ALL COMMANDS CHUNKED IN ONE SINGLE INSTRUCTION FOR _nextCommand // AKA FAN_IN
-            ///     .AndNowIsASingleCommandPipeAgain()
-            ///     
-            ///     FAN_OUT / FAN_IN examples: mismo input procesado de N formas
-            ///     .For({
-            ///         CmdA.And(cmdB),
-            ///         CmdC,
-            ///         CmdA.And(cmdC),
-            ///         CmdB.And(cmdX).And(cmdY).And(cmdZ)
-            ///      })
-            ///      .Collect(_summarizationCommand) <- las fuentes de sumarizacion se procesan diferente por las cadenas de comandos
-            ///      .ChromaDump()
-            ///      
-            /// TODO ESTO ES V1 --> CHAINABLE COMMANDS (no CHAIN STEPS)
-            /// 
-            /// Una cosa es una commando y otra un step.
-            /// El SDK permite:
-            ///     Encadenar COMMANDS (con fluent api)
-            ///     Secuenciar STEPS (sin fluent api. Un Step es una Dictionary<string, Command> que ejectua la cadena de CMDS secuencialmente y le pasa el output a otro Dict / STEP
-            ///     Para que? -> Para poder hacer requests tipo Steps[
-            ///     {
-            ///        model &|| provider <- run step 1 w/Claude, step2 w/ollama etc
-            ///        cmdNames[]
-            ///     },
-            ///     {
-            ///         cmdNames
-            ///     }
-            ///     ]
             var baseIntruction = string.IsNullOrEmpty(request.SystemMessage) ? "" : request.SystemMessage.Trim();
 
             var systemChunk = await _chromaService.GetSysMessage("system-messages", "rag-query");
@@ -186,11 +116,11 @@ namespace DotnetLlamaSharp.Services.Prompting
 {systemChunk.Text}
 
 {getFileRagStringResult(collectionQueries)}";
-        
+
             var chatRequest = _mapper.Map<RagPromptRequest, SimplePromptRequest>(request);
 
             chatRequest.SystemMessage = systemMessage;
-      
+
             var response = await _chatService.SimplePrompt(chatRequest);
 
             if (!string.IsNullOrEmpty(response.Output))
@@ -201,7 +131,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             return new RagPrompt
             {
                 Model = response.Model,
-                EmbeddingModel = embeddingModels.Substring(0, embeddingModels.Length -1),
+                EmbeddingModel = embeddingModels.Substring(0, embeddingModels.Length - 1),
                 Input = request.Prompt,
                 Output = response.Output,
                 IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value.Chunks).ToList(),
@@ -210,7 +140,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             };
         }
 
-        public async Task<RagPrompt> SimpleSmartQuery(SmartQueryRequest request)
+        public async Task<RagPrompt> SimpleSmartQuery(SmartQueryRequestDEP request)
         {
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,7 +203,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
 
-                if(request.WithChatCollections)
+                if (request.WithChatCollections)
                 {
                     var availableChats = await _chromaService.GetAllChatCollections();
 
@@ -293,7 +223,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             ragReq.SystemMessage = request.SystemMessage;
 
-            return await SimpleRagQuery(ragReq, _mapper.Map<SmartQueryRequest, SmartRagSettings>(request));
+            return await SimpleRagQuery(ragReq, _mapper.Map<SmartQueryRequestDEP, SmartRagSettings>(request));
         }
 
         public async Task<ChatPrompt> RagChatPrompt(RagChatRequest request)
@@ -320,15 +250,15 @@ namespace DotnetLlamaSharp.Services.Prompting
                 request.SystemMessage = $"You are a helpful assistant named: {request.AgentName}. Your task is to chat with the user, {request.UserName}.";
 
             else request.SystemMessage += $"\n\nYour name is {request.AgentName}. You are starting a conversation with the user, {request.UserName}.";
-            
+
             var collectionName = $"{request.AgentName.Trim().Replace(" ", "")}-{request.UserName.Trim().Replace(" ", "")}";
-            
+
             var isFirstSession = !await _chatsRepo.CollectionExists(collectionName);
 
             ChromaChatsCollection collection = null;
-            if (isFirstSession)    
+            if (isFirstSession)
                 collection = await _chatsRepo.InitCollection(request.AgentName, request.UserName, _apiSettings.DefaultEmbedder, _apiSettings.DefaultDimensions);
-            
+
             else collection = await _chatsRepo.GetCollection(collectionName);
 
             var sessionChunk = isFirstSession ? await _chatsRepo.DefaultChunk(collection.Name) : await _chatsRepo.GetChunkById(collection.Name, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
@@ -358,15 +288,15 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 sessionChunk = await _chatsRepo.GetChunkById(collection.Name, collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
             }
-            else 
+            else
             {
                 var filterMetas = new Dictionary<string, object>();
-                
+
                 filterMetas.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
                 filterMetas.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
 
-                var chunks = await _chatsRepo.GetChunks(collectionName, filterMetas,withEmbeddings: false);
-                
+                var chunks = await _chatsRepo.GetChunks(collectionName, filterMetas, withEmbeddings: false);
+
                 if (!chunks.Any())
                     throw new InvalidDataException($"No CURRENT chunk has been found for collection: {collectionName} | session chunk: {sessionChunk.Id}");
 
@@ -377,7 +307,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             }
             var messages = currentChunk.TextAsMessages();
 
-            var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault(); 
+            var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault();
             // SYSTEM MESSAGE / RAG stuff
             var memoBuilder = new StringBuilder();
             if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 2)
@@ -405,17 +335,17 @@ namespace DotnetLlamaSharp.Services.Prompting
             systemMessage.Content = systemMessage.Content.Replace("[[-CHAT_MEMORIES-]]", currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 1 ? memoBuilder.ToString().Trim() : "(No memories yet for this conversation)");
 
             string? ragData = null;
-            if(request.QueryCollections.Any())
+            if (request.QueryCollections.Any())
                 ragData = await QueryCollections(request.Prompt, request.QueryCollections, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
 
             systemMessage.Content = systemMessage.Content.Replace("[[-RETRIEVED_DATA-]]", string.IsNullOrEmpty(ragData) ? "(Nothing relevant...)" : ragData);
 
             request.ChatHistory = [systemMessage];
 
-            if(currentChunk.Id == sessionChunk.Id)
-                request.ChatHistory.AddRange(messages.Skip(1).Take(messages.Count -1).ToList());
-            
-            else request.ChatHistory.AddRange(messages); 
+            if (currentChunk.Id == sessionChunk.Id)
+                request.ChatHistory.AddRange(messages.Skip(1).Take(messages.Count - 1).ToList());
+
+            else request.ChatHistory.AddRange(messages);
 
             if (request.ChatHistory.Last().Role == ChatRole.User.ToString())
                 request.ChatHistory = request.ChatHistory.SkipLast(1).ToList();
@@ -430,7 +360,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1);
 
             sessionChunk = await _chatsRepo.UpsertChunk(collection.Name, sessionChunk);
-            
+
             if (currentChunk.Text.Length >= _apiSettings.RagChatChunkSize)
             {
                 var overlaps = new List<ChatMessage> { new ChatMessage(ChatRole.User.ToString(), response.Input) };
@@ -450,7 +380,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             ChromaQuery queryResult = null;
             foreach (var name in names)
             {
-               //TODO: Add chat sessions & handle CHAT_INIT false (returns 0 embeddings for chunks without the tag
+                //TODO: Add chat sessions & handle CHAT_INIT false (returns 0 embeddings for chunks without the tag
                 queryResult = await _chromaService.QueryCollection(name, text, resultsNumber, filters);
 
                 if (minDistance != null)
@@ -477,12 +407,12 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             currentChunk = await _chatsRepo.UpsertChunk(collection.Name, currentChunk);
 
-            if(isSessionInit)
+            if (isSessionInit)
             {
                 sessionChunk = currentChunk;
                 currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), currentChunk.Id);
-                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), 1, resetDefault:true);
-            
+                currentChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), 1, resetDefault: true);
+
 
                 collection.AddMetadata(nameof(ChatCollectionMetadata.SESSION_IDS).ToLower(), string.IsNullOrEmpty(collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS) ? currentChunk.Id : $"{collection.GetMeta<ChatCollectionMetadata>().SESSION_IDS},{currentChunk.Id}");
                 collection.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_ID).ToLower(), currentChunk.Id);
@@ -570,6 +500,80 @@ namespace DotnetLlamaSharp.Services.Prompting
             //};
         }
 
+        public async Task<ChainResult> SmartRagChain(SimpleCommandRequest request)
+            => await LameChain
+                .StartWith(new StepInstruction(
+                    _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
+                    new StepSettings(new PromptCommandRequest(request.Prompt)),
+                    feedFwd: "Use the generated User Intent to guide you in your task"),
+                    request.Settings, //Default Settings para toda la cadena
+                    finalSysMessage: "", // No hace falta porque esto es para UserFrendlyMessage
+                    chainIntent: "")
+                .StashIf(new StepInstruction(
+                    _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
+                        systemMessage: $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below"),
+                    new StepSettings(new PromptCommandRequest(""))
+                        .WithDataBoost("AVAILABLE COLLECTIONS:", await getChromaCollectionChoices(withChatCollections: false)),
+                    feedFwd: "Use this data as a reliable source to answer the user"),
+                    trueBranch: LameChain.SubChainWith<StashedStep>(
+                        new StepInstruction(
+                            _factory.GetSourceable<RagExpansionCommand>(),
+                            new StepSettings(new RagExpansionRequest(expansions: 1, request.Prompt))
+                        ),
+                        false, //TODO: StashSettings : StepSettings & StepWithCustomParamsSettings : StepSettings y quitar esta guarrada
+                        true
+                     )
+                    .ExposeThisId(out var ragExpansionId)
+                    .Stash(new StepInstruction(
+                        _factory.GetSourceable<QueryAugmentationCommand>(),
+                        new StepSettings(new RagExpansionRequest(expansions: 3, request.Prompt, withFewShot: true, 2))),
+                        out var queryAugmentId,
+                        isGreedy: true,
+                        isIsolated: true)
+                    .Stash(new StepInstruction(
+                        _factory.GetEmbeddedSourceable<SmartQuerySourceable>(
+                            _chromaService.SimilaritySearch, 
+                            llamaGuidance: "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."
+                        ), // appended to Core Message (default | db)
+                        new StepSettings(
+                            new SmartQueryRequest(
+                                request.Prompt,
+                                collectionChoices: await getChromaCollectionChoices(withChatCollections: false),
+                                maxChoices: 2,
+                                resultsPerChoice: 3,
+                                guidanceMessage: string.Empty, // this is overwritten by prev_ctx so leave it empty
+                                dimensions: 512,
+                                model: "nomic-embed-text",
+                                filters: null) 
+                            )
+                        ), //Chroma metadata filters 
+                        out var smartQueryId)
+                    .ChainFeedsFrom([ragExpansionId, queryAugmentId])
+                    .ForwardFirstType<StashedStep>()
+                 )
+                .Then(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
+                      new StepSettings(new PromptCommandRequest(request.Prompt)))
+                .ChainFeedsFrom([smartQueryId])
+                .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
+
+        private async Task<List<string>> getChromaCollectionChoices(bool withChatCollections = false)
+        {
+            var formattedChoices = new List<string>();
+
+
+            var collections = await _chromaService.GetAllFileCollections();
+
+            collections.ForEach(collection => formattedChoices.Add(getFileCollectionRagText(collection)));
+
+            if(withChatCollections)
+            {
+                var chats = await _chromaService.GetAllChatCollections();
+
+                chats.ForEach(chat => formattedChoices.Add(getChatCollectionRagText(chat)));
+            }
+
+            return formattedChoices;
+        }
 
         private async Task<string> getFileCollectionsRagText(string itemSplitMark = null)
         {
@@ -597,9 +601,9 @@ namespace DotnetLlamaSharp.Services.Prompting
             var sb = new StringBuilder();
 
             sb.Append(string.IsNullOrEmpty(itemSplitMark) ? "" : itemSplitMark)
-                  .Append("\n\n- COLLECTION NAME =  ")
+                  .Append("- COLLECTION NAME = ")
                   .Append(collection.Name)
-                  .Append(string.IsNullOrEmpty(collection.Description) ? "" : $"\n- DESCRIPTION: {collection.Description}\n")
+                  .AppendLine(string.IsNullOrEmpty(collection.Description) ? "" : $"\n> DESCRIPTION: {collection.Description}")
                   .Append("> TOPICS: ")
                   .Append(collection.GetMeta<FileCollectionMetadata>().TOPICS);
 

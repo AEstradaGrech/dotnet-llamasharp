@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Interfaces;
 using Dotnet.Chroma.Repositories.Models.Metadata;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
@@ -187,11 +188,11 @@ namespace DotnetLlamaSharp.Services.Embeddings
             throw new NotImplementedException();
         }
 
-        public async Task<List<SimilarSearchResult>> SimilaritySearch(string name, ReadOnlyMemory<float> query, int resultsNumber, Dictionary<string, object> filters)
+        public async Task<List<ILameSearchResult>> SimilaritySearch(string name, ReadOnlyMemory<float> query, int resultsNumber, Dictionary<string, object> filters)
         {
             var results = await _repo.QueryCollection(name, query, resultsNumber, filters);
 
-            return results.Select(chunk => new SimilarSearchResult(chunk.Text, (float)chunk.Distance)).ToList();
+            return results.Select(chunk => new VectorSearchResult(chunk.Text, (float)chunk.Distance, name, chunk.DefaultMetadata.DOCUMENT_NAME) as ILameSearchResult).ToList();
         }
     }
 }

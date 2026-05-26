@@ -1,10 +1,12 @@
-﻿using Dotnet.LangSearch.SDK;
+﻿using Dotnet.Chroma.Repositories.Models;
+using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
-using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
@@ -190,9 +192,9 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<ChainResult> GuidedBatchChain(ChainedPrompt request)
         {
-            var chromaQueryCmd = _promptsFactory.GetSimilaritySearchSourceable(_chromaService.SimilaritySearch);
+            var chromaQueryCmd = _promptsFactory.GetVectorSearchSourceable(_chromaService.SimilaritySearch);
 
-            var simReq = new SimilaritySearchRequest("rags", "What can you tell me about AI gaming agents?", "nomic-embed-text", 512, 3);
+            var simReq = new VectorSearchRequest("rags", "What can you tell me about AI gaming agents?", "nomic-embed-text", 512, 3);
 
             var queryResults = await chromaQueryCmd.Prompt(simReq);
 
@@ -485,27 +487,50 @@ namespace DotnetLlamaSharp.Services.Prompting
                     finalSysMessage: "",
                     chainIntent: "")
                 .StashIf(new StepInstruction(
-                    _promptsFactory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(systemMessage: ""),
-                    new StepSettings(new PromptCommandRequest("")),
-                    feedFwd: ""),
+                    _promptsFactory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
+                        systemMessage: $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{getChromaCollectionChoices([])}"),
+                    new StepSettings(new PromptCommandRequest("")), 
+                    feedFwd: "Use this data as a reliable source to answer the user"),
                     trueBranch: LameChain.SubChainWith<StashedStep>(
-                        new StepInstruction(_promptsFactory.GetSourceable<RagExpansionCommand>(),
-                        new StepSettings(new PromptCommandRequest("")),
-                        feedFwd: ""),
-                        defaultSettings: request.Settings)
+                        new StepInstruction(
+                            _promptsFactory.GetSourceable<RagExpansionCommand>(),
+                            new StepSettings(new PromptCommandRequest(""))
+                         ), true, false
+                    )
+                    .ExposeThisId(out var ragExpansionId)
                     .Stash(new StepInstruction(
                         _promptsFactory.GetSourceable<QueryAugmentationCommand>(),
                         new StepSettings(new PromptCommandRequest(""))),
                         out var queryAugmentId,
                         isGreedy: true,
                         isIsolated: true)
-                    .Then(_promptsFactory.GetMessagePromptCommand(""), new StepSettings())
+                    .Stash(new StepInstruction(
+                        _promptsFactory.GetSourceable<SmartQuerySourceable>(), 
+                        new StepSettings(
+                            new SmartQueryRequest(request.Prompt, 
+                                collectionChoices: getChromaCollectionChoices([/*await _chroma.GetCollectionChunks()*/]), 
+                                maxChoices: 2, 
+                                resultsPerChoice: 3, 
+                                guidanceMessage: "",
+                                dimensions: 512,
+                                model: "nomic-text-embed", 
+                                filters: null)
+                            )
+                        ), //Chroma metadata filters 
+                        out var smartQueryId)
                     .ChainFeedsFrom([queryAugmentId])
                     .ForwardFirstType<StashedStep>()
                  )
-                .Then(_promptsFactory.GetMessagePromptCommand(systemMessage: ""), new StepSettings(new PromptCommandRequest("")))
+                .Then(_promptsFactory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage), 
+                      new StepSettings(new PromptCommandRequest(request.Prompt)))
+                .ChainFeedsFrom([ragExpansionId, queryAugmentId, smartQueryId])
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
+
+        private List<string> getChromaCollectionChoices(List<ChromaChunk> collectionChunks)
+        {
+            return new List<string>();
+        }
         //public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)
         //{
         //    var command = _promptsFactory.GetBoolPromptCommand("bool-resp");

@@ -56,7 +56,7 @@ namespace DotnetLlamaSharp.Mappers
                 .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
             CreateMap<RagChatRequestDto, RagChatRequest>()
                 .IncludeBase<RagPromptRequestDto, RagPromptRequest>();
-            CreateMap<SmartQueryRequestDto, SmartQueryRequest>()
+            CreateMap<SmartQueryRequestDto, SmartQueryRequestDEP>()
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
             // Domain to Domain models
 
@@ -80,9 +80,9 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
 
-            CreateMap<SmartQueryRequest, SimplePromptRequest>()
+            CreateMap<SmartQueryRequestDEP, SimplePromptRequest>()
                 .ForMember(dest => dest.Settings, opt => opt.MapFrom(opt => opt.Settings));
-            CreateMap<SmartQueryRequest, SimpleCommandRequest>()
+            CreateMap<SmartQueryRequestDEP, SimpleCommandRequest>()
                 .ForMember(dest => dest.Settings, opt => opt.MapFrom(opt => opt.Settings));
 
             CreateMap<SimplePromptRequest, RagPromptRequest>()
@@ -96,7 +96,7 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
 
-            CreateMap<SmartQueryRequest, SmartRagSettings>()
+            CreateMap<SmartQueryRequestDEP, SmartRagSettings>()
                 .ForMember(dest => dest.MaxExamples, opt => opt.MapFrom(src => src.MaxFewShotExamples))
                 .ForMember(dest => dest.WithQueryAugmentation, opt => opt.Ignore())
                 .ForMember(dest => dest.WithRagExpansion, opt => opt.Ignore());

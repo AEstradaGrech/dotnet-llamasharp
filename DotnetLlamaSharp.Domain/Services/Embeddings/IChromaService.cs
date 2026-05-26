@@ -1,5 +1,5 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
-using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -17,7 +17,7 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<ChromaFilesCollection> InspectFilesCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false); // Default: all chunks from idx 0
         Task<ChromaChunk> InspectChunk(string collectionName, string id);
         Task<ChromaQuery> QueryCollection(string name, string query, int resultsNumber, Dictionary<string, object> metadataFilters);
-        Task<List<SimilarSearchResult>> SimilaritySearch(string index, ReadOnlyMemory<float> queryEmbeddings, int resultsNumber, Dictionary<string, object> metadataFilters);
+        Task<List<ILameSearchResult>> SimilaritySearch(string index, ReadOnlyMemory<float> queryEmbeddings, int resultsNumber, Dictionary<string, object> metadataFilters);
         Task<ChromaChatsCollection> GetChatsCollection(string name, bool excludeSysmsg = true, string? sessionId = null, int pageSize = 10, int page = 0);
         Task<ChromaChatsCollection> GetCollectionSessions(string name, int pageSize = 10, int page = 0);
         Task<SysChunksCollection> CreateSystemChunksCollection(string name, string? description);

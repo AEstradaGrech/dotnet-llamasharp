@@ -1,11 +1,11 @@
-﻿using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using System.ComponentModel;
 
 namespace DotnetLlamaSharp.Domain.Models.Request
 {
-    public class SmartQueryRequest : SimpleCommandRequest
+    public class SmartQueryRequestDEP : SimpleCommandRequest
     {
-        [Description(nameof(ChatCommandRequest))]
+        
         public bool WithChatCollections { get; set; } // include the catalogue of chat collections in the available collections catalogue;
         //[CommandName=nameof(QueryAugmentationCommand))]
         public int QueryAugments { get; set; } // generate N variants of the input to cover more similarity points;

@@ -1,9 +1,8 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Requests;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
@@ -255,7 +254,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/rag/qa/smart/prompt")]
         public async Task<IActionResult> SimpleSmartPrompt([FromBody] SmartQueryRequestDto request)
         {
-            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SmartQueryRequestDto, SmartQueryRequest>(request)));
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SmartQueryRequestDto, SmartQueryRequestDEP>(request)));
 
             if (response != null)
                 return Ok(response);
@@ -296,6 +295,18 @@ namespace DotnetLlamaSharp.Controllers
 
 
             var response = await _ollamaService.GuidedBatchChain(_mapper.Map<ChainedPromptDto, ChainedPrompt>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/chains/smart-rag")]
+        public async Task<IActionResult> SmartRagChain([FromBody] SimplePromptRequestDto request)
+        {
+   
+            var response = await _ragService.SmartRagChain(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
 
             if (response != null)
                 return Ok(response);

@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
+using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -10,7 +11,8 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         // Q&A
         Task<RagPrompt> ScoredBinaryQuestion(RagPromptRequest request);
         Task<RagPrompt> SimpleRagQuery(RagPromptRequest request, SmartRagSettings smartSettings = null);
-        Task<RagPrompt> SimpleSmartQuery(SmartQueryRequest request);
+        Task<RagPrompt> SimpleSmartQuery(SmartQueryRequestDEP request);
+        Task<ChainResult> SmartRagChain(SimpleCommandRequest request);
         // Chat Turns with rag
         Task<ChatPrompt> RagChatPrompt(RagChatRequest request);
 
