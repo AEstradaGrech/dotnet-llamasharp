@@ -448,29 +448,69 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 // then you could make use of the final 'user-friendly' message to start the conversation with the newly created NPC using the rich CharacterModel.cs as context.
                 // Because the ChainResult includes both, you could then return the final ChatMessage and store the CharacterModel in DB from the client app.
 
-        // STASH ONE SOURCEABLE COMMAND
+        // CONDITIONAL STASH OF A SOURCEABLE COMMAND
+        // So far I have provided examples of sequencing, parallelizing and feeding steps. In every step
+        // One or many commands were executed and their output passed to the next and optionally to any other
+        // if a feed is configured but, what if you want to just store data at some point in the chain to feed multiple steps with it?
+        // And not what if that data might not be necessarily the product of a LLM request but maybe the product of a web search or a DB query?
+        // Moreover, what if you want to create that data source IF a certain condition is met after an LLM evaluation?
+        // Well, you can solve all that situations with LameChain StashedSteps and ConditionalSteps.
+        // You can use a StashedStep to store the result of any SourceableCommand (that is a command that returns always a List<string>)
+        // And then configure some feeds to route the results through the chain.
+        // Also, you can use the .StashIf() extension method to set a ScoredBoolCommand that will evaluate something in the chain prompt and
+        // return a scored bool with a justification. Depending on the bool the stash branch will be inserted into the chain and created
+        // otherwise will continue the chain passing the justification comment to the next so the chain is awared of what's happening in the process
+        //
+        // Here is a very simple example:
         public async Task<ChainResult> StashExample(ChainedPrompt request)
             => await LameChain
                 .StartWith(new StepInstruction(
-                    _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
-                    new StepSettings(new PromptCommandRequest("")),
-                    feedFwd: ""),
-                    request.Settings,
-                    finalSysMessage: "",
-                    chainIntent: "")
+                    // Start by analyzing the user intent with a Lame Core Command
+                    // This is very useful to help the chain understand what is the user trying to do or querying about.
+                    // Together with the 'chainIntent' and the '_runner.UserPrompt' this is the best way to
+                    // capture the general goal and keep it as global context along the chain
+                    _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "Try to be as specific as possible when defining the user intent", request.Settings), //You can help the LLM to generate your required outputs by passing more guidance messages 
+                    new StepSettings(new PromptCommandRequest(request.Prompt)), // pass the prompt to analyze
+                    feedFwd: "Use the definition of the intent to understand better what is the user trying to do and use the information in your deliverances"), // enforce the analysis of the intent in the scored bool command to help the LLM decide if it is necesary to retrieve data from previous chats to answer the user
+                    request.Settings, // Default settings for all the cahin
+                    finalSysMessage: "", // No final message required (the last step is a Chat command afterall)
+                    chainIntent: "Conversation with the user with recurrent access to a memories database")
                 .StashIf(new StepInstruction(
-                        _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(systemMessage: ""),
-                        new StepSettings(new PromptCommandRequest(""))),
-                    stashInstruction:
-                        new StepInstruction(_factory.GetSourceable<RagExpansionCommand>(),
-                        new StepSettings(new PromptCommandRequest("")),
-                        feedFwd: ""),
-                    isGreedy: true,
-                    isIsolated: true)
-                .Then(_factory.GetMessagePromptCommand(systemMessage: ""), new StepSettings(new PromptCommandRequest("")))
+                        _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(systemMessage: @"Analyze the user input and any other provided support data and determine if is necessary to retrieve previous chat conversations that the system has stored. 
+Note if the user is making references to past conversations with you or events of which you are supposed to be aware of. Check if the user is speaking in past or present, including or mentioning you or speaking in a way that makes you think that you should be aware of some information that is not present in the input"),
+                        new StepSettings(new PromptCommandRequest($"Analyze the user input and reason if it would be necessary to review previous conversations to answer the user or it not. User Input: {request.Prompt}"))), // This would not be necessary because the instruction is clear, but it is usefult for local dumb models
+                    stashInstruction: // Add the stash. In this case is a VectorSearchSourceable that will return a list of chat chunks sorted by distance to the query
+                        new StepInstruction(
+                            _factory.GetSourceable<VectorSearchSourceable>(),
+                            new StepSettings(new VectorSearchRequest(
+                                index: "UserName-AgentProfileName", // hypothetic chat collection where the session chats are stored
+                                query: request.Prompt,
+                                embedder: "nomic-embed-text",
+                                dimensions: 512,
+                                results: 4)
+                            ),
+                        feedFwd: "Use this fragments of conversation to get a better understanding of the current user input and provide a more consistent response"),
+                    // This are the only 'rules' for a stash:
+                    isGreedy: true, // Greedy = the next step WON'T read the stash as it does with the other steps (this is because you want to configure every stash feed manually)
+                    isIsolated: true) // Isolated = the stash WON'T read the previous output as the other steps do (this is because you don't want to add noise to the context of the sourceable command or because you just don't need it, like in a VectorSearchSourceable that requires only the user Prompt
+                .Then(_factory.GetMessagePromptCommand(
+                    systemMessage: "You are a helpful assistant. Chat with the user in a natural way and use any provided data about previous conversations to offer a more contextualized response to the user"), // settings here are the same that came in the request and passed as Default 
+                    new StepSettings(new PromptCommandRequest(request.Prompt))) // pass the user input to the final chat step, that will answer to any "new topic" prompt without checking the chat history or perform a DB search to retrieve data to add it to the context in the final step
+                //In a real use case you would create for example a PersistentChatCommand that makes the LLM request, updates the DB chat history and returns the result to make the loop work
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
         // STASH A SOURCEABLE WITH SUBPROCESSES (instantiates the right type, chains N steps and forwards the firs step with type check)
+        // The previous example was a minimal demonstration of the usage of ConditionalSteps and StashedSteps but it was more a conceptual example than
+        // a real use case. The example below works (as long as you have a Estrada.ChromaDB.Repository with two collections well taged and descripted)
+        // It also demonstrates how add a subchain with multiple steps to the code and how you can use different Sourceables that generate their stash
+        // using an LLM. This Lame Chain executes the next process:
+        // 1 - Evaluate the user intent to get a clear statement defining what is the user trying / querying about to help the next LLM decision with it
+        // 2 - Evaluate if the intent is related to any of the provided db collections and justify the answer (this will output something like 'yes, it is related to X collection' and will help the SmartQuery decide too)
+        // 3 - Generate a response without 'reliable' DB data to increase the similarity points that match the query topic in general terms
+        // 4 - Generate N copies of the user input to do the same
+        // 5 - Execute a SmartQueryCommand that will select the best db collection to query from based on the user input, with the additional support of the ScoredBool justification comment that enabled the subchaina
+        //     Then with the contents of the stashes that contain the augmentation texts it performs a query in the DB to data from reliable (or user selected) sources to use them as a source in the final step (this steps is stashed too)
+        // 6 - Finally, the RagCommand executes the final LLM request using the reliable DB data if it was potentially relevant for the answer or generate the response with the 'built-in' LLM knowledge from the training dataset
         public async Task<ChainResult> SmartRagChain(SimpleCommandRequest request)
             => await LameChain
                 .StartWith(new StepInstruction(
@@ -509,7 +549,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                         new StepSettings(
                             new SmartQueryRequest(
                                 request.Prompt,
-                                collectionChoices: await getChromaCollectionChoices(withChatCollections: false),
+                                collectionChoices: await getChromaCollectionChoices(withChatCollections: false), // add a formated catalogue of DB collections with descriptions and topics to help the LLM decide
                                 maxChoices: 1,
                                 resultsPerChoice: 3,
                                 guidanceMessage: string.Empty, // this is overwritten by prev_ctx so leave it empty
@@ -518,15 +558,23 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                                 filters: null),
                             withFullContext: false,
                             withPrevSchema: false
-                            ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step
-                        ), //Chroma metadata filters 
+                            )// A nested feed is a feed that should go to a sub step or a sub command inside a step
+                             // In this case Im passing the result of the ScoredBool (with the justification comment) to the MultiChoice command that selects the best available collections.
+                             // This will help the LLM decide and will retur more accurate results when there are overlapping collection topics
+                            .WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step
+                        ), 
                         out var smartQueryId)
+                    // Feed the VectorSearch command (which is the 'main' command of the SmartQueryCommand)
+                    // with the expansion stashes
                     .ChainFeedsFrom([ragExpansion.GetRunnerId, queryAugmentId])
-                    .ForwardFirstType<StashedStep>()
+                    // At this point you are working with the last subchain step
+                    // so you have to finish the subchain by passing the first step to be linked properly with the ConditionalStep
+                    // use this method to do that and cast it to the right type (this feature is still under development)
+                    .ForwardFirstType<StashedStep>() 
                  )
                 .Then(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
                       new StepSettings(new PromptCommandRequest(request.Prompt)))
-                .ChainFeedsFrom([smartQueryId])
+                .ChainFeedsFrom([smartQueryId]) // retrieve the output of the SmartQueryCommand that made the query with the expansions
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
         private async Task<List<string>> getChromaCollectionChoices(bool withChatCollections = false)
@@ -572,13 +620,29 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
         }
 
         // COMMANDS
-        public async Task<TResult> GuidedPromptCommand<TResult>(SimplePromptRequest request) where TResult : class
+        /// <summary>
+        /// Instantiates and executes a command that returns TResult
+        /// This is the most basic usage of Lame Commands. It has no DB dependency
+        /// and no dedicated command request. It makes use of the request SystemMessage and 
+        /// the request prompt to return a simple ChatMessage
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public async Task<ChatMessage> GuidedPromptCommand(SimplePromptRequest request)
         {
-            var command = _factory.GetCommand<GuidedStructuredPrompt<TResult>, TResult>(request.SystemMessage, request.Settings);
+            var command = _factory.GetCommand<GuidedStructuredPrompt<ChatMessage>, ChatMessage>(request.SystemMessage, request.Settings);
 
             return await command.Prompt(new PromptCommandRequest(request.Prompt, request.Settings.Model));
         }
 
+        /// <summary>
+        /// This example demonstrates how to use Lame Commands to perform actions that do not require an LLM
+        /// VectorSearchCommands are commands that require an Embeddings Generator to work and they are meant
+        /// to query VectorDatabases 
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public async Task<List<ILameSearchResult>> VectorSearchCommand(RagChatRequest request)
         {
             var chromaQueryCmd = _factory.GetSimilaritySearchCommand(_chromaService.SimilaritySearch);
@@ -587,6 +651,13 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
 
             return await chromaQueryCmd.Prompt(simReq);
         }
+
+        /// <summary>
+        /// This is a Sourceable version of a VectorSearch command. Sourceables are necessary to create StashedSteps so
+        /// you need to create a Sourceable version of your VectorSearchCommands
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public async Task<List<string>> VectorSearchSourceable(RagChatRequest request)
         {
             var chromaQueryCmd = _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch);
@@ -596,6 +667,14 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             return await chromaQueryCmd.Prompt(simReq);
         }
 
+        /// <summary>
+        /// This are Commands that read their Core Message from a database using a lambda function that must accept two string input parms and return a Task<string> that will retrieve 
+        /// the system message on chain execution
+        /// 
+        /// The example demonstrates how you can use an AtomicValue command with a custom DB instruction that gives you better results 
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public async Task<ChatMessage> DbPromptCommand(SimplePromptRequest request)
         {
             var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: "", messageName: "", _chromaService.GetSystemInstruction, request.SystemMessage, request.Settings);
@@ -606,6 +685,13 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
         }
 
     
+        /// <summary>
+        /// You may need for some commands the capability of being able to work with or without a DB message. In those cases
+        /// You can use DBPromptCommands with DefaultMode and add a default instruction in the command and / or use them with request guidance messages
+        /// To do that, just null the DB params and the command will try to build the system message with the default properties
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public async Task<ChatMessage> DbPromptCommandDefaultCompatible(SimplePromptRequest request)
         {
             //This will force the command to look for a default hardcoded message instead of trying to get the instruction from DB. In case there is not a default message, it can work with the 'command guidance' and the 'request guidance' messages
