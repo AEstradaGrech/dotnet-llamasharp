@@ -3,7 +3,7 @@ using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutput;
+using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;

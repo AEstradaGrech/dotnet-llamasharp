@@ -1,5 +1,5 @@
 ﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
-using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutput.Attributes;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs.Attributes;
 
 namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
 {
