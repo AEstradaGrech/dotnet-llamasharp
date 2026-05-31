@@ -4,15 +4,14 @@ using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
 using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.DocumentLoader;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;
 using DotnetLlamaSharp.Models.Common.Documents;
-using DotnetLlamaSharp.Models.Request;
-using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Request.Chroma;
+using DotnetLlamaSharp.Models.Request.Embeddings;
+using DotnetLlamaSharp.Models.Response.Chroma;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
 using System.Text.Json;
 
 namespace DotnetLlamaSharp.Controllers

@@ -29,25 +29,18 @@ namespace DotnetLlamaSharp.Services.Prompting
     // FYI: https://elbruno.com/tag/ollama/
     public class OllamaSharpService : IOllamaSharpService
     {
-        //private readonly IOllamaInferenceService _ollamaService;
         private readonly IPromptCommandsFactory _promptsFactory;
-        private readonly ILangSearchService _langSearch;
-        private readonly IChromaService _chromaService;
-        private readonly IChromaSysChunksRepository _sysRepo;
         private readonly RequestOptions _settings;
         private readonly ILogger<OllamaSharpService> _logger;
 
         public OllamaSharpService(IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger)
         {
-            _promptsFactory = promptsFactory;
-            _langSearch = langSearch;
+  
             _settings = settings.Value ?? new RequestOptions();
             _logger = logger;
-            _chromaService = chromaService;
-
+           
             if (settings.Value == null)
                 _logger.LogWarning("-- No RequestOptions injected from app settings. Using default OllamaSharp request options --");
-            _sysRepo = sysRepo;
         }
 
         // call to '/api/generate' endpoint for single Q&A inference
@@ -88,24 +81,6 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return null; //TODO: EMBEDDINGS COMMAND await _ollamaService.GetEmbeddings(request);
         }
-
-        //public async Task<ChatPrompt> BooleanQuestion(SimplePromptRequest req)
-        //{
-        //    var command = _promptsFactory.GetBoolPromptCommand("bool-resp");
-
-        //    var response = await command.Prompt(_ollamaService, new PromptCommandRequest { Model = req.Model, Prompt = req.Prompt, Settings = _settings });
-
-        //    if (response == null)
-        //        throw new ArgumentNullException($"{nameof(OllamaSharpService)} >> {nameof(BooleanQuestion)} >> An error has ocurred while requesting the structured output, try again");
-
-        //    var stringResponse = response ? "YES" : "NO";
-
-        //    var messages = new List<ChatMessage> { new ChatMessage(ChatRole.System.ToString(), req.SystemMessage), new ChatMessage(ChatRole.User.ToString(), req.Prompt)};
-
-        //    messages.Add(new ChatMessage(ChatRole.Assistant.ToString(), stringResponse));
-
-        //    return new ChatPrompt { Model = req.Model, Input = req.Prompt, Output =  stringResponse, ChatHistory = messages };
-        //}
 
     }
 }

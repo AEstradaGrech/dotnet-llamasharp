@@ -2,7 +2,7 @@
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting;
-using DotnetLlamaSharp.Models.Request;
+using DotnetLlamaSharp.Models.Request.Embeddings;
 using DotnetLlamaSharp.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 using OllamaSharp.Models;
@@ -25,8 +25,9 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> EmbedTexts([FromBody] SimpleEmbeddingsRequestDto request)
             => Ok(_mapper.Map<ModelEmbeddings, EmbeddingsResponseDto>(await _service.GenerateEmbeddings(request.Texts, request.Dimensions, request.Model)));
 
-        [HttpPost("/embeddings/request")]
-        public async Task<IActionResult> GetEmbeddings([FromBody] EmbedRequest request)
-            => Ok(await _ollama.GetOllamaClientEmbeddings(request));
+        // TODO: OllamaEmbeddingsCommand o borrar
+        //[HttpPost("/embeddings/request")]
+        //public async Task<IActionResult> GetEmbeddings([FromBody] EmbedRequest request)
+        //    => Ok(await _ollama.GetOllamaClientEmbeddings(request));
     }
 }

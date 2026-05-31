@@ -23,13 +23,10 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IPromptCommandsService commandService,
-        ILangSearchService langSearchService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
+    public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
     {
         private readonly IOllamaSharpService _ollamaService = ollamaService;
         private readonly IOllamaStreamService _streamService = streamService;
-        private readonly IPromptCommandsService _ollamaCommands = commandService;
-        private readonly ILangSearchService _langSearchService = langSearchService;
         private readonly IRagService _ragService = ragService;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PromptingController> _logger = logger;
@@ -117,6 +114,17 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> RagChatPrompt([FromBody] RagChatRequestDto request)
         {
             var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.RagChatPrompt(_mapper.Map<RagChatRequestDto, RagChatRequest>(request)));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/rag/qa/smart/prompt")]
+        public async Task<IActionResult> SimpleSmartPrompt([FromBody] SmartQueryRequestDto request)
+        {
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SmartQueryRequestDto, SmartQueryRequestDEP>(request)));
 
             if (response != null)
                 return Ok(response);

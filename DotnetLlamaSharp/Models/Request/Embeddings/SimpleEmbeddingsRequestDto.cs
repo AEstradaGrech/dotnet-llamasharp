@@ -1,5 +1,8 @@
-﻿namespace DotnetLlamaSharp.Models.Request
+﻿namespace DotnetLlamaSharp.Models.Request.Embeddings
 {
+    /// <summary>
+    /// Generate embeddings request for the IEmbeddingsService (Microsoft.AI.Extensions interface)
+    /// </summary>
     public class SimpleEmbeddingsRequestDto
     {
         public string? Model { get; set; } = null;

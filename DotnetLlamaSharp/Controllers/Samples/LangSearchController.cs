@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
-using DotnetLlamaSharp.Models.Request;
+using DotnetLlamaSharp.Models.Request.LangSearch;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -37,9 +37,9 @@ namespace DotnetLlamaSharp.Controllers.Samples
         }
 
         [HttpPost("/langsearch/prompt/default/ranked-page")]
-        public async Task<IActionResult> LangSearchRankedPageDefault([FromBody] LangSearchWebSearchDto request)
+        public async Task<IActionResult> LangSearchRankedPageDefault([FromBody] LangSearchRankedRequestDto request)
         {
-            var response = await _langSearchService.SearchAndRankPages(_mapper.Map<LangSearchWebSearchDto, WebSearchRequest>(request));
+            var response = await _langSearchService.GetReRankData(_mapper.Map<LangSearchRankedRequestDto, RankedSearchRequest>(request));
 
             if (response != null)
                 return Ok(response);

@@ -1,4 +1,4 @@
-﻿namespace DotnetLlamaSharp.Models.Request
+﻿namespace DotnetLlamaSharp.Models.Request.LangSearch
 {
     /// <summary>
     /// Test request. v2 -> LangSearchRanked for multiple sources (for random / general similarity searches)

@@ -9,6 +9,7 @@ using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
+using DotnetLlamaSharp.Models.Request.LangSearch;
 using DotnetLlamaSharp.Models.Response;
 using OllamaSharp.Models.Chat;
 

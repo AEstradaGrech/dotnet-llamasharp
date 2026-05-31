@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.Models.Response
+﻿using DotnetLlamaSharp.Models.Response.Chroma;
+
+namespace DotnetLlamaSharp.Models.Response
 {
     public class RagPromptResponseDto : ChatPromptResponseDto
     {

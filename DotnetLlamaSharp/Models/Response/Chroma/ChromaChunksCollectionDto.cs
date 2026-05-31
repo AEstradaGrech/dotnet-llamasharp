@@ -1,4 +1,4 @@
-﻿namespace DotnetLlamaSharp.Models.Response
+﻿namespace DotnetLlamaSharp.Models.Response.Chroma
 {
     public class ChromaChunksCollectionDto<T> where T : ChromaChunkDto
     {

@@ -1,4 +1,5 @@
-﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
@@ -19,7 +20,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<ChatMessage> GuidedPromptCommand(SimplePromptRequest request);
         Task<ChatMessage> DbPromptCommand(SimplePromptRequest request);
         Task<ChatMessage> DbPromptCommandDefaultCompatible(SimplePromptRequest request);
-        Task<List<ILameSearchResult>> VectorSearchCommand(RagChatRequest request);
-        Task<List<string>> VectorSearchSourceable(RagChatRequest request);
+        Task<List<ILameSearchResult>> VectorSearchCommand(VectorSearchRequest request);
+        Task<List<string>> VectorSearchSourceable(VectorSearchRequest request);
     }
 }

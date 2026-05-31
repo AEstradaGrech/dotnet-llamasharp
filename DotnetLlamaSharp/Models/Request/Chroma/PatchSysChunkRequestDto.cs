@@ -1,4 +1,4 @@
-﻿namespace DotnetLlamaSharp.Models.Request
+﻿namespace DotnetLlamaSharp.Models.Request.Chroma
 {
     public class PatchSysChunkRequestDto
     {

@@ -2,12 +2,15 @@
 using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Metadata;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Models.Request;
+using DotnetLlamaSharp.Models.Request.Chroma;
+using DotnetLlamaSharp.Models.Request.Embeddings;
 using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Response.Chroma;
 
 namespace DotnetLlamaSharp.Mappers
 {
@@ -94,6 +97,8 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.Message))
                 .ForMember(dest => dest.Embedding, opt => opt.Ignore())
                 .ForMember(dest => dest.DefaultMetadata, opt => opt.Ignore());
+
+            CreateMap<VectorSearchRequestDto, VectorSearchRequest>().ReverseMap();
 
         }
     }

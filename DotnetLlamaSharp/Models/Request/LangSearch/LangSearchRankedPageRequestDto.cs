@@ -1,6 +1,6 @@
 ﻿using Dotnet.LangSearch.SDK.Models.Enums;
 
-namespace DotnetLlamaSharp.Models.Request
+namespace DotnetLlamaSharp.Models.Request.LangSearch
 {
     public class LangSearchRankedPageRequestDto
     {

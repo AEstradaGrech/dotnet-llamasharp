@@ -394,7 +394,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                             _factory.GetStringChoiceCommand( //You can use different type of Lame Commands in the chain. Here I'm using an AtomicValue Command that selects a single string from the passed list based on the given instruction
                                 guidanceMessage: "Select a faction from the available list for the game character you are creating. Use the provided data to select the faction that fits best or choose at random if none stands out."),
                             new StepSettings(new StringChoiceRequest(
-                                choices: [ "Comuneros", "Germaners", "Tercio" ],
+                                choices: ["Germaners", "Comuneros", "Tercio Imperial" ],
                                 message: "Select a game faction for the character", // Enforce the instruction if you get hallucinations with dumb models or maybe the context adds too much noise and misleads the LLM
                                 model: null))
                                 .FeedFrom(startId), // This is just to demonstrate an individual feed in a splitted step from a previous process different than the previous
@@ -406,13 +406,13 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                             feedFwd: "Use the selected location as the character's place of birth"), // Every parallel branch can add its own Feed Forward message to help the next step to understand / use the output of its instruction
                         new StepInstruction(
                             _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                                instruction: request.Instructions.Skip(4).First().SystemMessage),
-                            settings: new StepSettings(new PromptCommandRequest(message: "Generate a background story or profile for the character you are creating. Use the provided data to figure out what kind of character may be appropriate in terms of style, mood, vibe..."))
+                                instruction:"Generate a background story or profile for the character you are creating. Use the provided data to figure out what kind of character my ne appropriate in terms of style, mood, vibe..."),
+                            settings: new StepSettings(new PromptCommandRequest(message: ""))
                                 .WithDataBoost( // Steps can be boosted by feeding the output of previous steps but also by adding external string sources.
                                 // In this case I'm adding semi-random data to the bias the generated character base profile towards specific styles.
                                 // But ideally you would add here well processed sources (in this example it could be real human-made character concepts made by the game studio artists
                                     "Use the below data to bias your final response towards that style, ambience, topic or vibe",
-                                    await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 6, Query = "Bujias Campanolo, El Dia de la Bestia" }, returnSnippet: true)),
+                                    await _langSearch.SearchWebTexts(new WebSearchRequest("Don Pablo o La vida del buscón. Lazarillo de Tormes, sinopsis.", 5), returnSnippet: false, resultsClamp: 100)),
                             feedFwd: "Use this profile as an inspiration for your final character profile, but adapt it to the game lore") // Guide the refining / summarizing step to leverage the output of the different branches and get more consistent results
                     ])
                 // Now that the chain has been splitted in 3 branches, it is possible to work on each branch indepently by piping commands that will be executed on each recieved previous output
@@ -430,8 +430,8 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 // In this example, it could be more content produced by the game studio staff (like scene scripts or even quest scripts, the idea
                 // is to add get results that are aligned with the game lore so the final junction step does not hallucinate and add content from it's training dataset
                 .WithRebujito(
-                    await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 3, Query = "H.P Lovecraft stories. Richard Bachman novels" }, returnSnippet: false),
-                    guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
+                    await _langSearch.SearchWebTexts(new WebSearchRequest("Revuelta de los Comuneros. Rebelion de las Germanias", results: 3), returnSnippet: false),
+                    guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore. Output your response in always in English despite the source language.", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
                     feedDose: 100)
                 .Join(
                     new StepInstruction(
@@ -573,7 +573,7 @@ Note if the user is making references to past conversations with you or events o
                     .ForwardFirstType<StashedStep>() 
                  )
                 .Then(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
-                      new StepSettings(new PromptCommandRequest(request.Prompt)))
+                      new StepSettings(new ChatCommandRequest(request.Prompt, request.SystemMessage)))
                 .ChainFeedsFrom([smartQueryId]) // retrieve the output of the SmartQueryCommand that made the query with the expansions
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
@@ -643,13 +643,13 @@ Note if the user is making references to past conversations with you or events o
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public async Task<List<ILameSearchResult>> VectorSearchCommand(RagChatRequest request)
+        public async Task<List<ILameSearchResult>> VectorSearchCommand(VectorSearchRequest request)
         {
-            var chromaQueryCmd = _factory.GetSimilaritySearchCommand(_chromaService.SimilaritySearch);
+            var command = _factory.GetSimilaritySearchCommand(_chromaService.SimilaritySearch);
 
-            var simReq = new VectorSearchRequest(index: request.QueryCollections.First(), query: request.Prompt, embedder: request.Settings.Model, dimensions: 512, results: request.CollectionRetrievals);
+            var commandRequest = new VectorSearchRequest(index: request.QueryIndex, query: request.Prompt, embedder: request.Model, dimensions: request.Dimensions, results: request.ReturnedResults);
 
-            return await chromaQueryCmd.Prompt(simReq);
+            return await command.Prompt(commandRequest);
         }
 
         /// <summary>
@@ -658,13 +658,13 @@ Note if the user is making references to past conversations with you or events o
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public async Task<List<string>> VectorSearchSourceable(RagChatRequest request)
+        public async Task<List<string>> VectorSearchSourceable(VectorSearchRequest request)
         {
-            var chromaQueryCmd = _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch);
+            var command = _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch);
 
-            var simReq = new VectorSearchRequest(index: request.QueryCollections.First(), query: request.Prompt, embedder: request.Settings.Model, dimensions: 512, results: request.CollectionRetrievals);
+            var commandRequest = new VectorSearchRequest(index: request.QueryIndex, query: request.Prompt, embedder: request.Model, dimensions: request.Dimensions, results: request.ReturnedResults);
 
-            return await chromaQueryCmd.Prompt(simReq);
+            return await command.Prompt(commandRequest);
         }
 
         /// <summary>
@@ -701,5 +701,7 @@ Note if the user is making references to past conversations with you or events o
 
             return new ChatMessage(ChatRole.Assistant.ToString(), $"{(response.Answer ? "YES" : "NO")}: {response.Justification}");
         }
+
+
     }
 }

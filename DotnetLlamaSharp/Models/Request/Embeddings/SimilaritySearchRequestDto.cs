@@ -1,5 +1,8 @@
-﻿namespace DotnetLlamaSharp.Models.Request
+﻿namespace DotnetLlamaSharp.Models.Request.Embeddings
 {
+    /// <summary>
+    /// Similarity search request to query Chroma Repositories
+    /// </summary>
     public class SimilaritySearchRequestDto
     {
         public string Collection { get; set; }

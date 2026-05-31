@@ -2,9 +2,9 @@
 {
     public enum EGameLocations
     {
-        VILLARRIBA = 0,
+        VILLARRIBA = 2,
         VILLABAJO = 1,
-        MADRIZ = 2,
+        MADRIZ = 0,
         BOTVILLE = 3
     }
 }
