@@ -142,8 +142,6 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<RagPrompt> SimpleSmartQuery(SmartQueryRequestDEP request)
         {
-
-            /////////////////////////////////////////////////////////////////////////////////////////////////////////////
             var userIntent = await _ollamaCommands.GuidedPromptCommand<ChatMessage>(
                 new PromptCommandRequest(request.Prompt, request.Settings.Model),
                 guidanceMessage: null,
@@ -158,7 +156,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var evaluationInstruction = $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below.\n\n>> AVAILABLE COLLECTIONS:\n\n{collectionsCatalogue}";
 
-            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, request.Settings);
+            var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, request.IsGuidanceAppend, request.Settings);
 
             var ragReq = _mapper.Map<SimpleCommandRequest, RagPromptRequest>(request);
 
@@ -179,7 +177,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query.";
 
-                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: request.MaxCollectionChoices, guidanceMessage: selectorGuidance, request.Settings);
+                var selectedChoices = await _ollamaCommands.MultiChoice(request.Prompt, choices.Keys.ToList(), maxChoices: request.MaxCollectionChoices, guidanceMessage: selectorGuidance, request.IsGuidanceAppend, request.Settings);
 
                 ragReq.SystemMessage = null;
 
@@ -487,7 +485,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                             _factory.GetSourceable<RagExpansionCommand>(),
                             new StepSettings(new RagExpansionRequest(expansions: 1, request.Prompt))
                         ),
-                        false, //TODO: StashSettings : StepSettings & StepWithCustomParamsSettings : StepSettings y quitar esta guarrada
+                        false, // TODO: less ugly way of doing this (configure stash)
                         true
                      )
                     .ExposeThisStep(out var ragExpansion)

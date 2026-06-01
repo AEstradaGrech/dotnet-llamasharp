@@ -8,5 +8,6 @@ namespace DotnetLlamaSharp.Domain.Models.Request
     {
         public string Prompt { get; set; }
         public string SystemMessage { get; set; } = string.Empty;
+        public bool IsGuidanceAppend { get; set; }
     }
 }

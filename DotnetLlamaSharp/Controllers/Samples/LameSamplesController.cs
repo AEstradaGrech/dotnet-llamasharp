@@ -1,11 +1,9 @@
 ﻿using AutoMapper;
 using Dotnet.Chroma.Repositories.Models.Enums;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Models.Request;
@@ -59,7 +57,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
         [HttpPost("/commands/single-choice/prompt")]
         public async Task<IActionResult> SingleChoice([FromBody] StringChoiceRequestDto dto)
         {
-            var response = await _ollamaCommands.StringChoice(dto.Prompt, dto.Choices, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+            var response = await _ollamaCommands.StringChoice(dto.Prompt, dto.Choices, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -103,7 +101,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
             }
              */
             var response = _mapper.Map<ScoredStringChoice, ScoredChoiceDto>(
-                await _ollamaCommands.ScoredChoice(dto.Choices, dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings));
+                await _ollamaCommands.ScoredChoice(dto.Choices, dto.Prompt, dto.SystemMessage,dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings));
 
             if (response != null)
                 return Ok(response);
@@ -141,31 +139,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
              *  (Note: in this case I had to enforce the instruction with more guidance and a explicit user prompt. Sometimes is the only way, just try to give the instructions en general terms in the guidance
              *  and more specific details about the case your dealing with in the user prompt)
              *  
-             {
-              "prompt": "Select any month corresponding to the summer season present in the choices list. If there are no matching values in the list, return an empty list",
-              "systemMessage": "Select a range of choices according to the maximum requested choices and the actual available choices given the user query",
-              "settings": {
-                "model": "hermes3",
-                "maxTokens": 666,
-                "contextLength": 6000,
-                "temperature": 0.0,
-                "topP": 0.1,
-                "topK": 10,
-                "miroStat": 0,
-                "miroStatEta": 0.4,
-                "miroStatTau": 5.0,
-                "repeatPenalty": 1.1,
-                "repeatLastN": -1,
-                "commandValidations": 1,
-                "validationType": 1,
-                "useDefaultCommandMessage": true
-              },
-              "choices": [
-                "DECEMBER", "JANUARY", "FEBRUARY", "OCTOBER", "APRIL"
-              ]
-            }
-
-            ------------------------------- WITH /CHAT & Reviewer.withJsonInfo -------------------------------
+         
              {
               "prompt": "Select any month corresponding summer season present in the choices list (according to the North Hemisphere seasons). ### IMPORTANT: If there are no matching chices in the list, return an empty list",
               "systemMessage": "Select a range of choices (if any) according to the maximum requested choices and the actual available choices given the user query",
@@ -190,7 +164,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
               ]
 }
              */
-            var response = await _ollamaCommands.MultiChoice(dto.Prompt, dto.Choices, maxChoices:  maxChoices, guidanceMessage: dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+            var response = await _ollamaCommands.MultiChoice(dto.Prompt, dto.Choices, maxChoices:  maxChoices, guidanceMessage: dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -207,7 +181,50 @@ namespace DotnetLlamaSharp.Controllers.Samples
         public async Task<IActionResult> BooleanPrompt([FromBody] SimplePromptRequestDto dto)
         {
             // Try different prompts to get a true / false response
-            var response = await _ollamaCommands.BooleanChoice(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+
+            /*
+             {
+              "prompt": "Is Pepsi prefered world wide by the consumers rather than Coca Cola?",
+              "systemMessage": "",
+              "isGuidanceAppend": true,
+               "settings": {
+               "model": "hermes3",
+               "maxTokens": 666,
+               "contextLength": 6000,
+               "temperature": 0.7,
+               "topP": 0.9,
+               "topK": 30,
+               "miroStat": 1,
+               "miroStatEta": 0.2,
+               "miroStatTau": 5.0,
+               "repeatPenalty": 1.5,
+               "repeatLastN": -1,
+               "commandValidations": 1,
+               "validationType": 2,
+               "useDefaultCommandMessage": true
+             }
+            }
+             */
+            var response = await _ollamaCommands.BooleanChoice(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        /// <summary>
+        /// Returns true or false for a given user question. Use the system message to guide the LLM if necessary
+        /// returns also a confidence score and a comment explainig the reason
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("/commands/reasoned-boolean/prompt")]
+        public async Task<IActionResult> ReasonedBooleanPrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            // Same than in the boolean prompt enpoint but scored and 'reasoned'
+            // You can use the dto.SystemMessage to guide the LLM / help the model passing contextual data about the question
+            var response = await _ollamaCommands.ReasonedBool(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -226,7 +243,68 @@ namespace DotnetLlamaSharp.Controllers.Samples
         {
             // Same than in the boolean prompt enpoint but scored and 'reasoned'
             // You can use the dto.SystemMessage to guide the LLM / help the model passing contextual data about the question
-            var response = await _ollamaCommands.ScoredBool(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+            var response = await _ollamaCommands.ScoredBool(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        /// <summary>
+        /// Returns true or false for a given user question. Use the system message to guide the LLM if necessary
+        /// returns also a confidence score and a comment explainig the reason
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("/commands/scored-response/prompt")]
+        public async Task<IActionResult> ScoredPrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            // Same than in the boolean prompt enpoint but scored and 'reasoned'
+            // You can use the dto.SystemMessage to guide the LLM / help the model passing contextual data about the question
+            var response = await _ollamaCommands.ScoredPrompt(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+        /// <summary>
+        /// Returns true or false for a given user question. Use the system message to guide the LLM if necessary
+        /// returns also a confidence score and a comment explainig the reason
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("/commands/resoned-score/prompt")]
+        public async Task<IActionResult> ReasonedScorePrompt([FromBody] SimplePromptRequestDto dto)
+        {
+            // Same than in the boolean prompt enpoint but scored and 'reasoned'
+            // You can use the dto.SystemMessage to guide the LLM / help the model passing contextual data about the question
+            /*
+             {
+              "prompt": "Is Pepsi prefered world wide by the consumers rather than Coca Cola?",
+              "systemMessage": "",
+              "isGuidanceAppend": true,
+               "settings": {
+               "model": "hermes3",
+               "maxTokens": 666,
+               "contextLength": 6000,
+               "temperature": 0.7,
+               "topP": 0.9,
+               "topK": 30,
+               "miroStat": 1,
+               "miroStatEta": 0.2,
+               "miroStatTau": 5.0,
+               "repeatPenalty": 1.5,
+               "repeatLastN": -1,
+               "commandValidations": 1,
+               "validationType": 2,
+   
+               "useDefaultCommandMessage": true
+             }
+            }
+             */
+            var response = await _ollamaCommands.ReasonedScore(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -242,7 +320,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
         [HttpPost("/commands/yn/prompt")]
         public async Task<IActionResult> StringyBoolPrompt([FromBody] SimplePromptRequestDto dto)
         {
-            var response = await _ollamaCommands.StringBoolChoice(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+            var response = await _ollamaCommands.StringBoolChoice(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             if (response != null)
                 return Ok(response);
@@ -260,7 +338,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
         {
             // Try prompts that can be solved / answered with a number (decimals allowed) or null of the question cannot be answered with a float
             // note: this fails often with dumb / small local models (7b-8b models are have not proven to be too reliable for this task & output)
-            var response = await _ollamaCommands.NumericResult(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+            var response = await _ollamaCommands.NumericResult(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             return response != null ? Ok(response) : Ok("The answer to the query cannot be a number");
         }
@@ -277,7 +355,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
             //This example demonstrates how you can handle your app logic using your enums to make the LLM
             // select the best value for the given instruction. Here it is being use to select the best type of Chroma Chunks Collection
             // to store data depending on the user query
-            var response = await _ollamaCommands.EnumChoice<EChunkType>(dto.Prompt, dto.SystemMessage, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
+            var response = await _ollamaCommands.EnumChoice<EChunkType>(dto.Prompt, dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
             return Ok(response);
         }

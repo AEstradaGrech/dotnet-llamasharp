@@ -631,6 +631,10 @@ Note if the user is making references to past conversations with you or events o
         /// <returns></returns>
         public async Task<ChatMessage> GuidedPromptCommand(SimplePromptRequest request)
         {
+            // You can use the request system message as a part of the core message of the system instruction and pass nothing in the command request to guide the LLM
+            // Compose / add context information the way you need depending on the process you are developing
+            // In this case I'm using the most basic way to make a prompt so I'm using a command with NO default instruction hardcoded and NO DB message
+            // then using the client app request to set the chatbot rules in terms of tone, response constraints etc by passing it as command core message
             var command = _factory.GetCommand<GuidedStructuredPrompt<ChatMessage>, ChatMessage>(request.SystemMessage, request.Settings);
 
             return await command.Prompt(new PromptCommandRequest(request.Prompt, request.Settings.Model));
@@ -677,9 +681,9 @@ Note if the user is making references to past conversations with you or events o
         /// <returns></returns>
         public async Task<ChatMessage> DbPromptCommand(SimplePromptRequest request)
         {
-            var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: "", messageName: "", _chromaService.GetSystemInstruction, request.SystemMessage, request.Settings);
+            var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: "", messageName: "", _chromaService.GetSystemInstruction, null, request.Settings);
 
-            var response = await command.Prompt(new PromptCommandRequest(request.Prompt, request.Settings.Model));
+            var response = await command.Prompt(new PromptCommandRequest(request.Prompt, request.SystemMessage, request.IsGuidanceAppend, request.Settings.Model));
 
             return new ChatMessage(ChatRole.Assistant.ToString(), $"{(response.Answer ? "YES" : "NO")}: {response.Justification}");
         }
@@ -695,9 +699,9 @@ Note if the user is making references to past conversations with you or events o
         public async Task<ChatMessage> DbPromptCommandDefaultCompatible(SimplePromptRequest request)
         {
             //This will force the command to look for a default hardcoded message instead of trying to get the instruction from DB. In case there is not a default message, it can work with the 'command guidance' and the 'request guidance' messages
-            var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: null, messageName: null, retrieverLambda: null, guidanceMessage: request.SystemMessage, settings: request.Settings);
-
-            var response = await command.Prompt(new PromptCommandRequest(request.Prompt, guidanceMessage: "This can be used to compose the system message too", request.Settings.Model));
+            var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: null, messageName: null, retrieverLambda: null, guidanceMessage: null /*Use this to append system message info to the core message*/, settings: request.Settings);
+            // Use the request SystemMessage to guide the LLM by appending or preppending more contextual info to the system message
+            var response = await command.Prompt(new PromptCommandRequest(request.Prompt, guidanceMessage: request.SystemMessage, request.IsGuidanceAppend, request.Settings.Model));
 
             return new ChatMessage(ChatRole.Assistant.ToString(), $"{(response.Answer ? "YES" : "NO")}: {response.Justification}");
         }

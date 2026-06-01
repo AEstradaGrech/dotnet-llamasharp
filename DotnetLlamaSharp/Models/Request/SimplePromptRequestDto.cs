@@ -6,6 +6,7 @@ namespace DotnetLlamaSharp.Models.Request
     {
         public string Prompt { get; set; }
         public string? SystemMessage { get; set; } = null;
+        public bool IsGuidanceAppend { get; set; }
         public PromptSettingsDto Settings { get; set; }
     }
 }

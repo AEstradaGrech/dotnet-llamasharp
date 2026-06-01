@@ -41,6 +41,7 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<PromptSettings, PromptSettingsDto>()
                 .ForMember(dest => dest.UseDefaultCommandMessage, opt => opt.Ignore())
+                .ForMember(dest => dest.ValidatorModel, opt => opt.Ignore())
                 .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
                 .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
 
@@ -64,7 +65,8 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<PromptSettings, CommandSettings>()
                .ForMember(dest => dest.UseDefaultCommandMessage, opt => opt.Ignore())
                .ForMember(dest => dest.CommandValidations, opt => opt.Ignore())
-               .ForMember(dest => dest.ValidationType, opt => opt.Ignore());
+               .ForMember(dest => dest.ValidationType, opt => opt.Ignore())
+               .ForMember(dest => dest.ValidatorModel, opt => opt.Ignore());
             CreateMap<CommandSettings, PromptSettings>();
             CreateMap<CommandSettings, CommandSettings>();
 

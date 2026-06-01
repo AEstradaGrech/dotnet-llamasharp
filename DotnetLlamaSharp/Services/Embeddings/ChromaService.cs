@@ -1,6 +1,4 @@
-﻿using AutoMapper;
-using DocumentFormat.OpenXml.Wordprocessing;
-using Dotnet.Chroma.Repositories.Models;
+﻿using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Interfaces;
 using Dotnet.Chroma.Repositories.Models.Metadata;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
