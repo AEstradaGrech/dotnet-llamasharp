@@ -251,9 +251,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                 var model = request.EmbeddingModel ?? _settings.DefaultEmbedder;
 
-                if (!_settings.EmbeddingModels.Contains(model))
-                    throw new HttpException(HttpStatusCode.BadRequest, $"Embedding model: {model} not available");
-
                 var embedding = await _embeddingsService.GenerateEmbeddings(textToEmbed, request.Dimensions, model);
 
                 currentChunk.Embedding = embedding.GeneratedEmbeddings.First().Vector;

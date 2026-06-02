@@ -1,3 +1,5 @@
+using Dotnet.Chroma.Repositories.Models;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -9,12 +11,12 @@ namespace DotnetLlamaSharp.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class ApiManagementController(IOllamaApiClient ollama, IOptions<ApiSettings> apiSettings, IOptions<RequestOptions> ollamaSettings, ILogger<ApiManagementController> logger) : ControllerBase
+    public class ApiManagementController(IOllamaApiClient ollama, IOptions<ApiSettings> apiSettings, IOptions<OllamaSettings> ollamaSettings, ILogger<ApiManagementController> logger) : ControllerBase
     {
         private readonly IOllamaApiClient _ollama = ollama;
         private readonly ILogger<ApiManagementController> _logger = logger;
         private readonly ApiSettings _apiSettings = apiSettings.Value;
-        private readonly RequestOptions _ollamaSettings = ollamaSettings.Value;
+        private readonly OllamaSettings _ollamaSettings = ollamaSettings.Value;
 
         [HttpGet("/check")]
         public async Task<IActionResult> GetCheck()
@@ -50,7 +52,7 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> GetEmebeddingModels()
         {
             if (_apiSettings != null)
-                return Ok(_apiSettings.EmbeddingModels);
+                return Ok(_ollamaSettings.EmbeddingModels);
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }

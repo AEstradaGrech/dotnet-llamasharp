@@ -48,7 +48,6 @@ Thumbs.db
 ##############################
 # Environment / secrets
 ##############################
-appsettings.json
 appsettings.*.json
 
 ##############################
