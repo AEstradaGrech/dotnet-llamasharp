@@ -67,13 +67,6 @@ namespace DotnetLlamaSharp.Extensions
                 ServiceLifetime.Transient => services.AddTransient<IDocumentLoader<PdfLoaderService>, PdfLoaderService>(),
                 _ => services
             };
-        public static IServiceCollection AddWordDocumentLoader(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Scoped)
-           => lifetime switch
-           {
-               ServiceLifetime.Scoped => services.AddScoped<IDocumentLoader<WordLoaderService>, WordLoaderService>(),
-               ServiceLifetime.Transient => services.AddTransient<IDocumentLoader<WordLoaderService>, WordLoaderService>(),
-               _ => services
-           };
 
         private static IApplicationBuilder ConfigureGlobalErrorHandler(this IApplicationBuilder app)
         {

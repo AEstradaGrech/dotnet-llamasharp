@@ -18,10 +18,9 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ChromaController(IChromaService service, IDocumentLoader<PdfLoaderService> docLoader, IMapper mapper, IDocumentLoader<WordLoaderService> wordLoader) : ControllerBase
+    public class ChromaController(IChromaService service, IDocumentLoader<PdfLoaderService> docLoader, IMapper mapper) : ControllerBase
     {
         private readonly IChromaService _service = service;
-        private readonly IDocumentLoader<WordLoaderService> _wordLoader = wordLoader;
         private readonly IDocumentLoader<PdfLoaderService> _loader = docLoader;
         private readonly IMapper _mapper = mapper;
         
@@ -104,10 +103,6 @@ namespace DotnetLlamaSharp.Controllers
         [HttpGet("/documents/load/{docName}/page/{index}/size/{batchSize}")]
         public async Task<IActionResult> LoadDocumentPages(string docName, int index, int batchSize)
             => Ok(_mapper.Map<IEnumerable<DocumentPage>, IEnumerable<DocumentPageDto>>(await _loader.LoadPages(docName, index, batchSize)));
-
-        [HttpGet("/documents/load/word/{docName}")]
-        public async Task<IActionResult> LoadWordDocument(string docName)
-            => Ok(_mapper.Map<Document, DocumentDto>(await _wordLoader.LoadDocument(docName)));
 
         [HttpGet("/serialized/text")]
         public async Task<IActionResult> GetJsonString()

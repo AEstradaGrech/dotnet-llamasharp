@@ -43,24 +43,21 @@ try
     // Add services to the container.
 
     builder.Services.AddControllers();
-    // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-    //builder.Services.AddOpenApi();
 
     builder.Services
         .AddConfigurations(builder.Configuration)
-        
         .ConfigureLameChain(builder.Configuration, ServiceLifetime.Scoped)
         .ConfigureLangSearch(builder.Configuration)
         .AddChromaConfiguration(builder.Configuration)
         .AddDefaultChromaRepository()
         .AddChromaClient(builder.Configuration)
         .AddPdfDocumentLoader()
-        .AddWordDocumentLoader()
         .AddAutoMapper(cfg => {
             cfg.AddMaps(new[] {
                 typeof(DocumentsMappingProfile),
                 typeof(PromptsMappingProfile),
-                typeof(EmbeddingsMappingProfile)
+                typeof(EmbeddingsMappingProfile),
+                typeof(LameChainMappingProfile)
             });
         })
         .AddServicesFromAssemblies(DependencyContext.Default.RuntimeLibraries
@@ -69,7 +66,6 @@ try
             )
             .ToList())
         .AddCorsPolicy()
-        //.AddEndpointsApiExplorer()
         .AddSwaggerGen(cfg => {
             cfg.SwaggerDoc("ApiManagement", new OpenApiInfo { Title = "ApiManagement", Version = "v1" });
             cfg.SwaggerDoc("Prompting", new OpenApiInfo { Title = "Prompting", Version = "v1" });
@@ -86,9 +82,6 @@ try
         cfg.SwaggerEndpoint("/swagger/Prompting/swagger.json", "Prompting");
        });
     
-
-    //app.UseSerilogRequestLogging();
-
     app.UseHttpsRedirection()
        .Configure();
 

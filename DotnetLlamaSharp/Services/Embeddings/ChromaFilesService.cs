@@ -1,5 +1,4 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
-using Dotnet.Chroma.Repositories.Models.Metadata;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
