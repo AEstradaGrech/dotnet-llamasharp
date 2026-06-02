@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DotnetLlamaSharp.Domain.Models.Request
+﻿namespace DotnetLlamaSharp.Domain.Models.Request.Prompting
 {
+    /// <summary>
+    /// App base prompt request for both the Command and No-Command requests
+    /// </summary>
     public class BasePromptRequest
     {
         public string Prompt { get; set; }

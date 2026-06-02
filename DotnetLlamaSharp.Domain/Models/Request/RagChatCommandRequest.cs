@@ -2,7 +2,7 @@
 
 namespace DotnetLlamaSharp.Domain.Models.Request
 {
-    public class RagChatRequest : RagPromptRequest
+    public class RagChatCommandRequest : RagCommandRequest
     {
         public string? AgentName { get; set; }
         public string? UserName { get; set; }

@@ -3,7 +3,7 @@ using Dotnet.Chroma.Repositories.Models;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
-using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Chroma;
 using DotnetLlamaSharp.Domain.Services.DocumentLoader;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;

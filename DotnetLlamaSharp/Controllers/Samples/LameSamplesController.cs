@@ -130,7 +130,9 @@ namespace DotnetLlamaSharp.Controllers.Samples
              *  
              *  For some reason all models fail to execute this task (unless prompted explicitely to select the months, which is
              *  the equivalent to hardcoding a use-case and not valid for a general use command). 
-             *  To solve that kind of problems you can use different command validations to review and rewrite the fist output so the problem is solved iteratively working on the previous invalid results)
+             *  To solve that kind of problems you should use a smarter model, but if you are trying to run your app with the fastest local model ('dumb' models) you can use different command validations to review and rewrite 
+             *  the fist output so the problem is solved iteratively working on the previous invalid results (note: 'dumb' models may return wrong responses more often. Just be aware of that if you are testing this endpoints)
+             *  
              *  This example I finally made it work using hermes3 or qwen2.5:14b by passing the first output (that usually includes months that are not in the list or closest to the requested season but out of the intent scope)
              *  Once the validator recieves an 'almost-fine' result with wrong selections, it is easier for the LLM to review the instruction and rewrite the result in the same JSON format but with the right values.
              *  In case you are still having troubles with your chain and the reviewer is not smart enough to fix the problem, you can use 'BOOL_AND_REVIEW' (validation type 2) tha will first perform an ScoredBoolCommand
@@ -162,7 +164,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
               "choices": [
                 "DECEMBER", "JANUARY", "FEBRUARY", "OCTOBER", "APRIL"
               ]
-}
+            }
              */
             var response = await _ollamaCommands.MultiChoice(dto.Prompt, dto.Choices, maxChoices:  maxChoices, guidanceMessage: dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 

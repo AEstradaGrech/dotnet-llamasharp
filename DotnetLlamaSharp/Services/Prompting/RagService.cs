@@ -18,6 +18,7 @@ using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting;
@@ -56,7 +57,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             _factory = commandsFactory;
         }
 
-        public async Task<RagPrompt> SimpleRagQuery(RagPromptRequest request, SmartRagSettings? smartSettings = null)
+        public async Task<RagPrompt> SimpleRagQuery(RagCommandRequest request, SmartRagSettings? smartSettings = null)
         {
             ChromaQuery chromaQuery = null;
             var collectionQueries = new Dictionary<string, ChromaQuery>();
@@ -79,7 +80,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                         };
 
                         var expansion = await _ollamaCommands.PromptCommand<RagExpansionCommand, List<string>>(
-                            expansionReq, instruction: null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
+                            expansionReq, instruction: null, request.Settings);
 
                         if (expansion.Count > 0)
                             expansion.ForEach(item => queryPrompt += $"\n{item}");
@@ -97,14 +98,14 @@ namespace DotnetLlamaSharp.Services.Prompting
                         };
 
                         var expansion = await _ollamaCommands.PromptCommand<QueryAugmentationCommand, List<string>>(
-                            expansionReq, instruction: null, request.Settings.GetType() == typeof(CommandSettings) ? (CommandSettings)request.Settings : null);
+                            expansionReq, instruction: null, request.Settings);
 
                         if (expansion.Count > 0)
                             expansion.ForEach(item => queryPrompt += $"\n{item}");
                     }
                 }
 
-                collectionQueries = await QueryCollections(request.QueryCollections, queryPrompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
+                collectionQueries = await QueryCollections(request.QueryCollections, queryPrompt, request.CollectionRetrievals, request.MaxDistance, request.EmbeddingFilters);
             }
 
             var baseIntruction = string.IsNullOrEmpty(request.SystemMessage) ? "" : request.SystemMessage.Trim();
@@ -117,7 +118,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
 {getFileRagStringResult(collectionQueries)}";
 
-            var chatRequest = _mapper.Map<RagPromptRequest, SimplePromptRequest>(request);
+            var chatRequest = _mapper.Map<RagCommandRequest, SimpleCommandRequest>(request);
 
             chatRequest.SystemMessage = systemMessage;
 
@@ -140,12 +141,11 @@ namespace DotnetLlamaSharp.Services.Prompting
             };
         }
 
-        public async Task<RagPrompt> SimpleSmartQuery(SmartQueryRequestDEP request)
+        public async Task<RagPrompt> SimpleSmartQuery(SimpleSmartQueryRequest request)
         {
-            var userIntent = await _ollamaCommands.GuidedPromptCommand<ChatMessage>(
-                new PromptCommandRequest(request.Prompt, request.Settings.Model),
-                guidanceMessage: null,
-                request.Settings);
+            var userIntent = await _factory
+                .GetCommand<UserIntentCommand,ChatMessage>(systemMessage:null, request.Settings)
+                .Prompt(new PromptCommandRequest(request.Prompt));
 
             var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
 
@@ -158,7 +158,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var isRelatedIntent = await _ollamaCommands.ScoredBool(intentEvaluationPrompt, evaluationInstruction, request.IsGuidanceAppend, request.Settings);
 
-            var ragReq = _mapper.Map<SimpleCommandRequest, RagPromptRequest>(request);
+            var ragReq = _mapper.Map<SimpleCommandRequest, RagCommandRequest>(request);
 
             if (isRelatedIntent.Answer && isRelatedIntent.Score >= request.IntentConfidenceThreshold)
             {
@@ -188,10 +188,68 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             ragReq.SystemMessage = request.SystemMessage;
 
-            return await SimpleRagQuery(ragReq, _mapper.Map<SmartQueryRequestDEP, SmartRagSettings>(request));
+            return await SimpleRagQuery(ragReq, _mapper.Map<SimpleSmartQueryRequest, SmartRagSettings>(request));
         }
 
-        public async Task<ChatPrompt> RagChatPrompt(RagChatRequest request)
+        public async Task<ChainResult> SmartRagChain(SimpleCommandRequest request)
+            => await LameChain
+                .StartWith(new StepInstruction(
+                    _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
+                    new StepSettings(new PromptCommandRequest(request.Prompt)),
+                    feedFwd: "Use the generated User Intent to guide you in your task"),
+                    request.Settings, //Default Settings for all the chains
+                    finalSysMessage: "", // There is no need to fill this since there is no user final message required
+                    chainIntent: "")
+                .StashIf(new StepInstruction(
+                    _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
+                        systemMessage: $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below"),
+                    new StepSettings(new PromptCommandRequest(""))
+                        .WithDataBoost("AVAILABLE COLLECTIONS:", await getChromaCollectionChoices(withChatCollections: false)),
+                    feedFwd: "Use this data as a reliable source to answer the user"),
+                    trueBranch: LameChain.SubChainWith<StashedStep>(
+                        new StepInstruction(
+                            _factory.GetSourceable<RagExpansionCommand>(),
+                            new StepSettings(new RagExpansionRequest(expansions: 1, request.Prompt))
+                        ),
+                        false, // TODO: less ugly way of doing this (configure stash)
+                        true
+                     )
+                    .ExposeThisStep(out var ragExpansion)
+                    .Stash(new StepInstruction(
+                        _factory.GetSourceable<QueryAugmentationCommand>(),
+                        new StepSettings(new RagExpansionRequest(expansions: 3, request.Prompt, withFewShot: true, 2))),
+                        out var queryAugmentId,
+                        isGreedy: true,
+                        isIsolated: true)
+                    .Stash(new StepInstruction(
+                        _factory.GetEmbeddedSourceable<SmartQuerySourceable>(
+                            _chromaService.SimilaritySearch,
+                            llamaGuidance: "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."
+                        ), // appended to Core Message (default | db)
+                        new StepSettings(
+                            new SmartQueryRequest(
+                                request.Prompt,
+                                collectionChoices: await getChromaCollectionChoices(withChatCollections: false),
+                                maxChoices: 1,
+                                resultsPerChoice: 3,
+                                guidanceMessage: string.Empty, // this is overwritten by prev_ctx so leave it empty
+                                dimensions: 512,
+                                model: "nomic-embed-text",
+                                filters: null),
+                            withFullContext: false,
+                            withPrevSchema: false
+                            ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step
+                        ), //Chroma metadata filters 
+                        out var smartQueryId)
+                    .ChainFeedsFrom([ragExpansion.GetRunnerId, queryAugmentId])
+                    .ForwardFirstType<StashedStep>()
+                 )
+                .Then(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
+                      new StepSettings(new PromptCommandRequest(request.Prompt)))
+                .ChainFeedsFrom([smartQueryId])
+                .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
+
+        public async Task<ChatPrompt> RagChatPrompt(RagChatCommandRequest request)
         {
             if (string.IsNullOrEmpty(request.Prompt))
                 throw new BadHttpRequestException("No prompt found. Type something to start chatting");
@@ -301,7 +359,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             string? ragData = null;
             if (request.QueryCollections.Any())
-                ragData = await QueryCollections(request.Prompt, request.QueryCollections, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
+                ragData = await QueryCollections(request.Prompt, request.QueryCollections, request.CollectionRetrievals, request.MaxDistance, request.EmbeddingFilters);
 
             systemMessage.Content = systemMessage.Content.Replace("[[-RETRIEVED_DATA-]]", string.IsNullOrEmpty(ragData) ? "(Nothing relevant...)" : ragData);
 
@@ -315,7 +373,7 @@ namespace DotnetLlamaSharp.Services.Prompting
             if (request.ChatHistory.Last().Role == ChatRole.User.ToString())
                 request.ChatHistory = request.ChatHistory.SkipLast(1).ToList();
 
-            var response = await _chatService.ChatPrompt(_mapper.Map<RagChatRequest, ChatPromptRequest>(request));
+            var response = await _chatService.ChatPrompt(_mapper.Map<RagChatCommandRequest, CommandChatRequest>(request));
 
             currentChunk.AppendMessage(ChatRole.Assistant.ToString(), response.Output);
 
@@ -336,10 +394,10 @@ namespace DotnetLlamaSharp.Services.Prompting
             return response;
         }
 
-        public async Task<Dictionary<string, ChromaQuery>> QueryCollections(List<string> names, string text, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
+        public async Task<Dictionary<string, ChromaQuery>> QueryCollections(List<string> names, string text, int resultsNumber, double? maxDistance, Dictionary<string, object> filters)
         {
-            if (minDistance == 0)
-                minDistance = null;
+            if (maxDistance == 0)
+                maxDistance = null;
 
             var results = new Dictionary<string, ChromaQuery>();
             ChromaQuery queryResult = null;
@@ -348,8 +406,8 @@ namespace DotnetLlamaSharp.Services.Prompting
                 //TODO: Add chat sessions & handle CHAT_INIT false (returns 0 embeddings for chunks without the tag
                 queryResult = await _chromaService.QueryCollection(name, text, resultsNumber, filters);
 
-                if (minDistance != null)
-                    queryResult.Chunks = queryResult.Chunks.Where(chunk => chunk.Distance <= minDistance).ToList();
+                if (maxDistance != null)
+                    queryResult.Chunks = queryResult.Chunks.Where(chunk => chunk.Distance <= maxDistance).ToList();
 
                 results.Add(name, queryResult);
             }
@@ -357,9 +415,10 @@ namespace DotnetLlamaSharp.Services.Prompting
             return results;
         }
 
-        public async Task<string> QueryCollections(string text, List<string> names, int resultsNumber, double? minDistance, Dictionary<string, object> filters)
-            => getFileRagStringResult(await QueryCollections(names, text, resultsNumber, minDistance, filters));
+        public async Task<string> QueryCollections(string text, List<string> names, int resultsNumber, double? maxDistance, Dictionary<string, object> filters)
+            => getFileRagStringResult(await QueryCollections(names, text, resultsNumber, maxDistance, filters));
 
+        // RagChat chunks processor
         private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatsCollection collection, List<ChatMessage> overlaps, bool isSessionInit = false)
         {
             var embeddings = await _embeddingsService.GenerateEmbeddings(currentChunk.EmbeddedText(collection.AgentName, collection.UserName), collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
@@ -415,7 +474,8 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return nextChunk;
         }
-
+        
+        // Smart Rag chain helper methods
         private string getFileRagStringResult(Dictionary<string, ChromaQuery> collectionQueries)
         {
             var sb = new StringBuilder().Append("### RETRIEVED DATA:\n");
@@ -435,98 +495,9 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return sb.ToString().Trim();
         }
-
-        public async Task<RagPrompt> ScoredBinaryQuestion(RagPromptRequest request)
-        {
-            return null;
-            //var systemMessage = $"{request.SystemMessage.Trim()}";
-            //ChromaQuery chromaQuery = null;
-            //var collectionQueries = new Dictionary<string, List<ChromaQueryChunk>>();
-
-            //if (request.QueryCollections.Count > 0)
-            //{
-            //    collectionQueries = await QueryCollections(request.QueryCollections, request.Prompt, request.CollectionRetrievals, request.MinDistance, request.EmbeddingFilters);
-            //    systemMessage += $"{getFileRagStringResult(collectionQueries)}";
-            //}
-
-            //request.SystemMessage = systemMessage;
-
-            //var response = await _chatService.BooleanQuestion(_mapper.Map<RagPromptRequest, SimplePromptRequest>(request));
-
-            //return new RagPrompt
-            //{
-            //    Model = response.Model,
-            //    EmbeddingModel = chromaQuery != null ? chromaQuery.EmbeddingModel : null,
-            //    Input = request.Prompt,
-            //    Output = response.Output,
-            //    IncludedChunks = collectionQueries.SelectMany(kvp => kvp.Value).ToList(),
-            //    ChatHistory = response.ChatHistory,
-            //    InputEmbedding = chromaQuery != null ? chromaQuery.QueryEmbedding : null
-            //};
-        }
-
-        public async Task<ChainResult> SmartRagChain(SimpleCommandRequest request)
-            => await LameChain
-                .StartWith(new StepInstruction(
-                    _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
-                    new StepSettings(new PromptCommandRequest(request.Prompt)),
-                    feedFwd: "Use the generated User Intent to guide you in your task"),
-                    request.Settings, //Default Settings for all the chains
-                    finalSysMessage: "", // There is no need to fill this since there is no user final message required
-                    chainIntent: "")
-                .StashIf(new StepInstruction(
-                    _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
-                        systemMessage: $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below"),
-                    new StepSettings(new PromptCommandRequest(""))
-                        .WithDataBoost("AVAILABLE COLLECTIONS:", await getChromaCollectionChoices(withChatCollections: false)),
-                    feedFwd: "Use this data as a reliable source to answer the user"),
-                    trueBranch: LameChain.SubChainWith<StashedStep>(
-                        new StepInstruction(
-                            _factory.GetSourceable<RagExpansionCommand>(),
-                            new StepSettings(new RagExpansionRequest(expansions: 1, request.Prompt))
-                        ),
-                        false, // TODO: less ugly way of doing this (configure stash)
-                        true
-                     )
-                    .ExposeThisStep(out var ragExpansion)
-                    .Stash(new StepInstruction(
-                        _factory.GetSourceable<QueryAugmentationCommand>(),
-                        new StepSettings(new RagExpansionRequest(expansions: 3, request.Prompt, withFewShot: true, 2))),
-                        out var queryAugmentId,
-                        isGreedy: true,
-                        isIsolated: true)
-                    .Stash(new StepInstruction(
-                        _factory.GetEmbeddedSourceable<SmartQuerySourceable>(
-                            _chromaService.SimilaritySearch, 
-                            llamaGuidance: "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."
-                        ), // appended to Core Message (default | db)
-                        new StepSettings(
-                            new SmartQueryRequest(
-                                request.Prompt,
-                                collectionChoices: await getChromaCollectionChoices(withChatCollections: false),
-                                maxChoices: 1,
-                                resultsPerChoice: 3,
-                                guidanceMessage: string.Empty, // this is overwritten by prev_ctx so leave it empty
-                                dimensions: 512,
-                                model: "nomic-embed-text",
-                                filters: null),
-                            withFullContext: false,
-                            withPrevSchema: false
-                            ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step
-                        ), //Chroma metadata filters 
-                        out var smartQueryId)
-                    .ChainFeedsFrom([ragExpansion.GetRunnerId, queryAugmentId])
-                    .ForwardFirstType<StashedStep>()
-                 )
-                .Then(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
-                      new StepSettings(new PromptCommandRequest(request.Prompt)))
-                .ChainFeedsFrom([smartQueryId])
-                .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
-
         private async Task<List<string>> getChromaCollectionChoices(bool withChatCollections = false)
         {
             var formattedChoices = new List<string>();
-
 
             var collections = await _chromaService.GetAllFileCollections();
 
@@ -541,7 +512,8 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return formattedChoices;
         }
-
+        
+        // Simple Smart Rag helper methods
         private async Task<string> getFileCollectionsRagText(string itemSplitMark = null)
         {
             var sb = new StringBuilder();
@@ -552,7 +524,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return sb.ToString().Trim();
         }
-
+        
         private async Task<string> getChatCollectionsRagText()
         {
             var sb = new StringBuilder();

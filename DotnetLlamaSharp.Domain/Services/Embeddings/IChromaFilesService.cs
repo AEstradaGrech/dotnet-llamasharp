@@ -1,5 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
-using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Chroma;
 
 namespace DotnetLlamaSharp.Domain.Services.Embeddings
 {

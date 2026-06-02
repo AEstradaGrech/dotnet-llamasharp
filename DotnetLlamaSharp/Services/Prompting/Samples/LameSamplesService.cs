@@ -629,7 +629,7 @@ Note if the user is making references to past conversations with you or events o
         /// <typeparam name="TResult"></typeparam>
         /// <param name="request"></param>
         /// <returns></returns>
-        public async Task<ChatMessage> GuidedPromptCommand(SimplePromptRequest request)
+        public async Task<ChatMessage> GuidedPromptCommand(SimpleCommandRequest request)
         {
             // You can use the request system message as a part of the core message of the system instruction and pass nothing in the command request to guide the LLM
             // Compose / add context information the way you need depending on the process you are developing
@@ -679,7 +679,7 @@ Note if the user is making references to past conversations with you or events o
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public async Task<ChatMessage> DbPromptCommand(SimplePromptRequest request)
+        public async Task<ChatMessage> DbPromptCommand(SimpleCommandRequest request)
         {
             var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: "", messageName: "", _chromaService.GetSystemInstruction, null, request.Settings);
 
@@ -696,7 +696,7 @@ Note if the user is making references to past conversations with you or events o
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public async Task<ChatMessage> DbPromptCommandDefaultCompatible(SimplePromptRequest request)
+        public async Task<ChatMessage> DbPromptCommandDefaultCompatible(SimpleCommandRequest request)
         {
             //This will force the command to look for a default hardcoded message instead of trying to get the instruction from DB. In case there is not a default message, it can work with the 'command guidance' and the 'request guidance' messages
             var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: null, messageName: null, retrieverLambda: null, guidanceMessage: null /*Use this to append system message info to the core message*/, settings: request.Settings);

@@ -33,9 +33,9 @@ namespace DotnetLlamaSharp.Services.Prompting
         private readonly RequestOptions _settings;
         private readonly ILogger<OllamaSharpService> _logger;
 
-        public OllamaSharpService(IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger)
+        public OllamaSharpService(IPromptCommandsFactory factory, IOptions<RequestOptions> settings, ILogger<OllamaSharpService> logger)
         {
-  
+            _promptsFactory = factory ?? throw new ArgumentNullException($"{nameof(IPromptCommandsFactory)}");
             _settings = settings.Value ?? new RequestOptions();
             _logger = logger;
            
@@ -44,7 +44,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         }
 
         // call to '/api/generate' endpoint for single Q&A inference
-        public async Task<ChatPrompt> SimplePrompt(SimplePromptRequest request)
+        public async Task<ChatPrompt> SimplePrompt(SimpleCommandRequest request)
         {
             if (string.IsNullOrEmpty(request.SystemMessage))
                 request.SystemMessage = "You are a helpful assistant";
@@ -58,11 +58,11 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             var response = await command.Prompt(new PromptCommandRequest { Model = request.Settings.Model, Prompt = request.Prompt });
 
-            return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = messages };
+            return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = messages, Timestamp = DateTime.Now };
         }
 
         // call to '/api/chat' endpoint to handle user-assistant chat turns
-        public async Task<ChatPrompt> ChatPrompt(ChatPromptRequest request, bool bWithSysmsgUpdate)
+        public async Task<ChatPrompt> ChatPrompt(CommandChatRequest request, bool bWithSysmsgUpdate)
         {
             var sb = new System.Text.StringBuilder();
 
@@ -72,7 +72,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             request.ChatHistory.Add(new ChatMessage(response.Role.ToString(), response.Content));
 
-            return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory };
+            return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory, Timestamp = DateTime.Now };
         }
 
         public async Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request)

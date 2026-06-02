@@ -1,7 +1,7 @@
 ﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs.Attributes;
 
-namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
+namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting.LameChain
 {
     [OllamaJsonOutput("Representation of a game character with pyschological profile for NPC dialogue generation", 
         Description = @"This schema captures the essential traits, personality facets, and demographic info needed 
@@ -11,7 +11,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Prompting
     [OllamaJsonRequirement("- Traits (3-5) should be concrete, observable characteristics")]
     [OllamaJsonRequirement("- Personalities (3-5) should represent emotional/psychological archetypes")]
     [OllamaJsonRequirement("- Age should be specific enough to inform voice and perspectiver")]
-    public class GameCharacterResponse : StructuredOutput
+    public class GameCharacter : StructuredOutput
     {
         [OllamaJsonProperty(Title = "Description", PromptDescription = "Character's primary function in game world (2-5 words, max 50 chars).")]
         [OllamaJsonHint("This determines available interactions, dialogue tone, and behavioral constraints.")]

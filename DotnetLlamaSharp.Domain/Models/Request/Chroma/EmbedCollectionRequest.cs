@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace DotnetLlamaSharp.Domain.Models.Request
+namespace DotnetLlamaSharp.Domain.Models.Request.Chroma
 {
     public class EmbedCollectionRequest : CreateCollectionRequest
     {

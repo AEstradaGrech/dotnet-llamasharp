@@ -10,6 +10,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
@@ -34,7 +35,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/simple/prompt")]
         public async Task<IActionResult> SimplePrompt([FromBody]SimplePromptRequestDto request)
         {
-            var response = await _ollamaService.SimplePrompt(_mapper.Map<SimplePromptRequestDto, SimplePromptRequest>(request));
+            var response = await _ollamaService.SimplePrompt(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
 
             if (response != null)
                 return Ok(response);
@@ -78,20 +79,9 @@ namespace DotnetLlamaSharp.Controllers
         }
 
         [HttpPost("/chat/prompt")]
-        public async Task<IActionResult> PostChatPrompt([FromBody] ChatPromptRequestDto request)
+        public async Task<IActionResult> PostChatPrompt([FromBody] ChatPromptRequestDto request, [FromQuery] bool withSystemMessage)
         {
-            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.ChatPrompt(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request)));
-
-            if (response != null)
-                return Ok(response);
-
-            return StatusCode((int)HttpStatusCode.InternalServerError);
-        }
-
-        [HttpPost("/guided/chat/prompt")]
-        public async Task<IActionResult> GuidedChatPrompt([FromBody] ChatPromptRequestDto request)
-        {
-            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.ChatPrompt(_mapper.Map<ChatPromptRequestDto, ChatPromptRequest>(request), bWithSysmsgUpdate: true));
+            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ollamaService.ChatPrompt(_mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request), withSystemMessage));
 
             if (response != null)
                 return Ok(response);
@@ -102,7 +92,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/rag/qa/prompt")]
         public async Task<IActionResult> SimpleRagPrompt([FromBody] RagPromptRequestDto request)
         {
-            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleRagQuery(_mapper.Map<RagPromptRequestDto, RagPromptRequest>(request)));
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleRagQuery(_mapper.Map<RagPromptRequestDto, RagCommandRequest>(request)));
 
             if (response != null)
                 return Ok(response);
@@ -113,7 +103,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/rag/chat/prompt")]
         public async Task<IActionResult> RagChatPrompt([FromBody] RagChatRequestDto request)
         {
-            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.RagChatPrompt(_mapper.Map<RagChatRequestDto, RagChatRequest>(request)));
+            var response = _mapper.Map<ChatPrompt, ChatPromptResponseDto>(await _ragService.RagChatPrompt(_mapper.Map<RagChatRequestDto, RagChatCommandRequest>(request)));
 
             if (response != null)
                 return Ok(response);
@@ -124,7 +114,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/rag/qa/smart/prompt")]
         public async Task<IActionResult> SimpleSmartPrompt([FromBody] SmartQueryRequestDto request)
         {
-            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SmartQueryRequestDto, SmartQueryRequestDEP>(request)));
+            var response = _mapper.Map<RagPrompt, RagPromptResponseDto>(await _ragService.SimpleSmartQuery(_mapper.Map<SmartQueryRequestDto, SimpleSmartQueryRequest>(request)));
 
             if (response != null)
                 return Ok(response);
