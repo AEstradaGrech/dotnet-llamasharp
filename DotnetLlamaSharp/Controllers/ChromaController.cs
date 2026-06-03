@@ -18,6 +18,7 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = nameof(ChromaController))]
     public class ChromaController(IChromaService service, IDocumentLoader<PdfLoaderService> docLoader, IMapper mapper) : ControllerBase
     {
         private readonly IChromaService _service = service;
@@ -103,10 +104,6 @@ namespace DotnetLlamaSharp.Controllers
         [HttpGet("/documents/load/{docName}/page/{index}/size/{batchSize}")]
         public async Task<IActionResult> LoadDocumentPages(string docName, int index, int batchSize)
             => Ok(_mapper.Map<IEnumerable<DocumentPage>, IEnumerable<DocumentPageDto>>(await _loader.LoadPages(docName, index, batchSize)));
-
-        [HttpGet("/serialized/text")]
-        public async Task<IActionResult> GetJsonString()
-            => Ok(JsonSerializer.Serialize(@""));
     }
 
 }

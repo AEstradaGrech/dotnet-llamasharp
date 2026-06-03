@@ -67,8 +67,12 @@ try
             .ToList())
         .AddCorsPolicy()
         .AddSwaggerGen(cfg => {
-            cfg.SwaggerDoc("ApiManagement", new OpenApiInfo { Title = "ApiManagement", Version = "v1" });
-            cfg.SwaggerDoc("Prompting", new OpenApiInfo { Title = "Prompting", Version = "v1" });
+            cfg.SwaggerDoc("LameSamplesController", new OpenApiInfo { Title = "Lame Samples", Version = "v1" });
+            cfg.SwaggerDoc("LangSearchController", new OpenApiInfo { Title = "Lang Search", Version = "v1" });
+            cfg.SwaggerDoc("PromptingController", new OpenApiInfo { Title = "Prompting", Version = "v1" });
+            cfg.SwaggerDoc("ChromaController", new OpenApiInfo { Title = "Chroma", Version = "v1" });
+            cfg.SwaggerDoc("ApiManagementController", new OpenApiInfo { Title = "ApiManagement", Version = "v1" });
+            cfg.SwaggerDoc("EmbeddingsController", new OpenApiInfo { Title = "Embeddings", Version = "v1" });
         });
     
     var app = builder.Build();
@@ -78,8 +82,12 @@ try
 
     app.UseSwagger()
        .UseSwaggerUI(cfg => {
-        cfg.SwaggerEndpoint("/swagger/ApiManagement/swagger.json", "ApiManagement");
-        cfg.SwaggerEndpoint("/swagger/Prompting/swagger.json", "Prompting");
+           cfg.SwaggerEndpoint("/swagger/ChromaController/swagger.json", "Chroma");
+           cfg.SwaggerEndpoint("/swagger/PromptingController/swagger.json", "Prompting");
+           cfg.SwaggerEndpoint("/swagger/LameSamplesController/swagger.json", "Lame Samples");
+           cfg.SwaggerEndpoint("/swagger/LangSearchController/swagger.json", "Lang Search");
+           cfg.SwaggerEndpoint("/swagger/ApiManagementController/swagger.json", "ApiManagement");
+           cfg.SwaggerEndpoint("/swagger/EmbeddingsController/swagger.json", "Embeddings");
        });
     
     app.UseHttpsRedirection()

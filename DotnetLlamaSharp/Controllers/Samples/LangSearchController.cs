@@ -9,6 +9,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = nameof(LangSearchController))]
     public class LangSearchController(IMapper mapper, ILangSearchService langSearchService) : ControllerBase
     {
         private readonly ILangSearchService _langSearchService = langSearchService;

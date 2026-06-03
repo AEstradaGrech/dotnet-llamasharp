@@ -11,6 +11,7 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = nameof(EmbeddingsController))]
     public class EmbeddingsController(IEmbeddingsService service, IOllamaSharpService ollama, IMapper mapper) : ControllerBase
     {
         private readonly IEmbeddingsService _service = service;

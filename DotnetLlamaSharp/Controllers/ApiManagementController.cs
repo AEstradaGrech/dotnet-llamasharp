@@ -11,6 +11,7 @@ namespace DotnetLlamaSharp.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [ApiExplorerSettings(GroupName = nameof(ApiManagementController))]
     public class ApiManagementController(IOllamaApiClient ollama, IOptions<ApiSettings> apiSettings, IOptions<OllamaSettings> ollamaSettings, ILogger<ApiManagementController> logger) : ControllerBase
     {
         private readonly IOllamaApiClient _ollama = ollama;

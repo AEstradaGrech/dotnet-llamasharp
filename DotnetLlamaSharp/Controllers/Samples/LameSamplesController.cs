@@ -18,6 +18,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = nameof(LameSamplesController))]
     public class LameSamplesController(IMapper mapper, ILameSamplesService samplesService, IPromptCommandsService commandsService) : ControllerBase
     {
         private readonly IMapper _mapper = mapper;

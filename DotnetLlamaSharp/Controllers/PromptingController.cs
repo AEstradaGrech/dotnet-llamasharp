@@ -24,6 +24,7 @@ namespace DotnetLlamaSharp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = nameof(PromptingController))]
     public class PromptingController(IOllamaSharpService ollamaService, IOllamaStreamService streamService, IRagService ragService, IMapper mapper, ILogger<PromptingController> logger) : ControllerBase
     {
         private readonly IOllamaSharpService _ollamaService = ollamaService;
