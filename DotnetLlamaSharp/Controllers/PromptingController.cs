@@ -16,6 +16,7 @@ using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Response;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq.Expressions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Schema;
@@ -43,6 +44,7 @@ namespace DotnetLlamaSharp.Controllers
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
+
 
         [HttpPost("/simple/prompt/stream")]
         public async Task SimplePromptStream([FromBody] ChatPromptRequestDto request)

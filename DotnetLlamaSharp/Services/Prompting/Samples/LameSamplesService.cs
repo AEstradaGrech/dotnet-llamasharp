@@ -6,9 +6,11 @@ using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
@@ -17,6 +19,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step.ValueObjects;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Steps;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
@@ -34,14 +37,38 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
         private readonly IPromptCommandsFactory _factory;
         private readonly ILangSearchService _langSearch;
         private readonly IChromaService _chromaService;
-
-        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService)
+        private readonly ILogger<LameSamplesService> _logger;
+        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService, ILogger<LameSamplesService> logger)
         {
             _factory = promptsFactory;
             _langSearch = langSearch;
             _chromaService = chromaService;
+            _logger = logger;
         }
+        public Action<Guid, string, LogLevel> GetBroadcastAction()
+            => new Action<Guid,string, LogLevel>(broadcaster);
+        
+        private void broadcaster(Guid runnerId, string message, LogLevel level)
+        {
+            string logMessage = $"{level} >> CHAIN STEP {runnerId} >> {message}";
 
+            switch (level)
+            {
+                case (LogLevel.Error):
+                case (LogLevel.Critical):
+                    _logger.LogError(logMessage);
+                    break;
+                case (LogLevel.Warning):
+                    _logger.LogWarning(logMessage);
+                    break;
+                case (LogLevel.Information):
+                case (LogLevel.Debug):
+                case (LogLevel.Trace):
+                default:
+                    _logger.LogInformation(logMessage);
+                    break;
+            }
+        }
         public async Task<ChatPrompt> TemplatedExamples(ChainedPrompt request)
         {
             // Example of simple sequencing. This is just a demonstration of how a simple action like a Question-Answer chatbot
@@ -371,6 +398,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     defaultSettings: request.Settings, // default settings for all the chain. If you don't pass individual settings to a command, this will be used instead
                     finalSysMessage: "Ensure you output your answer in old castillian spanish style, but be consistent with the provided context data.", //This is just to demonstrate how to use the Final Message. Let's say you are doing some tests about how should the character speak in the game
                     chainIntent: "Create game character") // This will be passed to all steps so every LLM request has a clear idea of what is the final task / overall goal
+                .UseBroadcaster(GetBroadcastAction())
                 .ExposeThisId(out var startId)
                 .Then(
                     _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
@@ -520,6 +548,7 @@ Note if the user is making references to past conversations with you or events o
                     request.Settings, //Default Settings for all the chains
                     finalSysMessage: "", // There is no need to fill this since there is no user final message required
                     chainIntent: "")
+                .UseBroadcaster(GetBroadcastAction())
                 .StashIf(new StepInstruction(
                     _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
                         systemMessage: $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below"),
@@ -577,6 +606,28 @@ Note if the user is making references to past conversations with you or events o
                 .ChainFeedsFrom([smartQueryId]) // retrieve the output of the SmartQueryCommand that made the query with the expansions
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
+        // Chat
+        // ES CONCEPTUAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        public async Task<ChainResult> ConditionalChatChain(CommandChatRequest request)
+            => await LameChain
+                .StartWith(new StepInstruction(
+                    _factory.GetCommand<MessagePromptCommand, ChatMessage>(systemMessage: request.SystemMessage, request.Settings),
+                    new StepSettings(new ChatCommandRequest(request.Prompt, [])),
+                    feedFwd: ""),
+                    request.Settings, //Default Settings for all the chains
+                    finalSysMessage: "", // There is no need to fill this since there is no user final message required
+                    chainIntent: "")
+                .UseBroadcaster(GetBroadcastAction())
+                .ThenIf(() => request.ChatHistory.Count > 1, // If algo... 
+                    new StepSettings(),
+                    LameChain.SubChainWith<StoredStep<ChatMessage>>(
+                        new StepInstruction(
+                            _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage), // guardo algo. Para hacer un chat mas complejo hay que hacer comandos propios para guardar chat history, no solo un msj. PREV TIENE QUE PASAR LIST<CHATMSG> || ChatChunkCollection
+                            new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName:"Dummy-K"))
+                        )
+                    )
+                )
+                .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
         private async Task<List<string>> getChromaCollectionChoices(bool withChatCollections = false)
         {
             var formattedChoices = new List<string>();

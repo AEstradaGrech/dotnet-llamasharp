@@ -24,27 +24,6 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<ChatMessage, Message>()
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => new ChatRole(src.Role)));
 
-            CreateMap<SimplePromptRequest, SimpleCommandRequest>().ReverseMap();
-
-
-            CreateMap<SimplePromptRequestDto, SimpleCommandRequest>()
-                .ForMember(dest => dest.Settings, opt => opt.MapFrom(src => src.Settings));
-
-            CreateMap<SimpleCommandRequest, RagCommandRequest>()
-               .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
-                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
-                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
-                .ForMember(dest => dest.MaxDistance, opt => opt.Ignore());
-
-            CreateMap<SimpleCommandRequest, RagCommandRequest>()
-                .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
-                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
-                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
-                .ForMember(dest => dest.MaxDistance, opt => opt.Ignore());
-
-            CreateMap<RagCommandRequest, SimpleCommandRequest>();
-            CreateMap<RagChatRequestDto, RagChatCommandRequest>();
-
             CreateMap<ScoredStringChoice, ScoredChoiceDto>()
                 .ForMember(dest => dest.Choice, opt => opt.MapFrom(src => src.Selected))
                 .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => src.Score))

@@ -69,38 +69,24 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<SmartQueryRequestDto, SimpleSmartQueryRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
-            
-           
-            // Domain to Domain models
-            //CreateMap<SimplePromptRequest, RagCommandRequest>()
-            //    .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
-            //    .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
-            //    .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
-            //    .ForMember(dest => dest.MinDistance, opt => opt.Ignore());
-            //CreateMap<RagCommandRequest, SimplePromptRequest>();
 
+            CreateMap<SimplePromptRequestDto, SimpleCommandRequest>()
+             .ForMember(dest => dest.Settings, opt => opt.MapFrom(src => src.Settings));
 
-            //CreateMap<SmartQueryRequest, SimplePromptRequest>()
-            //    .ForMember(dest => dest.Settings, opt => opt.MapFrom(opt => opt.Settings));
+            CreateMap<ChatPromptRequestDto, CommandChatRequest>();
             
-            //CreateMap<SmartQueryRequestDEP, SimpleCommandRequest>()
-            //    .ForMember(dest => dest.Settings, opt => opt.MapFrom(opt => opt.Settings));
+            CreateMap<RagChatRequestDto, RagChatCommandRequest>();
 
             CreateMap<SimpleSmartQueryRequest, SmartRagSettings>()
                 .ForMember(dest => dest.MaxExamples, opt => opt.MapFrom(src => src.MaxFewShotExamples))
                 .ForMember(dest => dest.WithQueryAugmentation, opt => opt.Ignore())
                 .ForMember(dest => dest.WithRagExpansion, opt => opt.Ignore());
 
+            CreateMap<SimplePromptRequest, SimpleCommandRequest>().ReverseMap();
+
             CreateMap<SimpleCommandRequest, CommandChatRequest>()
                 .ForMember(dest => dest.ChatHistory, opt => opt.Ignore());
             CreateMap<CommandChatRequest, SimpleCommandRequest>();
-
-            CreateMap<SimpleCommandRequest, RagCommandRequest>()
-                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
-                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
-                .ForMember(dest => dest.MaxDistance, opt => opt.Ignore())
-                .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore());
-            CreateMap<RagCommandRequest, SimpleCommandRequest>();
 
             CreateMap<CommandChatRequest, RagCommandRequest>()
                 .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
@@ -114,6 +100,13 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore());
+            
+            CreateMap<SimpleCommandRequest, RagCommandRequest>()
+               .ForMember(dest => dest.CollectionRetrievals, opt => opt.Ignore())
+                .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
+                .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
+                .ForMember(dest => dest.MaxDistance, opt => opt.Ignore());
+            CreateMap<RagCommandRequest, SimpleCommandRequest>();
 
             // LangSearch models
             CreateMap<LangSearchWebSearchDto, WebSearchRequest>()

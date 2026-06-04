@@ -3,6 +3,7 @@ using Dotnet.Chroma.Repositories.Models.Interfaces;
 using Dotnet.Chroma.Repositories.Models.Metadata;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
@@ -181,9 +182,11 @@ namespace DotnetLlamaSharp.Services.Embeddings
         public async Task<List<ChromaChatsCollection>> GetAllChatCollections()
             => await _chatsRepo.CollectionsOf((int)EChunkType.CHAT);
 
-        public Task<string> GetSystemInstruction(string collectionName, string messageName)
+        public async Task<string> GetSystemInstruction(string collectionName, string messageName)
         {
-            throw new NotImplementedException();
+            var msg = await _sysRepo.GetByName(collectionName, messageName);
+
+            return msg != null ? msg.Text : string.Empty;
         }
 
         public async Task<List<ILameSearchResult>> SimilaritySearch(string name, ReadOnlyMemory<float> query, int resultsNumber, Dictionary<string, object> filters)
@@ -191,6 +194,13 @@ namespace DotnetLlamaSharp.Services.Embeddings
             var results = await _repo.QueryCollection(name, query, resultsNumber, filters);
 
             return results.Select(chunk => new VectorSearchResult(chunk.Text, (float)chunk.Distance, name, chunk.DefaultMetadata.DOCUMENT_NAME) as ILameSearchResult).ToList();
+        }
+
+        public async Task<ChatMessage> OnNewChatMessage(ChatMessage message, string chatCollection)
+        {
+            _logger.LogWarning($"{nameof(OnNewChatMessage)} >> DB PROCESS MOCK >> {message.Role}: {message.Content}");
+            
+            return message;
         }
     }
 }

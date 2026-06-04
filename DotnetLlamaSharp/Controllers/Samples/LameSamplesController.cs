@@ -49,8 +49,18 @@ namespace DotnetLlamaSharp.Controllers.Samples
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
+        [HttpPost("/chains/example/chat")]
+        public async Task<IActionResult> ConditionalChatChain([FromBody] ChatPromptRequestDto request)
+        {
+            var response = await _samplesService.ConditionalChatChain(_mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request));
 
-        /// <summary>
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        /// <summary>Get
         /// Pass a list of choices and ask the LLM to select the best value. Use the system message to guide the LLM if necessary
         /// </summary>
         /// <param name="dto"></param>

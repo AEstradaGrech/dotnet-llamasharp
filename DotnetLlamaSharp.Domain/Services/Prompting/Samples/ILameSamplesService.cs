@@ -16,7 +16,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
     {
         Task<ChainResult> ParallelChainExample(ChainedPrompt request);
         Task<ChainResult> SmartRagChain(SimpleCommandRequest request);
-
+        Task<ChainResult> ConditionalChatChain(CommandChatRequest request);
         Task<ChatMessage> GuidedPromptCommand(SimpleCommandRequest request);
         Task<ChatMessage> DbPromptCommand(SimpleCommandRequest request);
         Task<ChatMessage> DbPromptCommandDefaultCompatible(SimpleCommandRequest request);

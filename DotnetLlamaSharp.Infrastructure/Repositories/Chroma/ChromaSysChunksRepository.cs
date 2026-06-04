@@ -105,7 +105,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 
             return message.Text;
         }
-
+        
         public Task<ChromaSysChunk> UpdateMessage(string collectionName, string name, string message, ReadOnlyMemory<float> embedding)
         {
             throw new NotImplementedException();

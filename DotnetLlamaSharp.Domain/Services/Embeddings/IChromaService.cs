@@ -1,5 +1,6 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request.Chroma;
@@ -35,5 +36,8 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         // Todos los conectores implementan esto (o el usuario se hace un servicio en su api con esta firma)
         // Task<ICommandEmbeddings> QueryCollection(string collection, ReadOnlyMemory<float> queryEmbeddings, int results, Dictionary<string, object> filters);
         Task<string> GetSystemInstruction(string collectionName, string messageName);
+
+        // Storeable
+        Task<ChatMessage> OnNewChatMessage(ChatMessage message, string chatCollection);
     }
 }
