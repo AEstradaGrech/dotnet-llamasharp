@@ -39,5 +39,6 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
 
         // Storeable
         Task<ChatMessage> OnNewChatMessage(ChatMessage message, string chatCollection);
+        //Task<TStored> StoreLameOutput<TStored>(string collectionName) where TStored : class;
     }
 }

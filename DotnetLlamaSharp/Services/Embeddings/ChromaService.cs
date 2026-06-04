@@ -196,10 +196,40 @@ namespace DotnetLlamaSharp.Services.Embeddings
             return results.Select(chunk => new VectorSearchResult(chunk.Text, (float)chunk.Distance, name, chunk.DefaultMetadata.DOCUMENT_NAME) as ILameSearchResult).ToList();
         }
 
+        /// <summary>
+        /// This is just part of the StoredStep / StoreableCommands example. Here you would add you logic to store the
+        /// chats according to your needs
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="chatCollection"></param>
+        /// <returns></returns>
         public async Task<ChatMessage> OnNewChatMessage(ChatMessage message, string chatCollection)
         {
             _logger.LogWarning($"{nameof(OnNewChatMessage)} >> DB PROCESS MOCK >> {message.Role}: {message.Content}");
-            
+
+            var isExistingChat = await _chatsRepo.CollectionExists(chatCollection);
+
+            if(!isExistingChat)
+            {
+                var split = chatCollection.Split("-");
+                if (split.Length < 2)
+                    throw new InvalidDataException($"{nameof(OnNewChatMessage)} >> COLLECTION NAME FORMAT IS NOT CORRECT. IT SHOULD BE <agentName-userName>");
+
+                var col = await _chatsRepo.InitCollection(split[0], split[1]);
+
+                if (col == null)
+                    throw new ArgumentNullException($"{nameof(OnNewChatMessage)} >> AN ERROR HAS OCCURED WHILE CREATING THE COLLECTION");
+            }
+        
+            var embeddedText = await _embeddingsService.GenerateEmbeddings(message.Content);
+
+            var chunk = await _chatsRepo.DefaultChunk(chatCollection);
+
+            chunk.Text = message.Content;
+            chunk.Embedding = embeddedText.GeneratedEmbeddings.First().Vector;
+
+            await _chatsRepo.InsertChunk(chatCollection, chunk);
+
             return message;
         }
     }

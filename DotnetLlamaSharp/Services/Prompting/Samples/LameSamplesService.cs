@@ -27,6 +27,8 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
+using DotnetLlamaSharp.Infrastructure.Settings;
+using Microsoft.Extensions.Options;
 using OllamaSharp.Models.Chat;
 using System.Text;
 
@@ -38,11 +40,13 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
         private readonly ILangSearchService _langSearch;
         private readonly IChromaService _chromaService;
         private readonly ILogger<LameSamplesService> _logger;
-        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService, ILogger<LameSamplesService> logger)
+        private readonly ApiSettings _apiSettings;
+        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService, IOptions<ApiSettings> apiSettings, ILogger<LameSamplesService> logger)
         {
             _factory = promptsFactory;
             _langSearch = langSearch;
             _chromaService = chromaService;
+            _apiSettings = apiSettings.Value;
             _logger = logger;
         }
         public Action<Guid, string, LogLevel> GetBroadcastAction()
@@ -606,28 +610,91 @@ Note if the user is making references to past conversations with you or events o
                 .ChainFeedsFrom([smartQueryId]) // retrieve the output of the SmartQueryCommand that made the query with the expansions
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
-        // Chat
-        // ES CONCEPTUAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         public async Task<ChainResult> ConditionalChatChain(CommandChatRequest request)
             => await LameChain
                 .StartWith(new StepInstruction(
                     _factory.GetCommand<MessagePromptCommand, ChatMessage>(systemMessage: request.SystemMessage, request.Settings),
-                    new StepSettings(new ChatCommandRequest(request.Prompt, [])),
-                    feedFwd: ""),
+                    new StepSettings(new ChatCommandRequest(request.Prompt, request.ChatHistory)), //Note: this is an example. There is no processing or validation of the chat history, it is supposed to be passed in the right order with the system message at first etc
+                    feedFwd: request.ChatHistory.Count > 0 && request.ChatHistory.First().Role == ChatRole.System.ToString() ? 
+                        $"This is the original system instruction for the chat. Use it to understand the context of the conversation and the any provided assistant instructions:\n{request.ChatHistory.First().Content}" : string.Empty),
                     request.Settings, //Default Settings for all the chains
                     finalSysMessage: "", // There is no need to fill this since there is no user final message required
-                    chainIntent: "")
+                    chainIntent: "Enhanced chat") // Add the chainIntent if you want to provide some global context to all steps / LLM requests.
                 .UseBroadcaster(GetBroadcastAction())
                 .ThenIf(() => request.ChatHistory.Count > 1, // If algo... 
                     new StepSettings(),
                     LameChain.SubChainWith<StoredStep<ChatMessage>>(
                         new StepInstruction(
                             _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage), // guardo algo. Para hacer un chat mas complejo hay que hacer comandos propios para guardar chat history, no solo un msj. PREV TIENE QUE PASAR LIST<CHATMSG> || ChatChunkCollection
-                            new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName:"Dummy-K"))
+                            new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName: $"ChatBot-{_apiSettings.DefaultUserName}"))
                         )
+                    ).Then(_factory.GetMessagePromptCommand("Your task is to generate an alternate version of the provided assistant response"), 
+                        new StepSettings(
+                            new PromptCommandRequest("Generate an alternate version of the provided assistant response without changing the core of the original content", isGuidanceAppend: true)), 
+                            feedFwdInstruction:"Use this content  as a source to generate yours. Do not chat with the user, just return a version of the lyrics as instructed."
+                        )
+                     .Then(_factory.GetMessagePromptCommand("Your task is to translate the previous output to pirate english"), 
+                        new StepSettings(new PromptCommandRequest("Translate the previous output to pirate english without changing the core of the original content", isGuidanceAppend: true)))
+                     .ForwardFirstType<StoredStep<ChatMessage>>()
+                )
+                .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
+
+        public async Task<ChainResult> ConditionalChainExamples(CommandChatRequest request)
+        {           
+            // Use Store<TPrevious> to retrieve and store the result of a step using a lambda with your required logic
+            // Here I'm saving the new generated assistant message in Chroma
+            var result = await LameChain
+                .StartWith(new StepInstruction(
+                    _factory.GetCommand<MessagePromptCommand, ChatMessage>(systemMessage: request.SystemMessage, request.Settings),
+                    new StepSettings(new ChatCommandRequest(request.Prompt, request.ChatHistory))),
+                    request.Settings //Default Settings for all the chains
+                )
+                .UseBroadcaster(GetBroadcastAction()) // Add an Action with the right signature to process the broadcasted chain events (logging them or storing them)
+                .Store<ChatMessage>(
+                    new StepInstruction(
+                        _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage), // guardo algo. Para hacer un chat mas complejo hay que hacer comandos propios para guardar chat history, no solo un msj. PREV TIENE QUE PASAR LIST<CHATMSG> || ChatChunkCollection
+                        new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName: $"ChatBot-{_apiSettings.DefaultUserName}"))
                     )
                 )
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
+
+            // Store a ChainStep result IF a boolean Expression is met (no LLM routing)
+            result = await LameChain
+               .StartWith(new StepInstruction(
+                   _factory.GetCommand<MessagePromptCommand, ChatMessage>(systemMessage: request.SystemMessage, request.Settings),
+                   new StepSettings(new ChatCommandRequest(request.Prompt, request.ChatHistory))),
+                   request.Settings, //Default Settings for all the chains
+                   finalSysMessage: "" // There is no need to fill neither this or the chainIntent since there is no user final message required
+                )
+               .UseBroadcaster(GetBroadcastAction())
+               .ThenIf<StoredStep<ChatMessage>>(() => request.ChatHistory.Count > 10, // This is a simple example of how to use the Expressions to pass conditions that will be evaluated on chain execution to run the 'True' branch or not 
+                   new StepSettings(), // this are the conditional step settings. You probably won't need them in unless you are using the LLM in the lambda your are passing. You can use them to feed data as usual and use it in the step logic as needed
+                   new StepInstruction(
+                       _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage), // In this example I'm just storing a chat conversation using Chroma without too much processing. Pass a function adapted to the chain model and your logic here
+                       new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName: $"ChatBot-{_apiSettings.DefaultUserName}"))
+                   )
+               )
+               .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
+
+            // This is a more explicit / readable usage of the Fluent API to work with StoredSteps.
+            result = await LameChain
+                .StartWith(new StepInstruction(
+                    _factory.GetCommand<MessagePromptCommand, ChatMessage>(systemMessage: request.SystemMessage, request.Settings),
+                    new StepSettings(new ChatCommandRequest(request.Prompt, request.ChatHistory))),
+                    request.Settings)
+                .UseBroadcaster(GetBroadcastAction())
+                .StoreIf<ChatMessage>(() => request.ChatHistory.Count > 10,
+                    new StepSettings(),
+                    new StepInstruction(
+                        _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage),
+                        new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName: $"ChatBot-{_apiSettings.DefaultUserName}"))
+                    )
+                )
+                .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
+
+            return result;
+        }
+
         private async Task<List<string>> getChromaCollectionChoices(bool withChatCollections = false)
         {
             var formattedChoices = new List<string>();

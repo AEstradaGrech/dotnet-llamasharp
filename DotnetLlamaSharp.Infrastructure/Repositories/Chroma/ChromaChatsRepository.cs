@@ -43,7 +43,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             return null;
         }
 
-        public async Task<ChromaChatsCollection> InitCollection(string agentName, string userName, string? embeddingModel, int? dimensions, string? description = null)
+        public async Task<ChromaChatsCollection> InitCollection(string agentName, string userName, string? embeddingModel = null, int? dimensions = null, string? description = null)
         {
             var validatedName = $"{getValidConstructorNameTag(agentName, isUser: false)}-{getValidConstructorNameTag(userName, isUser: true)}";
 
