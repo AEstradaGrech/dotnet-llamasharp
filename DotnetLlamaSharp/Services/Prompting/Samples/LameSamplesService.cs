@@ -363,7 +363,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             {
                 Model = request.Settings.Model ?? "app-default",
                 Input = request.Prompt,
-                Output = chainResult.Json,
+                Output = $"{chainResult.Result}",
                 ChatHistory = [chainResult.SystemInstructions, new ChatMessage(ChatRole.User.ToString(), request.Prompt), chainResult.Message]
             };
         }
@@ -428,18 +428,23 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                             new StepSettings(new StringChoiceRequest(
                                 choices: ["Germaners", "Comuneros", "Tercio Imperial" ],
                                 message: "Select a game faction for the character", // Enforce the instruction if you get hallucinations with dumb models or maybe the context adds too much noise and misleads the LLM
+                                isGuidanceAppend: true, // I'm using the command default instruction so I set this param to true to append the chain context 
                                 model: null))
                                 .FeedFrom(startId), // This is just to demonstrate an individual feed in a splitted step from a previous process different than the previous
-                            feedFwd: "Use this game related data to ground your profile to the game lore"), // Help the next worker focus on its task when you start to add too much content to the LLM's context window (for example joining three outputs, like in the next step)
+                            feedFwd: "# IMPORTANT: the provided faction name MUST be the character faction"), // Help the next worker focus on its task when you start to add too much content to the LLM's context window (for example joining three outputs, like in the next step)
                         new StepInstruction(
                             _factory.GetEnumChoiceCommand<EGameLocations>( // You can use other type of AtomicValue command for quick selections based on your app code. values  Here I'm using an AtomicValue command that selects an app enum value based on the instruction.
                                 guidanceMessage: "Select a game location from the available list for the game character you are creating. Use the provided data to select the location that fits best with the profile."),
-                            new StepSettings(new PromptCommandRequest(message: "Select a game location for the character as stated in your instruction")),
-                            feedFwd: "Use the selected location as the character's place of birth"), // Every parallel branch can add its own Feed Forward message to help the next step to understand / use the output of its instruction
+                            new StepSettings(
+                                new PromptCommandRequest(
+                                    message: "Select a game location for the character as stated in your instruction", 
+                                    isGuidanceAppend: true)
+                                ),
+                            feedFwd: "# IMPORTANT: THIS IS THE CHARACTER PLACE OF ORIGIN. Use the selected location as the character's place of birth"), // Every parallel branch can add its own Feed Forward message to help the next step to understand / use the output of its instruction
                         new StepInstruction(
                             _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                                instruction:"Generate a background story or profile for the character you are creating. Use the provided data to figure out what kind of character my ne appropriate in terms of style, mood, vibe..."),
-                            settings: new StepSettings(new PromptCommandRequest(message: ""))
+                                instruction:"Generate a background story or profile for the character you are creating. Use the provided data to figure out what kind of character might appropriate in terms of style, mood, vibe..."),
+                            settings: new StepSettings(new PromptCommandRequest(message: "", isGuidanceAppend : true))
                                 .WithDataBoost( // Steps can be boosted by feeding the output of previous steps but also by adding external string sources.
                                 // In this case I'm adding semi-random data to the bias the generated character base profile towards specific styles.
                                 // But ideally you would add here well processed sources (in this example it could be real human-made character concepts made by the game studio artists
@@ -455,8 +460,8 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                         instruction: "Review the content so far and combine it with the provided sources in a very short story plot (around 50 words)",
                         settings: request.Settings),
-                    pipedSettings: new StepSettings(new PromptCommandRequest(message: "")),
-                    pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile.")
+                    pipedSettings: new StepSettings(new PromptCommandRequest(message: "", isGuidanceAppend: true)),
+                    pipeFeedFwd: "Review all the sources and get a consistent overview of the expected character profile. #IMPORTANT: use the character 'Faction' and game place of origin to generate your profile")
                 // You can add rebujitos of data to influence the outputs of each branch of the pipe if you need.
                 // In this case I'm simulating more style biasing without filtering it, but ideally you would add business content that you would like to apply on each branch.
                 // In this example, it could be more content produced by the game studio staff (like scene scripts or even quest scripts, the idea
@@ -468,8 +473,11 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 .Join(
                     new StepInstruction(
                         _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                            instruction: "Generate a full character profile (400-500 words) with the provided data. Include a background story, a psychological profile and a 'usual routines' section"),
-                        settings: new StepSettings(new PromptCommandRequest(message: "Generate the requested character profile")) // Enforce the instruction (specially if you are using small local models and the context window is relatively filled)
+                            instruction: "Generate a full character profile (400-500 words) with the provided data. Review the character Faction and place of origin, you MUST include those in your profile. Include a background story, a psychological profile and a 'usual routines' section"),
+                        settings: new StepSettings(
+                            new PromptCommandRequest(
+                                message: "Generate the requested character profile",
+                                isGuidanceAppend: true)) // Enforce the instruction (specially if you are using small local models and the context window is relatively filled)
                             .FeedFrom(thenId) // Feed the name and age to ensure it uses the one generated at this step (dumb models may have alucinated with the background story and the rebujito feeds)
                     )
                 )
@@ -635,7 +643,7 @@ Note if the user is making references to past conversations with you or events o
                         )
                      .Then(_factory.GetMessagePromptCommand("Your task is to translate the previous output to pirate english"), 
                         new StepSettings(new PromptCommandRequest("Translate the previous output to pirate english without changing the core of the original content", isGuidanceAppend: true)))
-                     .ForwardFirstType<StoredStep<ChatMessage>>()
+                     .ForwardFirstType<StoredStep<ChatMessage>>() // AWeirdSummmaryAboutWTF
                 )
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 

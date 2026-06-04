@@ -1,4 +1,4 @@
-﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
@@ -15,8 +15,6 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
         // Chat Turns with rag
         Task<ChatPrompt> RagChatPrompt(RagChatCommandRequest request);
 
-
-        //------------------------------------- 
         Task<Dictionary<string, ChromaQuery>> QueryCollections(List<string> names, string text, int resultsNumber, double? maxDistance, Dictionary<string, object> filters);
         Task<string> QueryCollections(string text, List<string> names, int resultsNumber, double? maxDistance, Dictionary<string, object> filters);
     }
