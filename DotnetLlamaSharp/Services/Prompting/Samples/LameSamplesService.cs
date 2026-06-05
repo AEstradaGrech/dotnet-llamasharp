@@ -659,7 +659,7 @@ Note if the user is making references to past conversations with you or events o
                 .UseBroadcaster(GetBroadcastAction()) // Add an Action with the right signature to process the broadcasted chain events (logging them or storing them)
                 .Store<ChatMessage>(
                     new StepInstruction(
-                        _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage), // guardo algo. Para hacer un chat mas complejo hay que hacer comandos propios para guardar chat history, no solo un msj. PREV TIENE QUE PASAR LIST<CHATMSG> || ChatChunkCollection
+                        _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage),
                         new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName: $"ChatBot-{_apiSettings.DefaultUserName}"))
                     )
                 )

@@ -160,23 +160,24 @@ namespace DotnetLlamaSharp.Controllers.Samples
              *  and more specific details about the case your dealing with in the user prompt)
              *  
          
-             {
-              "prompt": "Select any month corresponding summer season present in the choices list (according to the North Hemisphere seasons). ### IMPORTANT: If there are no matching chices in the list, return an empty list",
+            {
+              "prompt": "Select any month corresponding to the summer season from the available choices list (according to the North Hemisphere seasons). ### IMPORTANT: If there are no matching choices in the list, return an empty list",
               "systemMessage": "Select a range of choices (if any) according to the maximum requested choices and the actual available choices given the user query",
               "settings": {
                 "model": "hermes3",
                 "maxTokens": 666,
-                "contextLength": 6000,
-                "temperature": 0.0,
-                "topP": 0.1,
+                "contextLength": 6600,
+                "temperature": 0.7,
+                "topP": 0.9,
                 "topK": 10,
-                "miroStat": 0,
-                "miroStatEta": 0.4,
-                "miroStatTau": 5.0,
-                "repeatPenalty": 1.1,
+                "miroStat": 1,
+                "miroStatEta": 0.2,
+                "miroStatTau": 4.0,
+                "repeatPenalty": 1.3,
                 "repeatLastN": -1,
                 "commandValidations": 1,
                 "validationType": 1,
+                "validatorModel": "gemma3:27b",
                 "useDefaultCommandMessage": true
               },
               "choices": [
