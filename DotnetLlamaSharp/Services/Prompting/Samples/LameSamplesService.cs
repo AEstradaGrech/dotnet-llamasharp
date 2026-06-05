@@ -628,7 +628,7 @@ Note if the user is making references to past conversations with you or events o
                     finalSysMessage: "", // There is no need to fill this since there is no user final message required
                     chainIntent: "Enhanced chat") // Add the chainIntent if you want to provide some global context to all steps / LLM requests.
                 .UseBroadcaster(GetBroadcastAction())
-                .ThenIf(() => request.ChatHistory.Count > 10, 
+                .ThenIf(() => request.ChatHistory.Count > 2, // This is just a dummy condition to trigger the subchain (and the subchain is just a dummy chain to sequentiate a few example steps) 
                     new StepSettings(),
                     LameChain.SubChainWith<StoredStep<ChatMessage>>(
                         new StepInstruction(
