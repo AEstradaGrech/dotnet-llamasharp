@@ -2,16 +2,21 @@
 using Dotnet.Chroma.Repositories.Models.Enums;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Request.Chains.Samples;
+using DotnetLlamaSharp.Models.Request.Chroma;
 using DotnetLlamaSharp.Models.Request.Embeddings;
 using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Response.Chroma;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -20,10 +25,11 @@ namespace DotnetLlamaSharp.Controllers.Samples
     [Route("api/[controller]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = nameof(LameSamplesController))]
-    public class LameSamplesController(IMapper mapper, ILameSamplesService samplesService, IPromptCommandsService commandsService) : ControllerBase
+    public class LameSamplesController(IMapper mapper, ILameSamplesService samplesService, IPromptCommandsService commandsService, IChromaService chromaService) : ControllerBase
     {
         private readonly IMapper _mapper = mapper;
         private readonly ILameSamplesService _samplesService = samplesService;
+        private readonly IChromaService _chromaService = chromaService;
 
         // Inject the CommandsService in your app to execute commands or use the IPromptCommandsFactory if you prefer it
         private readonly IPromptCommandsService _ollamaCommands = commandsService;
@@ -392,5 +398,70 @@ namespace DotnetLlamaSharp.Controllers.Samples
         [HttpPost("/commands/vector-search")]
         public async Task<IActionResult> VectorSearchCommand([FromBody] VectorSearchRequestDto dto)
             => Ok(await _samplesService.VectorSearchCommand(_mapper.Map<VectorSearchRequestDto, VectorSearchRequest>(dto)));
+
+
+        /// <summary>
+        /// This example demonstrates how to use storeable commands to store any type of model.
+        /// In this case, a SystemChunk
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("/commands/storeable/{collection}")]
+        public async Task<IActionResult> StoreableCommand([FromBody] CreateSysChunkRequestDto dto, string collection)
+        {
+            // get a storeable of the type you want to store. Pass the lambda with the storing logic
+            var command = _samplesService.StoreableCommand<ChromaSysChunk>(_chromaService.StoreSysChunk);
+
+            // map dto to domain model and pass it in the storeable request along with the db collection name
+            var commandRequest = new StoreableCommandRequest<ChromaSysChunk>(collectionName: collection, _mapper.Map<CreateSysChunkRequestDto, ChromaSysChunk>(dto));
+
+            // Execute the command and get the result of the 'StoreSysChunk' lambda, which should be the persisted model with its DB ID
+            var response = await command.Prompt(commandRequest);
+
+            // Note: In case you are wondering 'why create a command to trigger some logic that is stored in a service. Why not use the service directly?'
+            // then note that the command is intended to be used inside a chain that might recieve any type of output from the previous step, and it is supposed
+            // to provide a generic way to store data (meaning, it should work with any type od DB), doing it this way you can use lambda functions to store
+            // data in Chroma, Mongo, SQL, or whatever DB since the storing logic is completely left up to you (the base command basically triggers the stored lambda).
+            // Also, the chain works with a command system and the only way to 'insert' business logic in it is encapsulating it in a dedicated command. Anyways,
+            // if you are building your app just with Lame Commands, the idea is that you extend the 'StoreableCommand<TStored' to adapt it o your needs and you would
+            // encapsulate all your storing logic in your extended command, then using a simple _repository method with this signature 'Task<TStored> mth(TStored inserted, string index)' as command lambda
+            // something like:
+            //      'ChromaSysChunkStoreable : Storeable<ChromaSysChunk> <- already typed to your business models
+            //      [...]
+            //      public ChromaSysChunkStoreable(repositoryLambda) {} <- pass the Create method of your IRepository<TStored> (in this case would be a IChromaRepo<TCol, TStored>)
+            //      override async Task<ChromaSysChunk> Prompt(request)
+            //      {
+            //          // validate stuff, check whatever, insert something in related table... your business logic here
+            //
+            //          return await base.Prompt(request) <- call the base class that simply triggers the lambda
+            //      }
+
+            if (response != null)
+                return Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(response));
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/db-prompt")]
+        public async Task<IActionResult> DbPromptCommand([FromBody] SimplePromptRequestDto request)
+        {
+            var response = await _samplesService.DbPromptCommand(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/db-prompt/default-mode")]
+        public async Task<IActionResult> DbPromptCommandDefaultMode([FromBody] SimplePromptRequestDto request)
+        {
+            var response = await _samplesService.DbPromptCommandDefaultMode(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
     }
 }

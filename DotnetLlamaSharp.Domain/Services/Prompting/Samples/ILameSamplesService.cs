@@ -1,8 +1,11 @@
-﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
+using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
 
 namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
@@ -18,8 +21,9 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<ChainResult> ConditionalChatChain(CommandChatRequest request);
         Task<ChatMessage> GuidedPromptCommand(SimpleCommandRequest request);
         Task<ChatMessage> DbPromptCommand(SimpleCommandRequest request);
-        Task<ChatMessage> DbPromptCommandDefaultCompatible(SimpleCommandRequest request);
+        Task<ChatMessage> DbPromptCommandDefaultMode(SimpleCommandRequest request);
         Task<List<ILameSearchResult>> VectorSearchCommand(VectorSearchRequest request);
         Task<List<string>> VectorSearchSourceable(VectorSearchRequest request);
+        StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class;
     }
 }

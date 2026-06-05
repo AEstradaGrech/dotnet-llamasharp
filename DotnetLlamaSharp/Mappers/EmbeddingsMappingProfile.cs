@@ -36,7 +36,7 @@ namespace DotnetLlamaSharp.Mappers
             
             CreateMap<ChromaSysChunk, ChromaSysChunkDto>()
                 .IncludeBase<ChromaChunk, ChromaChunkDto>()
-                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => $"{src.Name}-{src.GetMeta<SysChunkMetadata>().VERSION}"));
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => string.IsNullOrEmpty(src.GetMeta<SysChunkMetadata>().VERSION) ? src.Name : $"{src.Name}-{src.GetMeta<SysChunkMetadata>().VERSION}"));
 
             CreateMap<ChromaChatChunk, ChromaChatChunkDto>()
                 .ForMember(dest => dest.IsCurrent, opt => opt.MapFrom(src => src.GetMeta<ChatChunkMetadata>().CURRENT));

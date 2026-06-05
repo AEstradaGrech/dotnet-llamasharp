@@ -19,7 +19,6 @@ using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step.ValueObjects;
-using Dotnet.OllamaSharp.LameChain.SDK.Models.Steps;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
@@ -629,11 +628,11 @@ Note if the user is making references to past conversations with you or events o
                     finalSysMessage: "", // There is no need to fill this since there is no user final message required
                     chainIntent: "Enhanced chat") // Add the chainIntent if you want to provide some global context to all steps / LLM requests.
                 .UseBroadcaster(GetBroadcastAction())
-                .ThenIf(() => request.ChatHistory.Count > 1, // If algo... 
+                .ThenIf(() => request.ChatHistory.Count > 10, 
                     new StepSettings(),
                     LameChain.SubChainWith<StoredStep<ChatMessage>>(
                         new StepInstruction(
-                            _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage), // guardo algo. Para hacer un chat mas complejo hay que hacer comandos propios para guardar chat history, no solo un msj. PREV TIENE QUE PASAR LIST<CHATMSG> || ChatChunkCollection
+                            _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage), 
                             new StepSettings(new StoreableCommandRequest<ChatMessage>(collectionName: $"ChatBot-{_apiSettings.DefaultUserName}"))
                         )
                     ).Then(_factory.GetMessagePromptCommand("Your task is to generate an alternate version of the provided assistant response"), 
@@ -643,7 +642,7 @@ Note if the user is making references to past conversations with you or events o
                         )
                      .Then(_factory.GetMessagePromptCommand("Your task is to translate the previous output to pirate english"), 
                         new StepSettings(new PromptCommandRequest("Translate the previous output to pirate english without changing the core of the original content", isGuidanceAppend: true)))
-                     .ForwardFirstType<StoredStep<ChatMessage>>() // AWeirdSummmaryAboutWTF
+                     .ForwardFirstType<StoredStep<ChatMessage>>()
                 )
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
@@ -801,13 +800,23 @@ Note if the user is making references to past conversations with you or events o
         /// This are Commands that read their Core Message from a database using a lambda function that must accept two string input parms and return a Task<string> that will retrieve 
         /// the system message on chain execution
         /// 
-        /// The example demonstrates how you can use an AtomicValue command with a custom DB instruction that gives you better results 
+        /// The example demonstrates how you can use an AtomicValue command with a custom DB instruction that gives you better results. 
+        /// If you have a Chroma container running, try this one for example:
+        /// 
+        /// {
+        ///   "name": "scored-bool-resp",
+        ///   "message": "Analyze the user request and reason a coherent response that can be sythetised in a boolean response to indicate 'YES' or 'NO' according to the provided JSON schema. Also, add a 'confidence score' to your response ranging from 0.0 to 1.0 indicating how sure are you about your response, and a 'justification' comment of 15-20 words long explaining your answer. Output your response according to the provided JSON schema.",
+        ///   "tag": "tag is for chroma filtering",
+        ///   "version": "v1"
+        /// }
+        /// (Go to the SwaggerUI Chroma specification and use 'collection/system/{name}/create' to create a SysChunksCollection, then pass the JSON in the 'collection/system/{name}/message/create' body)
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
         public async Task<ChatMessage> DbPromptCommand(SimpleCommandRequest request)
         {
-            var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: "", messageName: "", _chromaService.GetSystemInstruction, null, request.Settings);
+            //GetSystemInstruction will always return the last version / insert of the passed message name
+            var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: "system-messages", messageName: "scored-bool-resp", _chromaService.GetSystemInstruction, null, request.Settings);
 
             var response = await command.Prompt(new PromptCommandRequest(request.Prompt, request.SystemMessage, request.IsGuidanceAppend, request.Settings.Model));
 
@@ -822,7 +831,7 @@ Note if the user is making references to past conversations with you or events o
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public async Task<ChatMessage> DbPromptCommandDefaultCompatible(SimpleCommandRequest request)
+        public async Task<ChatMessage> DbPromptCommandDefaultMode(SimpleCommandRequest request)
         {
             //This will force the command to look for a default hardcoded message instead of trying to get the instruction from DB. In case there is not a default message, it can work with the 'command guidance' and the 'request guidance' messages
             var command = _factory.GetDbCommand<ScoredBoolCommand, ScoredBoolResponse>(source: null, messageName: null, retrieverLambda: null, guidanceMessage: null /*Use this to append system message info to the core message*/, settings: request.Settings);
@@ -832,6 +841,7 @@ Note if the user is making references to past conversations with you or events o
             return new ChatMessage(ChatRole.Assistant.ToString(), $"{(response.Answer ? "YES" : "NO")}: {response.Justification}");
         }
 
-
+        public StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class
+            => _factory.GetStoreable<TStored>(storingLambda);
     }
 }

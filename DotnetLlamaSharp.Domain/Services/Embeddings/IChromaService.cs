@@ -38,6 +38,7 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<string> GetSystemInstruction(string collectionName, string messageName);
 
         // Storeable
+        Task<ChromaSysChunk> StoreSysChunk(ChromaSysChunk chunk, string collectionName);
         Task<ChatMessage> OnNewChatMessage(ChatMessage message, string chatCollection);
         //Task<TStored> StoreLameOutput<TStored>(string collectionName) where TStored : class;
     }

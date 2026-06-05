@@ -183,11 +183,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             => await _chatsRepo.CollectionsOf((int)EChunkType.CHAT);
 
         public async Task<string> GetSystemInstruction(string collectionName, string messageName)
-        {
-            var msg = await _sysRepo.GetByName(collectionName, messageName);
-
-            return msg != null ? msg.Text : string.Empty;
-        }
+            => await _sysRepo.GetSystemMessage(collectionName, messageName);  
 
         public async Task<List<ILameSearchResult>> SimilaritySearch(string name, ReadOnlyMemory<float> query, int resultsNumber, Dictionary<string, object> filters)
         {
@@ -231,6 +227,45 @@ namespace DotnetLlamaSharp.Services.Embeddings
             await _chatsRepo.InsertChunk(chatCollection, chunk);
 
             return message;
+        }
+
+        public async Task<ChromaSysChunk> StoreSysChunk(ChromaSysChunk chunk, string collectionName)
+        {
+            chunk.Name = chunk.Name.Trim();
+            chunk.Text = chunk.Text.Trim();
+
+            if (string.IsNullOrEmpty(collectionName))
+                throw new InvalidDataException($"{nameof(StoreSysChunk)} >> NO COLLECTION NAME PROVIDED");
+
+            if (string.IsNullOrEmpty(chunk.Name))
+                throw new InvalidDataException($"{nameof(StoreSysChunk)} >> NO SYSTEM MESSAGE NAME PRESENT IN CHUNK");
+
+            if (string.IsNullOrEmpty(chunk.Text))
+                throw new InvalidDataException($"{nameof(StoreSysChunk)} >> NO SYSTEM MESSAGE PRESENT IN CHUNK");
+
+            var collection = await _sysRepo.GetCollection(collectionName);
+
+            var newChunk = await _sysRepo.DefaultChunk(collectionName);
+
+            if(await _sysRepo.ExistsMessage(collectionName, chunk.Name, version: null))
+            {
+                var lastMessage = await _sysRepo.GetByName(collectionName, chunk.Name);
+
+                newChunk.AddMetadata(nameof(SysChunkMetadata.VERSION).ToLower(), $"v{int.Parse(lastMessage.GetMeta<SysChunkMetadata>().VERSION.Substring(1)) +1}");
+            }
+            else newChunk.AddMetadata(nameof(SysChunkMetadata.VERSION).ToLower(), "v1");
+
+            var embedding = await _embeddingsService.GenerateEmbeddings(chunk.Name, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+
+            if (!embedding.GeneratedEmbeddings.Any())
+                throw new InvalidDataException($"{nameof(CreateSystemChunksCollection)} >> collection: {collectionName} >> No generated embeddings");
+
+            newChunk.Text = chunk.Text;
+            newChunk.Embedding = embedding.GeneratedEmbeddings.First().Vector;
+            newChunk.AddMetadata(nameof(ChromaMetadata.DOCUMENT_NAME).ToLower(), chunk.Name);
+            newChunk.AddMetadata(nameof(SysChunkMetadata.TAG).ToLower(), chunk.Tag);
+
+            return await _sysRepo.InsertChunk(collectionName, newChunk);
         }
     }
 }

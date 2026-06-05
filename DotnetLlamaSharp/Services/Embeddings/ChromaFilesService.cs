@@ -140,14 +140,16 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 request.Metadata.Add(nameof(FileChunkMetadata.TOPICS).ToLower(), fileTopics);
 
                 int batchSize = 50;
-                var chunkBatches = (int)Math.Ceiling((decimal)(newChunks.Count() / batchSize));
+                var chunkBatches = Math.Ceiling((decimal)((float)newChunks.Count() / (float)batchSize));
+
+                var fl = (float)newChunks.Count() / (float)batchSize;
 
                 _logger.LogInformation($"Inserting {chunkBatches} batches >> BATCH SIZE {batchSize}");
-                
+
                 int inserted = 0;
-                for (int i = 0; i <= chunkBatches; i++)
+                for (int i = 0; i < chunkBatches; i++)
                 {
-                    _logger.LogInformation($"Setting batch {i + 1} of {chunkBatches + 1}");
+                    _logger.LogInformation($"Setting batch {i + 1} of {chunkBatches}");
 
                     var batch = newChunks.Skip(i * batchSize).Take(batchSize).ToList();
 
@@ -155,7 +157,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                     _logger.LogInformation($"Inserted {inserted} elements of {newChunks.Count()}");
                 }
-
 
                 setCollectionMetadata(nameof(FileCollectionMetadata.FILES).ToLower(), $"{request.FileName}.{request.FileExtension}", $"{collection.GetMeta<FileCollectionMetadata>().FILES}", request);
                 setCollectionMetadata(nameof(FileCollectionMetadata.CHUNK_SIZES).ToLower(), $"{request.ChunkSize}", $"{collection.GetMeta<FileCollectionMetadata>().CHUNK_SIZES}", request);

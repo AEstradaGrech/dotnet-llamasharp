@@ -1,4 +1,5 @@
-﻿using Dotnet.Chroma.Repositories;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
+using Dotnet.Chroma.Repositories;
 using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Metadata;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
@@ -8,6 +9,7 @@ using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Connectors.Chroma;
+using System.Text;
 
 
 namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
@@ -99,16 +101,12 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             }
         }
 
+       
         public async Task<string> GetSystemMessage(string collectionName, string name)
         {
             var message = await GetByName(collectionName, name);
 
             return message.Text;
-        }
-        
-        public Task<ChromaSysChunk> UpdateMessage(string collectionName, string name, string message, ReadOnlyMemory<float> embedding)
-        {
-            throw new NotImplementedException();
         }
     }
 }

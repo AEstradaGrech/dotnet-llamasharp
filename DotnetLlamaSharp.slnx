@@ -3,6 +3,7 @@
     <File Path=".editorconfig" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="../dotnet-chroma-repositories/Dotnet.Chroma.Repositories/Dotnet.Chroma.Repositories.csproj" />
   <Project Path="../dotnet-lamechain-sdk/Dotnet.OllamaSharp.LameChain.SDK/Dotnet.OllamaSharp.LameChain.SDK.csproj" />
   <Project Path="../dotnet-langsearch-sdk/Dotnet.LangSearch.SDK/Dotnet.LangSearch.SDK.csproj" />
   <Project Path="DotnetLlamaSharp.Domain/DotnetLlamaSharp.Domain.csproj" />
