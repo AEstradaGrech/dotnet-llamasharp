@@ -192,40 +192,36 @@ namespace DotnetLlamaSharp.Services.Prompting
 
         public async Task<ChainResult> SmartRagChain(SimpleCommandRequest request)
             => await LameChain
-                .StartWith(new StepInstruction(
-                    _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
-                    new StepSettings(new PromptCommandRequest(request.Prompt)),
-                    feedFwd: "Use the generated User Intent to guide you in your task"),
+                .StartWith(new StepSettings(
+                        _factory.GetCommand<UserIntentCommand, ChatMessage>(systemMessage: "", request.Settings),
+                        feedFwd: "Use the generated User Intent to guide you in your task",
+                        request.Prompt),
                     request.Settings, //Default Settings for all the chains
                     finalSysMessage: "", // There is no need to fill this since there is no user final message required
                     chainIntent: "")
-                .StashIf(new StepInstruction(
+                .StashIf(new StepSettings(
                     _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
                         systemMessage: $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below"),
-                    new StepSettings(new PromptCommandRequest(""))
-                        .WithDataBoost("AVAILABLE COLLECTIONS:", await getChromaCollectionChoices(withChatCollections: false)),
-                    feedFwd: "Use this data as a reliable source to answer the user"),
+                        feedFwd: "Use this data as a reliable source to answer the user")
+                    .WithDataBoost("AVAILABLE COLLECTIONS:", await getChromaCollectionChoices(withChatCollections: false)),
                     trueBranch: LameChain.SubChainWith<StashedStep>(
-                        new StepInstruction(
+                        new StashSettings(
                             _factory.GetSourceable<RagExpansionCommand>(),
-                            new StepSettings(new RagExpansionRequest(expansions: 1, request.Prompt))
-                        ),
-                        false, // TODO: less ugly way of doing this (configure stash)
-                        true
+                            new RagExpansionRequest(expansions: 1, request.Prompt),
+                            feedFwd: null,
+                        isGreedy: false, // TODO: less ugly way of doing this (configure stash)
+                        isIsolated: true)
                      )
                     .ExposeThisStep(out var ragExpansion)
-                    .Stash(new StepInstruction(
-                        _factory.GetSourceable<QueryAugmentationCommand>(),
-                        new StepSettings(new RagExpansionRequest(expansions: 3, request.Prompt, withFewShot: true, 2))),
-                        out var queryAugmentId,
-                        isGreedy: true,
-                        isIsolated: true)
-                    .Stash(new StepInstruction(
-                        _factory.GetEmbeddedSourceable<SmartQuerySourceable>(
-                            _chromaService.SimilaritySearch,
-                            llamaGuidance: "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."
-                        ), // appended to Core Message (default | db)
-                        new StepSettings(
+                    .Stash(new StashSettings(
+                            _factory.GetSourceable<QueryAugmentationCommand>(),
+                            new RagExpansionRequest(expansions: 3, request.Prompt, withFewShot: true, 2),
+                            feedFwd: null,
+                            isGreedy: true,
+                            isIsolated: true),
+                        out var queryAugmentId)
+                    .Stash(new StashSettings(
+                        _factory.GetEmbeddedSourceable<SmartQuerySourceable>(_chromaService.SimilaritySearch, llamaGuidance: "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."), // appended to Core Message (default | db)
                             new SmartQueryRequest(
                                 request.Prompt,
                                 collectionChoices: await getChromaCollectionChoices(withChatCollections: false),
@@ -237,14 +233,15 @@ namespace DotnetLlamaSharp.Services.Prompting
                                 filters: null),
                             withFullContext: false,
                             withPrevSchema: false
-                            ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step
-                        ), //Chroma metadata filters 
+                            
+                        ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) as StashSettings, //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step, //Chroma metadata filters 
                         out var smartQueryId)
                     .ChainFeedsFrom([ragExpansion.GetRunnerId, queryAugmentId])
                     .ForwardFirstType<StashedStep>()
                  )
-                .Then(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
-                      new StepSettings(new PromptCommandRequest(request.Prompt)))
+                .Then(new StepSettings(_factory.GetCommand<RagQueryCommand, ChatMessage>(systemMessage: request.SystemMessage),
+                      new PromptCommandRequest(request.Prompt))
+                )
                 .ChainFeedsFrom([smartQueryId])
                 .ThenExecuteAsync(withFinalMessage: false, withReplay: true);
 
