@@ -95,7 +95,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                         if(currentChunkSize + page.Length >= request.ChunkSize)
                         {
                             chunkPages.Add(page);
-                            newChunks.AddRange(phunkPages(chunkPages, request.FileName, request.ChunkSize));
+                            newChunks.AddRange(this.chunkPages(chunkPages, request.FileName, request.ChunkSize));
                             chunkPages.Clear();
                             currentChunkSize = 0;
                         }
@@ -113,11 +113,11 @@ namespace DotnetLlamaSharp.Services.Embeddings
                         {
                             if(currentChunkSize > request.MinTextToChunk)
                             {
-                                newChunks.AddRange(phunkPages(chunkPages, request.FileName, request.ChunkSize));
+                                newChunks.AddRange(this.chunkPages(chunkPages, request.FileName, request.ChunkSize));
                             }
                             else
                             {
-                                var residualChunk = phunkPages(chunkPages, request.FileName, request.ChunkSize).First();
+                                var residualChunk = this.chunkPages(chunkPages, request.FileName, request.ChunkSize).First();
 
                                 newChunks.First().Text = $"{residualChunk.Text}\n\n{newChunks.First().Text}";
                             }
@@ -163,7 +163,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 setCollectionMetadata(nameof(FileCollectionMetadata.CHUNK_OVERLAPS).ToLower(), $"{request.ChunkOverlap}", $"{collection.GetMeta<FileCollectionMetadata>().CHUNK_OVERLAPS}", request);
                 setCollectionMetadata(nameof(FileCollectionMetadata.SKIPPED_PAGES).ToLower(), $"{request.InitialSkip}", $"{collection.GetMeta<FileCollectionMetadata>().SKIPPED_PAGES}", request);
                 setCollectionMetadata(nameof(FileCollectionMetadata.PAGE_CUTOFFS).ToLower(), $"{request.PageCutoff}", $"{collection.GetMeta<FileCollectionMetadata>().PAGE_CUTOFFS}", request);
-                setCollectionMetadata(nameof(FileCollectionMetadata.TOPICS).ToLower(), fileTopics, $"{collection.GetMeta<FileCollectionMetadata>().TOPICS}", request);
+                setCollectionMetadata(nameof(FileCollectionMetadata.TOPICS).ToLower(), fileTopics, $"{collection.GetMeta<FileCollectionMetadata>().TOPICS}", request, allowDuplicates: false);
                 request.Metadata.Add(nameof(FileCollectionMetadata.PAGES).ToLower(), $"{document.Pages.Count}");
 
                 _logger.LogInformation($"Inserted collection: {request.Name} >> Embedded file: {request.FileName}");
@@ -213,9 +213,11 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             return await _repo.InspectCollection(name, ids, includeEmbeddings);
         }
-        private void setCollectionMetadata(string key, string newValue, string currentValue, EmbedCollectionRequest request)
+        private void setCollectionMetadata(string key, string newValue, string currentValue, EmbedCollectionRequest request, bool allowDuplicates = true)
         {
             if (string.IsNullOrEmpty(newValue)) return;
+            
+            if (!allowDuplicates && currentValue.Contains(newValue)) return;
 
             string value = string.IsNullOrEmpty(currentValue.Trim()) ? newValue : $"{currentValue},{newValue}";
 
@@ -223,7 +225,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 request.Metadata[key] = value;
 
             else request.Metadata.Add(key, value);
-
          }
 
         private async Task<int> embeddAndStoreChunks(List<ChromaChunk> chunks, EmbedCollectionRequest request)
@@ -263,7 +264,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         private string getPreviousChunkOverlap(ChromaChunk prevChunk, int overlappedTokens)
         {
-            var text = prevChunk.Text.Replace("\n", "").Replace("\\", "");
+            var text = prevChunk.Text;
             var sentences = text.Split(".").Where(sentence => !string.IsNullOrEmpty(sentence)).ToList();
             if (text.EndsWith("."))
                 sentences[sentences.Count - 1] += ".";
@@ -297,7 +298,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         private string getNextChunkOverlap(ChromaChunk nextChunk, int overlappedTokens)
         {
-            var text = nextChunk.Text.Replace("\n", "").Replace("\\", "");
+            var text = nextChunk.Text;
             var sentences = nextChunk.Text.Split(".").Where(sentence => !string.IsNullOrEmpty(sentence)).ToList();
             var tokens = new List<string>();
             for(int i = 0; i < sentences.Count; i++)
@@ -327,7 +328,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
             tokens.ForEach(token => sb.Append(" ").Append(token));
             return sb.ToString().Trim();
         }
-        private List<ChromaChunk> phunkPages(List<DocumentPage> pages, string docName, int chunkSize)
+        private List<ChromaChunk> chunkPages(List<DocumentPage> pages, string docName, int chunkSize)
         {
             var chunks = new List<ChromaChunk>();
             var pagesIdx = new List<int>();
@@ -347,7 +348,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     var sentences = page.Text.Split(".").ToList();
                     for (int i = 0; i < sentences.Count; i++) 
                     {
-                        var sentence = sentences[i].Trim().Replace("\n", "").Replace("\\", "");
+                        var sentence = sentences[i].Trim();
                         
                         if (string.IsNullOrEmpty(sentence)) continue;
 
@@ -424,8 +425,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 if(!string.IsNullOrEmpty(sentence.Trim()))
                 {
                     sentence.Trim()
-                    .Replace("\n", "")
-                    .Replace("\\", "")
+                    //.Replace("\n", "")
+                    //.Replace("\\", "")
                     .Split(" ")
                     .ToList().ForEach(token => {
                         currentToken = $" {token}";

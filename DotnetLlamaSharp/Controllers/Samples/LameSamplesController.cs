@@ -35,9 +35,20 @@ namespace DotnetLlamaSharp.Controllers.Samples
         private readonly IPromptCommandsService _ollamaCommands = commandsService;
 
         [HttpPost("/chains/example/parallel")]
-        public async Task<IActionResult> ChaiTests([FromBody] ChainedPromptDto request)
+        public async Task<IActionResult> ChainTests([FromBody] ChainedPromptDto request)
         {
             var response = await _samplesService.ParallelChainExample(_mapper.Map<ChainedPromptDto, ChainedPrompt>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/chains/example/parallel/subchains")]
+        public async Task<IActionResult> SubChainTests([FromBody] ChainedPromptDto request)
+        {
+            var response = await _samplesService.ParallelSubChainsExample(_mapper.Map<ChainedPromptDto, ChainedPrompt>(request));
 
             if (response != null)
                 return Ok(response);

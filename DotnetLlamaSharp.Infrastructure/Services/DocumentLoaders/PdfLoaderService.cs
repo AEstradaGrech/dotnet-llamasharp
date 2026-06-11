@@ -25,7 +25,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders
 
             foreach (var page in document.GetPages())
                 if(!string.IsNullOrEmpty(page.Text.Trim()))
-                    pages.Add(new DocumentPage(page.Number, page.Text.Trim()));
+                    pages.Add(new DocumentPage(page.Number, page.Text.Trim().Replace("\n", " ").Replace("\r\n", " ").Replace("\t", " ").Replace("\\", "")));
             
             return Task.FromResult(new Document(fileName, "pdf", document.NumberOfPages, pages));
         }
@@ -47,7 +47,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders
 
             var page = document.GetPage(index);
 
-            return Task.FromResult(new DocumentPage(index, page.Text));
+            return Task.FromResult(new DocumentPage(index, page.Text.Trim().Replace("\n", " ").Replace("\r\n", " ").Replace("\t", " ").Replace("\\", "")));
         }
 
         public override Task<List<DocumentPage>> LoadPages(string fileName, int startIndex, int batchSize)

@@ -485,23 +485,30 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             => await LameChain
                 .StartWith<StashedStep>(
                     new StashSettings(
-                        _factory.GetSourceable<RagExpansionCommand>(),
-                        new RagExpansionRequest(expansions: 1, request.Prompt),
+                        _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch),
+                        new VectorSearchRequest(
+                            index: "game-lore-sources",
+                            query: request.Prompt,
+                            embedder: "nomic-embed-text",
+                            dimensions: 512,
+                            results: 4
+                        ),
+                        feedFwd:"Use this sources to set the style and ambience of your generated character",
                         isGreedy: false,
                         isIsolated: true),
                     defaultSettings: request.Settings, // default settings for all the chain. If you don't pass individual settings to a command, this will be used instead
-                    finalSysMessage: "Ensure you output your answer in old castillian spanish style, but be consistent with the provided context data.", //This is just to demonstrate how to use the Final Message. Let's say you are doing some tests about how should the character speak in the game
+                    finalSysMessage: "Your response must syntetize the provided profile in a descriptive text (around 400 words) presenting the character (like some kind of teaser or spoiler)", //This is just to demonstrate how to use the Final Message. Let's say you are doing some tests about how should the character speak in the game
                     chainIntent: "Create game character")
+                .UseBroadcaster(GetBroadcastAction())
                 .Then(new StepSettings(_factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                         instruction: "Generate a character name and assign it an age (the age might be a specific number or a rough string approximation).", //This should be the 'request.SystemMessage'
                         settings: request.Settings),
                     new PromptCommandRequest(
-                        message: "Generate a character for a game ambiented in Spain in the XVI century", // This should be the 'request.Prompt'
+                        message: string.Empty, // This should be the 'request.Prompt'
                         guidanceMessage: "You are a character concept creator for a videogames company" // bias the output of the first step by assigning it a role that makes it an expert in the topic.
                         )
                     )
                 )
-                .UseBroadcaster(GetBroadcastAction())
                 .ExposeThisId(out var startId)
                 .Then(new StepSettings(
                     _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
@@ -518,44 +525,49 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                             choices: ["Germaners", "Comuneros", "Tercio Imperial" ],
                             message: "Select a game faction for the character", // Enforce the instruction if you get hallucinations with dumb models or maybe the context adds too much noise and misleads the LLM
                             isGuidanceAppend: true, // I'm using the command default instruction so I set this param to true to append the chain context 
-                            model: null), // This is just to demonstrate an individual feed in a splitted step from a previous process different than the previous
-                        feedFwd: "# IMPORTANT: the provided faction name MUST be the character faction").FeedFrom(startId)
+                            model: null))  
+                        .FeedFrom(startId) 
                         )
-                        .Then(new StepSettings(_factory.GetMessagePromptCommand("")))
-                        .Store<ChatMessage>(new StepSettings(_factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage))),
+                    .Then(new StepSettings(_factory.GetMessagePromptCommand("Expand the selected faction with a short description of it (40-50) words. If the faction is based on a real historic faction, then you must be faithful to the historic facts related to the faction history and nature, despite it's ideology or morals"))) //enhance
+                    .Store<ChatMessage>(new StepSettings(
+                        _factory.GetStoreable<ChatMessage>(_chromaService.OnNewChatMessage),
+                        new StoreableCommandRequest<ChatMessage>(collectionName: $"parallel-subchain"),
+                        feedFwd: "# IMPORTANT: the provided faction name MUST be the character faction")
+                    ), //Store result example and pass fwd message
                     LameChain.SubChainWith<StashedStep>(
                         new StashSettings(
-                            _factory.GetSourceable<RagExpansionCommand>(),
+                            _factory.GetSourceable<RagExpansionCommand>(), //expand vector search query
                             new RagExpansionRequest(expansions: 1, request.Prompt),
                             feedFwd: null,
                             isGreedy:false,
                             isIsolated: true))
                     .Stash(new StashSettings(
-                            _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch),
-                            request.Prompt,
-                            feedFwd: null, 
+                            _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch), // style bias docs
+                            new VectorSearchRequest(index:"game-lore-sources", query: request.Prompt, "nomic-embed-text", dimensions: 512, results: 4),
+                            feedFwd: "Use this sources to set the style and ambience of your generated character", 
                             isGreedy: true, 
-                            isIsolated: true),
+                            isIsolated: false,
+                            withFullContext: false), //Use only the content of the previous sourceable result (a rag expansion in this case)
                         out var stashId),
-                    LameChain.SubChainWith<SingleThrowStep>()
-                        .Then(new StepSettings(
+                    LameChain.SubChainWith<SingleThrowStep>(
+                        new StepSettings(
                             _factory.GetEnumChoiceCommand<EGameLocations>( // You can use other type of AtomicValue command for quick selections based on your app code. values  Here I'm using an AtomicValue command that selects an app enum value based on the instruction.
                                 guidanceMessage: "Select a game location from the available list for the game character you are creating. Use the provided data to select the location that fits best with the profile."),
-                                new PromptCommandRequest(
-                                    message: "Select a game location for the character as stated in your instruction",
-                                    isGuidanceAppend: true
-                                ),
-                            feedFwd: "# IMPORTANT: THIS IS THE CHARACTER PLACE OF ORIGIN. Use the selected location as the character's place of birth") // Every parallel branch can add its own Feed Forward message to help the next step to understand / use the output of its instruction
-                        )
-                        //.Then(_factory.GetMessagePromptCommand(""),
-                        //    new StepSettings(new PromptCommandRequest(""))
-                        //)
-                    ],
-                    new StepSettings())
-                .WithRebujito(
-                    await _langSearch.SearchWebTexts(new WebSearchRequest("Revuelta de los Comuneros. Rebelion de las Germanias", results: 3), returnSnippet: false),
-                    guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore. Output your response in always in English despite the source language.", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
-                    feedDose: 100)
+                            new PromptCommandRequest(
+                                message: "Select a game location for the character as stated in your instruction",
+                                isGuidanceAppend: true)
+                        ) // Every parallel branch can add its own Feed Forward message to help the next step to understand / use the output of its instruction)
+                    )
+                    .Then(new StepSettings( // expand selection
+                        _factory.GetMessagePromptCommand( // You can use other type of AtomicValue command for quick selections based on your app code. values  Here I'm using an AtomicValue command that selects an app enum value based on the instruction.
+                        systemMessage: "Expand the selected game location with a short description of it. Review any provided information about the game location or, in case the location is fictional, generate a description that is consistent with the game lore and user intent"),
+                        new PromptCommandRequest(
+                            message: "Describe the selected game location or generate one that fits with the game lore",
+                            isGuidanceAppend: true
+                        ),
+                    feedFwd: "# IMPORTANT: THIS IS THE CHARACTER PLACE OF ORIGIN. Use the selected location as the character's place of birth") // Every parallel branch can add its own Feed Forward message to help the next step to understand / use the output of its instruction
+                )
+                    ])
                 .Join(
                     new StepSettings(
                         _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
@@ -565,6 +577,10 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                                 isGuidanceAppend: true) // Enforce the instruction (specially if you are using small local models and the context window is relatively filled)
                     )
                 )
+                .WithRebujito(
+                    await _langSearch.SearchWebTexts(new WebSearchRequest("Revuelta de los Comuneros. Rebelion de las Germanias", results: 3), returnSnippet: false),
+                    guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore. Output your response in always in English despite the source language.", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
+                    feedDose: 300)
                 .ChainFeedsFrom([thenId, stashId])
                 .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings);
 
