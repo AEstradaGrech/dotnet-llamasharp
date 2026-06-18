@@ -1,10 +1,8 @@
-﻿using Dotnet.Chroma.Repositories.Models;
-using Dotnet.LangSearch.SDK;
+﻿using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Bases;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;

@@ -2,7 +2,6 @@
 using Dotnet.Chroma.Repositories.Models;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.TextGenerators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
