@@ -59,12 +59,6 @@ namespace DotnetLlamaSharp.Services.Prompting
             return new ChatPrompt { Model = request.Settings.Model, Input = request.Prompt, Output = response.Content ?? "", ChatHistory = request.ChatHistory, Timestamp = DateTime.Now };
         }
 
-        public async Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request)
-        {
-            request.Options = _settings;
-
-            return null; //TODO: EMBEDDINGS COMMAND await _ollamaService.GetEmbeddings(request);
-        }
 
     }
 }

@@ -71,9 +71,6 @@ The **`LameSamplesService`** includes a conceptual example (not for execution) s
 
 ---
 
-## 🧪 Where Are the Tests?
-
-⏳ **Coming soon!** (I'll add them at some point—they're always on the TODO list... always last! 😄)
 
 ## 📄 License
 

@@ -8,6 +8,5 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting
     {
         Task<ChatPrompt> SimplePrompt(SimpleCommandRequest request);
         Task<ChatPrompt> ChatPrompt(CommandChatRequest request, bool bWithSysmsgUpdate = false);
-        Task<EmbedResponse> GetOllamaClientEmbeddings(EmbedRequest request);
     }
 }
