@@ -14,5 +14,7 @@ RUN dotnet publish DotnetLlamaSharp/DotnetLlamaSharp.csproj -c Release -o /app/p
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_HTTP_PORTS=5150
 EXPOSE 5150
 ENTRYPOINT ["dotnet", "DotnetLlamaSharp.dll"]
