@@ -1,0 +1,19 @@
+services:
+  dotllama:
+    image: dotllama:0.0.1
+    container_name: dotllama
+    ports:
+      - 5150:5150
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ChromaSettings__ServerUrl=http://chromadb:8000
+    depends_on:
+      - chromadb
+
+  chromadb:
+    image: chromadb/chroma:0.4.24
+    container_name: chromadb
+    ports:
+      - 8000:8000
+    volumes:
+      - C:\chroma-data:/data
