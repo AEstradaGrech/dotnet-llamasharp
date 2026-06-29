@@ -71,6 +71,12 @@ The **`LameSamplesService`** includes a conceptual example (not for execution) s
 
 ---
 
+## Use it with docker:
+
+- Download the repo.
+- Build the image (open a cmd in the .sln directory and run `docker image build -t dotllama:0.0.1 .`. Use the tag you want, then update the compose section)
+- Create bind-volume folders (for example C:\dotllama-data and C:\chroma-data)
+- Run the compose file (run `docker-compose up` in the .sln directory)
 
 ## 📄 License
 
