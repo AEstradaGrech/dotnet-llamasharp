@@ -7,9 +7,13 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ChromaSettings__ServerUrl=http://chromadb:8000
+      - DocumentLoader__PdfsPath=/data
+      - OllamaSettings__OllamaUrl=http://host.docker.internal:11434
+      - ApiSettings__Endpoints__ollama=http://host.docker.internal:11434
     depends_on:
       - chromadb
-
+    volumes:
+      - C:\dotllama-data:/data
   chromadb:
     image: chromadb/chroma:0.4.24
     container_name: chromadb

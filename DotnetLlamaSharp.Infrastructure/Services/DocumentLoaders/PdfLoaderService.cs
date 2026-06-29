@@ -8,7 +8,9 @@ namespace DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders
     public class PdfLoaderService : BaseDocumentLoader, IDocumentLoader<PdfLoaderService> 
     {
         const string LOADER = "pdfs";
-        public PdfLoaderService(IConfiguration config) : base(docsFolder: LOADER)
+        public PdfLoaderService(IConfiguration config) : base(
+            docsFolder: LOADER,
+            basePath: config["DocumentLoader:PdfsPath"])
         {
             validate(LOADER);
         }

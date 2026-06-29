@@ -5,9 +5,9 @@ namespace DotnetLlamaSharp.Domain.Services.DocumentLoader
     public abstract class BaseDocumentLoader
     {
         protected readonly string _basePath;
-        public BaseDocumentLoader(string docsFolder)
+        public BaseDocumentLoader(string docsFolder, string? basePath = null)
         {
-            _basePath = Path.Combine(
+            _basePath = basePath ?? Path.Combine(
                Directory.GetParent(Directory.GetCurrentDirectory()).FullName,
                "DotnetLlamaSharp.Infrastructure",
                "Data",
