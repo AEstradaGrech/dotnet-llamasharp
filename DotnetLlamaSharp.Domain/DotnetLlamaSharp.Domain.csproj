@@ -8,9 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="Estrada.ChromaDB.Repositories" Version="0.1.3-alpha" />
-    <PackageReference Include="Estrada.OllamaSharp.LameChain.SDK" Version="0.0.2-beta" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Chroma" Version="1.74.0-alpha" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\dotnet-lamechain-sdk\Dotnet.OllamaSharp.LameChain.SDK\Dotnet.OllamaSharp.LameChain.SDK.csproj" />
   </ItemGroup>
 
 </Project>

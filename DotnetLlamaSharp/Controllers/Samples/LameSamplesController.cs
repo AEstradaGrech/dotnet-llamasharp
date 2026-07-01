@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Dotnet.Chroma.Repositories.Models.Enums;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
@@ -468,6 +469,19 @@ namespace DotnetLlamaSharp.Controllers.Samples
         public async Task<IActionResult> DbPromptCommandDefaultMode([FromBody] SimplePromptRequestDto request)
         {
             var response = await _samplesService.DbPromptCommandDefaultMode(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/message")]
+        public async Task<IActionResult> ProviderMessageTest([FromBody] ChatPromptRequestDto request)
+        {
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var response = await _ollamaCommands.PromptCommand<MessagePromptCommand, ChatMessage>(_mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq), request.SystemMessage, chatCommandReq.Settings);
 
             if (response != null)
                 return Ok(response);

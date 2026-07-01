@@ -46,6 +46,9 @@ try
 
     builder.Services
         .AddConfigurations(builder.Configuration)
+        .ConfigureGroqSettings(builder.Configuration)
+        .AddGroqApiClient(builder.Configuration)
+        .ConfigureClaudeApiClient(builder.Configuration)
         .ConfigureLameChain(builder.Configuration, ServiceLifetime.Scoped)
         .ConfigureLangSearch(builder.Configuration)
         .AddChromaConfiguration(builder.Configuration)

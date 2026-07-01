@@ -1,10 +1,9 @@
 ﻿using AutoMapper;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
-using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Response;
 using OllamaSharp.Models.Chat;
@@ -31,6 +30,9 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<InstructionDto, Instruction>().ReverseMap();
             CreateMap<ChainedPromptDto, ChainedPrompt>();
+
+            CreateMap<CommandChatRequest, ChatCommandRequest>()
+                .ForMember(dest => dest.Model, opt => opt.MapFrom(src => src.Settings.Model));
         }
     }
 }

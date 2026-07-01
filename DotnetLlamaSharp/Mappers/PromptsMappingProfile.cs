@@ -73,7 +73,8 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<SimplePromptRequestDto, SimpleCommandRequest>()
              .ForMember(dest => dest.Settings, opt => opt.MapFrom(src => src.Settings));
 
-            CreateMap<ChatPromptRequestDto, CommandChatRequest>();
+            //CreateMap<ChatPromptRequestDto, ChatCommandRequest>()
+            //    .IncludeBase<SimplePromptRequestDto, PromptCommandRequest>();
             
             CreateMap<RagChatRequestDto, RagChatCommandRequest>();
 
