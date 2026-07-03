@@ -1,5 +1,6 @@
 ﻿
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
@@ -63,12 +64,36 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
             return choice;
         }
 
-        public List<string> ChromaSearchTool(
+        [Description($"Tool to retrieve data from the specified collection Chroma and user query. This tool is complementary to the {nameof(ChromaCollectionSelector)} tool and MUST be used AFTER calling the {nameof(ChromaCollectionSelector)} tool")]
+        public async Task<List<string>> ChromaSearchTool(
             [Description("Name of the ChromaDB collection to query")] string collectionName,
             [Description("User input that will be used to query the specified chroma collection")] string userQuery)
         {
             //de donde saco los repos y los comandos
-            return new List<string>();
+
+            _logger.LogWarning($"USING TOOL: {nameof(ChromaCollectionSelector)}");
+
+            //using var scope = _services.CreateScope(); 
+
+            var chromaService = _services.GetRequiredService<IChromaService>();
+
+            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaCollectionSelector)} >> retrieving collection: {collectionName}");
+
+            var collection = await chromaService.GetCollection(collectionName);
+
+            if (collection == null) return [];
+
+            _logger.LogWarning($"USING TOOL: {nameof(ChromaCollectionSelector)} >> retrieved collection {collectionName} >> Embedding Model: {collection.DefaultMetadata.MODEL} >> Embedding Dimensions: {collection.DefaultMetadata.DIMENSIONS}");
+
+            var commandsFactory = _services.GetRequiredService<IPromptCommandsFactory>();
+
+            var searchCommand = commandsFactory.GetVectorSearchSourceable(chromaService.SimilaritySearch);
+
+            var request = new VectorSearchRequest(collectionName, userQuery, collection.DefaultMetadata.MODEL, collection.DefaultMetadata.DIMENSIONS, 4);
+
+            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaCollectionSelector)} >> User query: {userQuery}");
+
+            return await searchCommand.Prompt(request);
         }
     }
 }

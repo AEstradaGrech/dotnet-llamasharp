@@ -1,12 +1,6 @@
 ﻿using AutoMapper;
-using Dotnet.LangSearch.SDK;
-using Dotnet.LangSearch.SDK.Models.Request;
-using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
-using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
-using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
-using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Request.Prompting;

@@ -487,6 +487,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
             
             commandReq.AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)));
+            commandReq.AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)));
 
             var response = await _ollamaCommands.PromptCommand<MessagePromptCommand, ChatMessage>(commandReq, request.SystemMessage, chatCommandReq.Settings);
 
