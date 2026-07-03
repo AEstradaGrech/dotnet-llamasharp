@@ -11,6 +11,9 @@ using System.Reflection;
 using Microsoft.Extensions.Options;
 using static OllamaSharp.OllamaApiClient;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
+using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
+using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 
 
 namespace DotnetLlamaSharp.Extensions
@@ -44,8 +47,9 @@ namespace DotnetLlamaSharp.Extensions
                     .WithTransientLifetime()),
                 _ => services
             };
-        
-        
+
+        public static IServiceCollection AddToolServices(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Scoped)
+            => services.WithToolsFrom<LlamaSharpTools>(lifetime);
         public static IServiceCollection AddConfigurations(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<ApiSettings>(configuration.GetSection(nameof(ApiSettings)));

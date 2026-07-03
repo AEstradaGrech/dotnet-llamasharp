@@ -7,19 +7,16 @@ using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Request.Prompting;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request;
-using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Response;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq.Expressions;
+using OllamaSharp;
 using System.Net;
-using System.Text.Json;
-using System.Text.Json.Schema;
+
 
 namespace DotnetLlamaSharp.Controllers
 {
@@ -32,6 +29,7 @@ namespace DotnetLlamaSharp.Controllers
         private readonly IOllamaStreamService _streamService = streamService;
         private readonly IRagService _ragService = ragService;
         private readonly IMapper _mapper = mapper;
+        private readonly IOllamaApiClient _client;
         private readonly ILogger<PromptingController> _logger = logger;
         
         [HttpPost("/simple/prompt")]
@@ -41,7 +39,7 @@ namespace DotnetLlamaSharp.Controllers
 
             if (response != null)
                 return Ok(response);
-
+  
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 

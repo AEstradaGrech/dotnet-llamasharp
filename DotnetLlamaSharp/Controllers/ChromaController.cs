@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.Tools;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
@@ -13,6 +14,7 @@ using DotnetLlamaSharp.Models.Request.Embeddings;
 using DotnetLlamaSharp.Models.Response.Chroma;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using System.Text.Json.Schema;
 
 namespace DotnetLlamaSharp.Controllers
 {
@@ -24,10 +26,11 @@ namespace DotnetLlamaSharp.Controllers
         private readonly IChromaService _service = service;
         private readonly IDocumentLoader<PdfLoaderService> _loader = docLoader;
         private readonly IMapper _mapper = mapper;
-        
+
         [HttpGet("/collection/list")]
         public async Task<IActionResult> GetDbCollections()
-            => Ok(await _service.GetDbCollections());
+            => Ok(OllamaTools.FromMethod(_service.GetType().GetMethod(nameof(_service.GetSysMessage))));
+            //=> Ok(await _service.GetDbCollections());
 
         [HttpGet("/collection/{name}")]
         public async Task<IActionResult> GetCollection(string name)

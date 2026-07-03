@@ -202,7 +202,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                     _factory.GetCommand<ScoredBoolCommand, ScoredBoolResponse>(
                         systemMessage: $"Your task is to determine whether the provided User Intent is related to any of the Collections of the list below"),
                         feedFwd: "Use this data as a reliable source to answer the user")
-                    .WithDataBoost("AVAILABLE COLLECTIONS:", await getChromaCollectionChoices(withChatCollections: false)),
+                    .WithDataBoost("AVAILABLE COLLECTIONS:", await GetChromaCollectionChoices(withChatCollections: false)),
                     trueBranch: LameChain.SubChainWith<StashedStep>(
                         new StashSettings(
                             _factory.GetSourceable<RagExpansionCommand>(),
@@ -223,7 +223,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                         _factory.GetEmbeddedSourceable<SmartQuerySourceable>(_chromaService.SimilaritySearch, llamaGuidance: "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query."), // appended to Core Message (default | db)
                             new SmartQueryRequest(
                                 request.Prompt,
-                                collectionChoices: await getChromaCollectionChoices(withChatCollections: false),
+                                collectionChoices: await GetChromaCollectionChoices(withChatCollections: false),
                                 maxChoices: 1,
                                 resultsPerChoice: 3,
                                 guidanceMessage: string.Empty, // this is overwritten by prev_ctx so leave it empty
@@ -490,7 +490,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return sb.ToString().Trim();
         }
-        private async Task<List<string>> getChromaCollectionChoices(bool withChatCollections = false)
+        public async Task<List<string>> GetChromaCollectionChoices(bool withChatCollections = false)
         {
             var formattedChoices = new List<string>();
 

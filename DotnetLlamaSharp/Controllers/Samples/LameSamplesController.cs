@@ -2,8 +2,10 @@
 using Dotnet.Chroma.Repositories.Models.Enums;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.Tools;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
@@ -11,6 +13,7 @@ using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
+using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Request.Chains.Samples;
@@ -26,12 +29,12 @@ namespace DotnetLlamaSharp.Controllers.Samples
     [Route("api/[controller]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = nameof(LameSamplesController))]
-    public class LameSamplesController(IMapper mapper, ILameSamplesService samplesService, IPromptCommandsService commandsService, IChromaService chromaService) : ControllerBase
+    public class LameSamplesController(IMapper mapper, ILameSamplesService samplesService, IPromptCommandsService commandsService, IChromaService chromaService, IToolsService<LlamaSharpTools> toolsService) : ControllerBase
     {
         private readonly IMapper _mapper = mapper;
         private readonly ILameSamplesService _samplesService = samplesService;
         private readonly IChromaService _chromaService = chromaService;
-
+        private readonly IToolsService<LlamaSharpTools> _toolsService = toolsService;
         // Inject the CommandsService in your app to execute commands or use the IPromptCommandsFactory if you prefer it
         private readonly IPromptCommandsService _ollamaCommands = commandsService;
 
@@ -480,8 +483,12 @@ namespace DotnetLlamaSharp.Controllers.Samples
         public async Task<IActionResult> ProviderMessageTest([FromBody] ChatPromptRequestDto request)
         {
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+            
+            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
+            
+            commandReq.AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)));
 
-            var response = await _ollamaCommands.PromptCommand<MessagePromptCommand, ChatMessage>(_mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq), request.SystemMessage, chatCommandReq.Settings);
+            var response = await _ollamaCommands.PromptCommand<MessagePromptCommand, ChatMessage>(commandReq, request.SystemMessage, chatCommandReq.Settings);
 
             if (response != null)
                 return Ok(response);

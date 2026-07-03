@@ -2,6 +2,7 @@ using Dotnet.Chroma.Repositories.Extensions;
 using Dotnet.LangSearch.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using DotnetLlamaSharp.Extensions;
+using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
 using DotnetLlamaSharp.Mappers;
 using Microsoft.Extensions.DependencyModel;
 using Microsoft.OpenApi;
@@ -50,6 +51,7 @@ try
         .AddGroqApiClient(builder.Configuration)
         .ConfigureClaudeApiClient(builder.Configuration)
         .ConfigureLameChain(builder.Configuration, ServiceLifetime.Scoped)
+        .WithToolsFrom<LlamaSharpTools>(ServiceLifetime.Scoped)
         .ConfigureLangSearch(builder.Configuration)
         .AddChromaConfiguration(builder.Configuration)
         .AddDefaultChromaRepository()
