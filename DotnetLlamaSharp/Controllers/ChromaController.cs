@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
-using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.Tools;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Utilities;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
@@ -13,8 +13,7 @@ using DotnetLlamaSharp.Models.Request.Chroma;
 using DotnetLlamaSharp.Models.Request.Embeddings;
 using DotnetLlamaSharp.Models.Response.Chroma;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
-using System.Text.Json.Schema;
+
 
 namespace DotnetLlamaSharp.Controllers
 {

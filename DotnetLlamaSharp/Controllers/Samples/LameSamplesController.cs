@@ -2,7 +2,6 @@
 using Dotnet.Chroma.Repositories.Models.Enums;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
-using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.Tools;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
