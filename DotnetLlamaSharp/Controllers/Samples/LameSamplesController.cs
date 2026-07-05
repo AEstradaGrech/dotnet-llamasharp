@@ -478,7 +478,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
-        [HttpPost("/commands/message")]
+        [HttpPost("/commands/tools/rag-example")]
         public async Task<IActionResult> ProviderMessageTest([FromBody] ChatPromptRequestDto request)
         {
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
