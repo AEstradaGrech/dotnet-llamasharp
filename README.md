@@ -58,6 +58,7 @@ The project includes a **`Samples`** folder demonstrating various use cases. Che
 - **`/rag/qa/prompt`**: Simple RAG application using Lame Commands and ChromaDB repositories to make request to the LLM including data from the specified collections
 - **`/rag/qa/smart/prompt`**: Simple RAG application using Lame Commands to orchestrate the process with the LLM as evaluator, data source selector and augmentation tricks
 - **`/chains/example/smart-rag`**: Same process implemented using fluent LameChain (this one is in the `LameSamplesController.cs` controller)
+- **`/commands/tools/rag-example`**: An 'agentic' version of the smart-rag chain that uses Ollama Tools to select the chroma collection and query the database.
 
 The **`LameSamplesService`** includes a conceptual example (not for execution) showing how to build chains from basic sequences to complex chains with parallel steps or conditional branches.
 

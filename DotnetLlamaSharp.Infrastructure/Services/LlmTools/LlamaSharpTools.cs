@@ -1,9 +1,7 @@
 ﻿
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
-using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
-using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
@@ -30,8 +28,6 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
         {
             _logger.LogWarning($"USING TOOL: {nameof(ChromaCollectionSelector)}");
 
-            //using var scope = _services.CreateScope(); 
-
             var commandsFactory = _services.GetRequiredService<IPromptCommandsFactory>();
             var ragService = _services.GetRequiredService<IRagService>();
 
@@ -39,7 +35,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
 
             var request = new PromptCommandRequest(userQuery);
 
-            var intent = await intentCommand.Prompt(request); // So far so good, but then it crashes here with the second LLM request
+            var intent = await intentCommand.Prompt(request); 
 
             _logger.LogWarning($"TOOL_CALL >> {nameof(ChromaCollectionSelector)} >> USER INTENT: {intent.Content}");
 
@@ -69,11 +65,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
             [Description("Name of the ChromaDB collection to query")] string collectionName,
             [Description("User input that will be used to query the specified chroma collection")] string userQuery)
         {
-            //de donde saco los repos y los comandos
-
             _logger.LogWarning($"USING TOOL: {nameof(ChromaCollectionSelector)}");
-
-            //using var scope = _services.CreateScope(); 
 
             var chromaService = _services.GetRequiredService<IChromaService>();
 
