@@ -8,5 +8,6 @@
         public string Prompt { get; set; }
         public string SystemMessage { get; set; } = string.Empty;
         public bool IsGuidanceAppend { get; set; }
+        public bool ThinkEnabled { get; set; }
     }
 }

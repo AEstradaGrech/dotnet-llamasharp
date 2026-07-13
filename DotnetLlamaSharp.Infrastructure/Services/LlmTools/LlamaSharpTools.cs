@@ -65,17 +65,17 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
             [Description("Name of the ChromaDB collection to query")] string collectionName,
             [Description("User input that will be used to query the specified chroma collection")] string userQuery)
         {
-            _logger.LogWarning($"USING TOOL: {nameof(ChromaCollectionSelector)}");
+            _logger.LogWarning($"USING TOOL: {nameof(ChromaSearchTool)}");
 
             var chromaService = _services.GetRequiredService<IChromaService>();
 
-            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaCollectionSelector)} >> retrieving collection: {collectionName}");
+            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaSearchTool)} >> retrieving collection: {collectionName}");
 
             var collection = await chromaService.GetCollection(collectionName);
 
             if (collection == null) return [];
 
-            _logger.LogWarning($"USING TOOL: {nameof(ChromaCollectionSelector)} >> retrieved collection {collectionName} >> Embedding Model: {collection.DefaultMetadata.MODEL} >> Embedding Dimensions: {collection.DefaultMetadata.DIMENSIONS}");
+            _logger.LogWarning($"USING TOOL: {nameof(ChromaSearchTool)} >> retrieved collection {collectionName} >> Embedding Model: {collection.DefaultMetadata.MODEL} >> Embedding Dimensions: {collection.DefaultMetadata.DIMENSIONS}");
 
             var commandsFactory = _services.GetRequiredService<IPromptCommandsFactory>();
 
@@ -83,7 +83,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
 
             var request = new VectorSearchRequest(collectionName, userQuery, collection.DefaultMetadata.MODEL, collection.DefaultMetadata.DIMENSIONS, 4);
 
-            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaCollectionSelector)} >> User query: {userQuery}");
+            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaSearchTool)} >> User query: {userQuery}");
 
             return await searchCommand.Prompt(request);
         }

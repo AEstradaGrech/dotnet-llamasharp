@@ -45,13 +45,8 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<ChatMessage, ChatMessageDto>()
                 .ReverseMap();
+
             //DTO to Domain
-            CreateMap<SimplePromptRequestDto, SimplePromptRequest>()
-                .ForMember(dest => dest.Settings, opt => opt.MapFrom(src => src.Settings));
-
-            CreateMap<ChatPromptRequestDto, ChatPromptRequest>()
-                .IncludeBase<SimplePromptRequestDto, SimplePromptRequest>();
-
             CreateMap<ChatPromptRequestDto, CommandChatRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
 
@@ -73,17 +68,12 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<SimplePromptRequestDto, SimpleCommandRequest>()
              .ForMember(dest => dest.Settings, opt => opt.MapFrom(src => src.Settings));
 
-            //CreateMap<ChatPromptRequestDto, ChatCommandRequest>()
-            //    .IncludeBase<SimplePromptRequestDto, PromptCommandRequest>();
-            
             CreateMap<RagChatRequestDto, RagChatCommandRequest>();
 
             CreateMap<SimpleSmartQueryRequest, SmartRagSettings>()
                 .ForMember(dest => dest.MaxExamples, opt => opt.MapFrom(src => src.MaxFewShotExamples))
                 .ForMember(dest => dest.WithQueryAugmentation, opt => opt.Ignore())
                 .ForMember(dest => dest.WithRagExpansion, opt => opt.Ignore());
-
-            CreateMap<SimplePromptRequest, SimpleCommandRequest>().ReverseMap();
 
             CreateMap<SimpleCommandRequest, CommandChatRequest>()
                 .ForMember(dest => dest.ChatHistory, opt => opt.Ignore());
@@ -97,6 +87,7 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<RagChatCommandRequest, CommandChatRequest>()
                 .IncludeBase<RagCommandRequest, SimpleCommandRequest>();
+
             CreateMap<CommandChatRequest, RagChatCommandRequest>()
                 .ForMember(dest => dest.QueryCollections, opt => opt.Ignore())
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
