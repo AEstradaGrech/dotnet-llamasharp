@@ -9,6 +9,7 @@ using Microsoft.OpenApi;
 using Serilog;
 using System.Reflection;
 
+
 /*
  * [!!!] https://langsearch.com/overview
  SEMKER: https://github.com/elbruno/semantickernel-localLLMs/blob/main/src/sk-ollamacsharp/OllamaChatCompletionService.cs

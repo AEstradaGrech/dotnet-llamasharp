@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Models.Common;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Enums;
+using DotnetLlamaSharp.Models.Common;
 
 namespace DotnetLlamaSharp.Models.Request
 {
@@ -7,7 +8,7 @@ namespace DotnetLlamaSharp.Models.Request
         public string Prompt { get; set; }
         public string? SystemMessage { get; set; } = null;
         public bool IsGuidanceAppend { get; set; }
-        public bool ThinkEnabled { get; set; }
+        public EReasoning? Reasoning { get; set; }
         public PromptSettingsDto Settings { get; set; }
     }
 }

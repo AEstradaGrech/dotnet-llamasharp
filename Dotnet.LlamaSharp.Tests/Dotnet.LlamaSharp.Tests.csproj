@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\dotnet-lamechain-sdk\Dotnet.OllamaSharp.LameChain.SDK\Dotnet.OllamaSharp.LameChain.SDK.csproj" />
     <ProjectReference Include="..\DotnetLlamaSharp\DotnetLlamaSharp.csproj" />
     <ProjectReference Include="..\DotnetLlamaSharp.Domain\DotnetLlamaSharp.Domain.csproj" />
     <ProjectReference Include="..\DotnetLlamaSharp.Infrastructure\DotnetLlamaSharp.Infrastructure.csproj" />

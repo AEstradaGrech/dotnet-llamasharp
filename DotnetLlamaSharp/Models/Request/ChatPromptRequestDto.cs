@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Models.Common;
+﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Enums;
+using DotnetLlamaSharp.Models.Common;
 
 namespace DotnetLlamaSharp.Models.Request
 {
