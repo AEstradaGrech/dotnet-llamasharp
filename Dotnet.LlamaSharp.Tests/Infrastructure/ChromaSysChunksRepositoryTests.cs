@@ -8,9 +8,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Connectors.Chroma;
 using Moq;
 using System.Text.Json;
-using WireMock.RequestBuilders;
-using WireMock.ResponseBuilders;
-using WireMock.Server;
 
 #pragma warning disable SKEXP0020
 
@@ -18,12 +15,12 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
 {
     // requestDocuments hace POST a {ServerUrl}/api/v1/collections/{id}/get con filtros de metadatos.
     // Las llamadas a GetCollectionAsync y ListCollectionsAsync son métodos de IChromaClient y se mockean con Moq.
-    // Las llamadas HTTP directas se interceptan con WireMock.Net.
+    // Las llamadas HTTP directas se interceptan con StubHttpServer.
 
     public class ChromaSysChunksRepositoryTests : IDisposable
     {
         private readonly Mock<IChromaClient> _mockClient;
-        private WireMockServer? _wireMock;
+        private StubHttpServer? _stubServer;
 
         public ChromaSysChunksRepositoryTests()
         {
@@ -32,9 +29,8 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
 
         public void Dispose()
         {
-            _wireMock?.Stop();
-            _wireMock?.Dispose();
-            _wireMock = null;
+            _stubServer?.Dispose();
+            _stubServer = null;
         }
 
         private ChromaSysChunksRepository CreateSut()
@@ -46,7 +42,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         private ChromaSysChunksRepository CreateSutWithWireMock()
             => new ChromaSysChunksRepository(
                 NullLogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>>.Instance,
-                Options.Create(new ChromaSettings { ServerUrl = _wireMock!.Url! }),
+                Options.Create(new ChromaSettings { ServerUrl = _stubServer!.Url }),
                 _mockClient.Object);
 
         // --- CreateCollection ---
@@ -227,7 +223,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         // para el chunk de metadatos de colección (ID "0"), necesario cuando GetCollection es invocado.
         private void SetupChromaDbMocks(string collectionName, string collectionId)
         {
-            _wireMock = WireMockServer.Start();
+            _stubServer = new StubHttpServer();
 
             _mockClient
                 .Setup(c => c.ListCollectionsAsync(It.IsAny<CancellationToken>()))
@@ -246,15 +242,10 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                 metadatas = new[] { new Dictionary<string, object> { ["document_name"] = collectionName, ["chunk_type"] = 2 } }
             });
 
-            _wireMock
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && (body.Contains("\"0\"") || body.Contains("'0'"))))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(collectionMetaJson));
+            _stubServer.StubPost(
+                $"/api/v1/collections/{collectionId}/get",
+                body => body != null && (body.Contains("\"0\"") || body.Contains("'0'")),
+                collectionMetaJson);
         }
 
         // Stub HTTP para GET por filtro de metadatos (document_name = chunkName).
@@ -269,15 +260,10 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                 metadatas
             });
 
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && body.Contains($"\"{chunkName}\"")))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(json));
+            _stubServer!.StubPost(
+                $"/api/v1/collections/{collectionId}/get",
+                body => body != null && body.Contains($"\"{chunkName}\""),
+                json);
         }
 
         // Stub HTTP para GET por ID de chunk que devuelve vacío.
@@ -293,28 +279,20 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                 metadatas = Array.Empty<Dictionary<string, object>>()
             });
 
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && body.Contains($"\"{chunkId}\"")))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(emptyJson));
+            _stubServer!.StubPost(
+                $"/api/v1/collections/{collectionId}/get",
+                body => body != null && body.Contains($"\"{chunkId}\""),
+                emptyJson);
         }
 
         // Stub HTTP para update de metadatos. updateCollectionChunksCount llama a requestEmbeddingsUpsert
         // con isCreate=false, que construye la URL como /api/v1/collections/{id}/update (no /upsert).
         private void StubUpsert(string collectionId)
         {
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/update")
-                    .UsingPost())
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithBody("{}"));
+            _stubServer!.StubPost(
+                $"/api/v1/collections/{collectionId}/update",
+                bodyMatch: null,
+                responseBody: "{}");
         }
 
         // Stub HTTP para DELETE y mock de IChromaClient.DeleteEmbeddingsAsync (cubre ambas rutas internas).
@@ -324,13 +302,10 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                 .Setup(c => c.DeleteEmbeddingsAsync(collectionId, It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/delete")
-                    .UsingPost())
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithBody("{}"));
+            _stubServer!.StubPost(
+                $"/api/v1/collections/{collectionId}/delete",
+                bodyMatch: null,
+                responseBody: "{}");
         }
 
         private static async IAsyncEnumerable<string> AsyncEnumerable(params string[] items)

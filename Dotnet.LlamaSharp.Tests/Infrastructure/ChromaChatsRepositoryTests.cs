@@ -6,9 +6,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Connectors.Chroma;
 using Moq;
 using System.Text.Json;
-using WireMock.RequestBuilders;
-using WireMock.ResponseBuilders;
-using WireMock.Server;
 
 #pragma warning disable SKEXP0020
 
@@ -16,7 +13,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
 {
     // GetCollection y GetChunkById en ChromaRepository usan ChromaClientExtensions.GetDocuments,
     // que hace llamadas HTTP directas a {ChromaSettings.ServerUrl}/api/v1/collections/{id}/get.
-    // Los tests que necesitan estos métodos usan WireMock.Net para interceptar esas llamadas.
+    // Los tests que necesitan estos métodos usan StubHttpServer para interceptar esas llamadas.
     // ListCollectionsAsync y GetCollectionAsync son métodos de IChromaClient y se mockean con Moq.
 
     public class ChromaChatsRepositoryTests : IDisposable
@@ -24,7 +21,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         private readonly Mock<ILogger<ChromaChatsRepository>> _mockLogger;
         private readonly Mock<IChromaClient> _mockClient;
         private readonly IOptions<ChromaSettings> _settings;
-        private WireMockServer? _wireMock;
+        private StubHttpServer? _stubServer;
 
         public ChromaChatsRepositoryTests()
         {
@@ -35,9 +32,8 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
 
         public void Dispose()
         {
-            _wireMock?.Stop();
-            _wireMock?.Dispose();
-            _wireMock = null;
+            _stubServer?.Dispose();
+            _stubServer = null;
         }
 
         private ChromaChatsRepository CreateSut()
@@ -46,7 +42,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         private ChromaChatsRepository CreateSutWithWireMock()
             => new ChromaChatsRepository(
                 _mockLogger.Object,
-                Options.Create(new ChromaSettings { ServerUrl = _wireMock!.Url! }),
+                Options.Create(new ChromaSettings { ServerUrl = _stubServer!.Url }),
                 _mockClient.Object);
 
         private TestableChromaChatsRepository CreateTestableSut()
@@ -217,7 +213,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         private void SetupCollectionMock(string collectionName, string collectionId,
             string sessionIds, string currentSessionId)
         {
-            _wireMock = WireMockServer.Start();
+            _stubServer = new StubHttpServer();
 
             // IChromaClient mocks (used by CollectionExists and GetChunkById → GetCollectionAsync)
             _mockClient
@@ -250,15 +246,10 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                 }
             });
 
-            _wireMock
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && (body.Contains("\"0\"") || body.Contains("'0'"))))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(collectionMetaJson));
+            _stubServer.StubPost(
+                $"/api/v1/collections/{collectionId}/get",
+                body => body != null && (body.Contains("\"0\"") || body.Contains("'0'")),
+                collectionMetaJson);
         }
 
         // HTTP stub for a specific chunk retrieved via GetChunkById.
@@ -284,15 +275,10 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                 }
             });
 
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && body.Contains($"\"{chunkId}\"")))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(chunkJson));
+            _stubServer!.StubPost(
+                $"/api/v1/collections/{collectionId}/get",
+                body => body != null && body.Contains($"\"{chunkId}\""),
+                chunkJson);
         }
 
         private static async IAsyncEnumerable<string> AsyncEnumerable(params string[] items)
