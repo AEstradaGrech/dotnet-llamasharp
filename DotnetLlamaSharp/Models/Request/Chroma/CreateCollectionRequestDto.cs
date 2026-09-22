@@ -6,5 +6,6 @@
         public string? Description { get; set; }
         public string? EmbeddingModel { get; set; }
         public int Dimensions { get; set; }
+        public CollectionHnswDto? HnswSettings { get; set; }
     }
 }

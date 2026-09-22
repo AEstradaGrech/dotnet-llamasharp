@@ -1,4 +1,5 @@
 using Dotnet.Chroma.Repositories.Models;
+using Dotnet.Chroma.Repositories.Models.Settings;
 using DotnetLlamaSharp.Infrastructure.Repositories.Chroma;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;

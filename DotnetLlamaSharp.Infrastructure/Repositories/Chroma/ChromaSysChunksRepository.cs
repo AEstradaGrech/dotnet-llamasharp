@@ -1,7 +1,7 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using Dotnet.Chroma.Repositories;
-using Dotnet.Chroma.Repositories.Models;
+﻿using Dotnet.Chroma.Repositories;
+using Dotnet.Chroma.Repositories.Interfaces;
 using Dotnet.Chroma.Repositories.Models.Metadata;
+using Dotnet.Chroma.Repositories.Models.Settings;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
@@ -9,7 +9,6 @@ using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Connectors.Chroma;
-using System.Text;
 
 
 namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
@@ -17,7 +16,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
     #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     public class ChromaSysChunksRepository : ChromaRepository<SysChunksCollection, ChromaSysChunk>, IChromaSysChunksRepository
     {
-        public ChromaSysChunksRepository(ILogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>> logger, IOptions<ChromaSettings> dbSettings, IChromaClient client) : base(client, dbSettings)  { }
+        public ChromaSysChunksRepository(ILogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>> logger, IOptions<ChromaSettings> dbSettings, IChromaClient client, IChromaDbClient dbClient) : base(client, dbClient, dbSettings)  { }
 
         public async Task<SysChunksCollection> CreateCollection(string name, ReadOnlyMemory<float> embedding, string? description)
         {

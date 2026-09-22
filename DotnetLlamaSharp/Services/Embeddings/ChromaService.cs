@@ -1,6 +1,7 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Interfaces;
 using Dotnet.Chroma.Repositories.Models.Metadata;
+using Dotnet.Chroma.Repositories.Models.Settings;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
@@ -266,6 +267,19 @@ namespace DotnetLlamaSharp.Services.Embeddings
             newChunk.AddMetadata(nameof(SysChunkMetadata.TAG).ToLower(), chunk.Tag);
 
             return await _sysRepo.InsertChunk(collectionName, newChunk);
+        }
+
+        public async Task<IEnumerable<string>> GetCollections()
+            => await _repo.GetCollections();
+
+        public async Task<string> CreateCollection(string name, HnswSettings? config)
+        {
+            var collection = await _repo.CreateDbCollection(name, config);
+
+            if(collection == null)
+                throw new InvalidOperationException($"{nameof(CreateCollection)} >> {name} >> An error has occured while creating the collection");
+
+            return collection.Name;
         }
     }
 }

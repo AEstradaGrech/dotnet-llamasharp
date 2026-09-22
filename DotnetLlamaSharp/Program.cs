@@ -56,6 +56,7 @@ try
         .AddChromaConfiguration(builder.Configuration)
         .AddDefaultChromaRepository()
         .AddChromaClient(builder.Configuration)
+        .AddChromaDbClient(builder.Configuration)
         .AddPdfDocumentLoader()
         .AddAutoMapper(cfg => {
             cfg.AddMaps(new[] {
