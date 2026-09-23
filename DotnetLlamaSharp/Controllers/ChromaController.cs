@@ -29,7 +29,7 @@ namespace DotnetLlamaSharp.Controllers
         [HttpGet("/collection/list")]
         public async Task<IActionResult> GetDbCollections()
             //=> Ok(OllamaTools.FromMethod(_service.GetType().GetMethod(nameof(_service.GetSysMessage))));
-            => Ok(await _service.GetCollections());
+            => Ok(await _service.GetDbCollections());
 
         [HttpPost("/new/collection")]
         public async Task<IActionResult> NewCollection([FromBody] CreateCollectionRequestDto dto)

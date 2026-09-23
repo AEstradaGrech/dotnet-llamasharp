@@ -83,7 +83,7 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
                 _logger.LogInformation($"Pages to embed: {selectedPages.Count()} >> SKIPPED INITIAL {request.InitialSkip} PAGES");
                 
-                var chunkPages = new List<DocumentPage>();
+                var chunkedPages = new List<DocumentPage>();
                 int currentChunkSize = 0;
                 var newChunks = new List<ChromaChunk>();
                 for (int i = 0; i < selectedPages.Count(); i++)
@@ -94,35 +94,35 @@ namespace DotnetLlamaSharp.Services.Embeddings
                     {
                         if(currentChunkSize + page.Length >= request.ChunkSize)
                         {
-                            chunkPages.Add(page);
-                            newChunks.AddRange(this.chunkPages(chunkPages, request.FileName, request.ChunkSize));
-                            chunkPages.Clear();
+                            chunkedPages.Add(page);
+                            newChunks.AddRange(chunkPages(chunkedPages, request.FileName, request.ChunkSize));
+                            chunkedPages.Clear();
                             currentChunkSize = 0;
                         }
                         else
                         {
                             currentChunkSize += page.Length;
-                            chunkPages.Add(page);
+                            chunkedPages.Add(page);
                         }
                     }
                     else
                     {
                         var chromaChunks = splitAndChunk(page, request.FileName, request.ChunkSize);
 
-                        if (chunkPages.Count > 0)
+                        if (chunkedPages.Count > 0)
                         {
                             if(currentChunkSize > request.MinTextToChunk)
                             {
-                                newChunks.AddRange(this.chunkPages(chunkPages, request.FileName, request.ChunkSize));
+                                newChunks.AddRange(chunkPages(chunkedPages, request.FileName, request.ChunkSize));
                             }
                             else
                             {
-                                var residualChunk = this.chunkPages(chunkPages, request.FileName, request.ChunkSize).First();
+                                var residualChunk = chunkPages(chunkedPages, request.FileName, request.ChunkSize).First();
 
                                 newChunks.First().Text = $"{residualChunk.Text}\n\n{newChunks.First().Text}";
                             }
 
-                            chunkPages.Clear();
+                            chunkedPages.Clear();
                             currentChunkSize = 0;
                         }
 

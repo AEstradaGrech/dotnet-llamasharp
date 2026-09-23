@@ -11,10 +11,10 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
 {
     public interface IChromaService
     {
-        Task<IEnumerable<string>> GetCollections();
+        Task<IEnumerable<string>> GetDbCollections();
         Task<string> CreateCollection(string name, HnswSettings? config);
         //------------------
-        Task<IAsyncEnumerable<string>> GetDbCollections();
+        //Task<IAsyncEnumerable<string>> GetDbCollections();
         Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request);
         Task<bool> DeleteCollection(string name);
         Task<ChromaChunksCollection<ChromaChunk>> GetCollection(string name);
