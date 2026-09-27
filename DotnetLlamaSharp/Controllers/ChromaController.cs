@@ -28,9 +28,19 @@ namespace DotnetLlamaSharp.Controllers
 
         [HttpGet("/collection/list")]
         public async Task<IActionResult> GetDbCollections()
-            => Ok(OllamaTools.FromMethod(_service.GetType().GetMethod(nameof(_service.GetSysMessage))));
-            //=> Ok(await _service.GetDbCollections());
+            //=> Ok(OllamaTools.FromMethod(_service.GetType().GetMethod(nameof(_service.GetSysMessage))));
+            => Ok(await _service.GetDbCollections());
 
+        [HttpPost("/new/collection")]
+        public async Task<IActionResult> NewCollection([FromBody] CreateCollectionRequestDto dto)
+        {
+            var request = _mapper.Map<CreateCollectionRequestDto, CreateCollectionRequest>(dto);
+
+            var result = await _service.CreateCollection(request.Name, request.HnswSettings);
+
+            return Ok(result);
+        }
+        //---------------
         [HttpGet("/collection/{name}")]
         public async Task<IActionResult> GetCollection(string name)
             => Ok(_mapper.Map<ChromaChunksCollection<ChromaChunk>, ChromaChunksCollectionDto<ChromaChunkDto>>(await _service.GetCollection(name)));

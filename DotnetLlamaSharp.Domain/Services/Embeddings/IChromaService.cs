@@ -1,4 +1,5 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
+using Dotnet.Chroma.Repositories.Models.Settings;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
@@ -10,7 +11,10 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
 {
     public interface IChromaService
     {
-        Task<IAsyncEnumerable<string>> GetDbCollections();
+        Task<IEnumerable<string>> GetDbCollections();
+        Task<string> CreateCollection(string name, HnswSettings? config);
+        //------------------
+        //Task<IAsyncEnumerable<string>> GetDbCollections();
         Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request);
         Task<bool> DeleteCollection(string name);
         Task<ChromaChunksCollection<ChromaChunk>> GetCollection(string name);

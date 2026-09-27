@@ -2,6 +2,7 @@
 using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Metadata;
+using Dotnet.Chroma.Repositories.Models.Settings;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
@@ -87,7 +88,7 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.TotalMessages, opt => opt.MapFrom(src => src.Chunks.First().GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES))
                 .ForMember(dest => dest.TotalChunks, opt => opt.MapFrom(src => src.Chunks.First().GetMeta<ChatChunkMetadata>().SESSION_CHUNKS));
 
-
+            CreateMap<CollectionHnswDto, HnswSettings>().ReverseMap();
             CreateMap<CreateCollectionRequestDto, CreateCollectionRequest>();
 
             CreateMap<EmbedCollectionRequestDto, EmbedCollectionRequest>()

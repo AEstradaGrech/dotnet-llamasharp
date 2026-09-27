@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Dotnet.Chroma.Repositories.Models.Settings;
+
 
 namespace DotnetLlamaSharp.Domain.Models.Request.Chroma
 {
@@ -10,5 +9,7 @@ namespace DotnetLlamaSharp.Domain.Models.Request.Chroma
         public string? Description { get; set; }
         public string? EmbeddingModel { get; set; }
         public int Dimensions { get; set; }
+
+        public HnswSettings? HnswSettings { get; set; }
     }
 }
