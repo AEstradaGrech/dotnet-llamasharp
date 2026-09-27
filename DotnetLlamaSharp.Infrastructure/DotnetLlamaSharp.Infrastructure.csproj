@@ -8,16 +8,15 @@
 
   <ItemGroup>
 
-    <PackageReference Include="Estrada.OllamaSharp.LameChain.SDK" Version="0.1.4-beta" />
+    <PackageReference Include="Estrada.ChromaDB.Repositories" Version="0.0.3-beta-001" />
 
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Chroma" Version="1.74.0-alpha" />
+    <PackageReference Include="Estrada.OllamaSharp.LameChain.SDK" Version="0.1.4-beta" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
     <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\dotnet-chroma-repositories\Dotnet.Chroma.Repositories\Dotnet.Chroma.Repositories.csproj" />
     <ProjectReference Include="..\DotnetLlamaSharp.Domain\DotnetLlamaSharp.Domain.csproj" />
   </ItemGroup>
 

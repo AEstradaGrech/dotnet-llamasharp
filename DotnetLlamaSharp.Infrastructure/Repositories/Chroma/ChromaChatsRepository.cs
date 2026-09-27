@@ -8,15 +8,13 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Connectors.Chroma;
-
 
 namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 {
     public class ChromaChatsRepository : ChromaRepository<ChromaChatsCollection, ChromaChatChunk>, IChromaChatsRepository
     {
 #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        public ChromaChatsRepository(ILogger<ChromaChatsRepository> logger, IOptions<ChromaSettings> dbSettings, IChromaClient client, IChromaDbClient dbClient) : base(client, dbClient, dbSettings) { }
+        public ChromaChatsRepository(ILogger<ChromaChatsRepository> logger, IOptions<ChromaSettings> dbSettings, IChromaDbClient dbClient) : base(dbClient, dbSettings) { }
 
         public Task<List<ChromaChatChunk>> GetCollectionSessions(string collectionName)
         {

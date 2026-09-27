@@ -45,9 +45,6 @@ namespace DotnetLlamaSharp.Services.Embeddings
         public async Task<ChromaChunksCollection<ChromaChunk>> GetCollection(string name)
             => await _repo.GetCollection(name);
 
-        //public Task<IAsyncEnumerable<string>> GetDbCollections()
-        //    => _repo.GetDbCollections();
-
         public async Task<ChromaFilesCollection> InspectFilesCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false)
             => await _fileMgmtService.InspectCollection(name, startIndex, samples, includeEmbeddings);
 

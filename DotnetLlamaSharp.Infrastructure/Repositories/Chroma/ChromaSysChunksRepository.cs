@@ -8,15 +8,12 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Connectors.Chroma;
-
 
 namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 {
-    #pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     public class ChromaSysChunksRepository : ChromaRepository<SysChunksCollection, ChromaSysChunk>, IChromaSysChunksRepository
     {
-        public ChromaSysChunksRepository(ILogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>> logger, IOptions<ChromaSettings> dbSettings, IChromaClient client, IChromaDbClient dbClient) : base(client, dbClient, dbSettings)  { }
+        public ChromaSysChunksRepository(ILogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>> logger, IOptions<ChromaSettings> dbSettings, IChromaDbClient dbClient) : base(dbClient, dbSettings)  { }
 
         public async Task<SysChunksCollection> CreateCollection(string name, ReadOnlyMemory<float> embedding, string? description)
         {
@@ -59,7 +56,6 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
                 
                 return chunk;
             }
-            
         }
 
         public async Task<bool> ExistsMessage(string collectionName, string name, string? version)
@@ -100,7 +96,6 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             }
         }
 
-       
         public async Task<string> GetSystemMessage(string collectionName, string name)
         {
             var message = await GetByName(collectionName, name);

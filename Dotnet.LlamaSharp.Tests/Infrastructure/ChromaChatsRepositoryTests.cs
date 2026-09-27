@@ -1,54 +1,35 @@
+using Dotnet.Chroma.Repositories;
+using Dotnet.Chroma.Repositories.Interfaces;
 using Dotnet.Chroma.Repositories.Models;
+using Dotnet.Chroma.Repositories.Models.Client.Response;
 using Dotnet.Chroma.Repositories.Models.Settings;
 using DotnetLlamaSharp.Infrastructure.Repositories.Chroma;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Connectors.Chroma;
 using Moq;
-using System.Text.Json;
-using WireMock.RequestBuilders;
-using WireMock.ResponseBuilders;
-using WireMock.Server;
-
-#pragma warning disable SKEXP0020
 
 namespace Dotnet.LlamaSharp.Tests.Infrastructure
 {
-    // GetCollection y GetChunkById en ChromaRepository usan ChromaClientExtensions.GetDocuments,
-    // que hace llamadas HTTP directas a {ChromaSettings.ServerUrl}/api/v1/collections/{id}/get.
-    // Los tests que necesitan estos métodos usan WireMock.Net para interceptar esas llamadas.
-    // ListCollectionsAsync y GetCollectionAsync son métodos de IChromaClient y se mockean con Moq.
+    // ChromaChatsRepository builds on top of ChromaRepository<TCol, TChunk>, which talks to Chroma
+    // exclusively through IChromaDbClient. Mocking that interface directly (with Moq) is enough to
+    // exercise the repository logic - no HTTP layer / WireMock is involved anymore.
 
-    public class ChromaChatsRepositoryTests : IDisposable
+    public class ChromaChatsRepositoryTests
     {
         private readonly Mock<ILogger<ChromaChatsRepository>> _mockLogger;
-        private readonly Mock<IChromaClient> _mockClient;
+        private readonly Mock<IChromaDbClient> _mockClient;
         private readonly IOptions<ChromaSettings> _settings;
-        private WireMockServer? _wireMock;
 
         public ChromaChatsRepositoryTests()
         {
             _mockLogger = new Mock<ILogger<ChromaChatsRepository>>();
-            _mockClient = new Mock<IChromaClient>();
+            _mockClient = new Mock<IChromaDbClient>();
             _settings = Options.Create(new ChromaSettings());
-        }
-
-        public void Dispose()
-        {
-            _wireMock?.Stop();
-            _wireMock?.Dispose();
-            _wireMock = null;
         }
 
         private ChromaChatsRepository CreateSut()
             => new ChromaChatsRepository(_mockLogger.Object, _settings, _mockClient.Object);
-
-        private ChromaChatsRepository CreateSutWithWireMock()
-            => new ChromaChatsRepository(
-                _mockLogger.Object,
-                Options.Create(new ChromaSettings { ServerUrl = _wireMock!.Url! }),
-                _mockClient.Object);
 
         private TestableChromaChatsRepository CreateTestableSut()
             => new TestableChromaChatsRepository(_mockLogger.Object, _settings, _mockClient.Object);
@@ -98,7 +79,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         }
 
         // --- QueryCollection: mutación de filtros ---
-        // El override del base QueryCollection(4-param) intercepta los filtros antes de la llamada real.
+        // El override del base QueryCollection(6-param) intercepta los filtros antes de la llamada real.
 
         [Fact]
         public async Task QueryCollection_WithoutSessionsAndEmptyFilters_AddsChatInitFalseFilter()
@@ -136,8 +117,8 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         {
             // Arrange
             SetupCollectionMock("test-col", "col-uuid", sessionIds: "session1", currentSessionId: "session1");
-            StubChunkHttpGet("col-uuid", chunkId: "session1", isSessionChunk: true);
-            var sut = CreateSutWithWireMock();
+            StubChunkGet("col-uuid", chunkId: "session1", isSessionChunk: true);
+            var sut = CreateSut();
 
             // Act
             var result = await sut.GetCurrentSessionChunk("test-col");
@@ -150,10 +131,10 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         [Fact]
         public async Task GetCurrentSessionChunk_CollectionNotFound_ThrowsException()
         {
-            // Arrange – ListCollectionsAsync returns empty → CollectionExists = false → exception
+            // Arrange - IChromaDbClient.GetCollection returns null -> ChromaRepository.GetCollection returns null
             _mockClient
-                .Setup(c => c.ListCollectionsAsync(It.IsAny<CancellationToken>()))
-                .Returns(AsyncEnumerable());
+                .Setup(c => c.GetCollection("nonexistent-col"))
+                .ReturnsAsync((ChromaCollection)null!);
             var sut = CreateSut();
 
             // Act
@@ -168,10 +149,10 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         [Fact]
         public async Task GetSessionChunks_ValidSessionId_ReturnsNull()
         {
-            // Arrange – implementation is currently incomplete: returns null after validation
+            // Arrange - implementation is currently incomplete: returns null after validation
             SetupCollectionMock("test-col", "col-uuid", sessionIds: "session1", currentSessionId: "session1");
-            StubChunkHttpGet("col-uuid", chunkId: "session1", isSessionChunk: true);
-            var sut = CreateSutWithWireMock();
+            StubChunkGet("col-uuid", chunkId: "session1", isSessionChunk: true);
+            var sut = CreateSut();
 
             // Act
             var result = await sut.GetSessionChunks("test-col", "session1");
@@ -183,9 +164,9 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         [Fact]
         public async Task GetSessionChunks_SessionNotInCollection_ThrowsInvalidOperationException()
         {
-            // Arrange – SESSION_IDS = "session1", requested session = "session99" → not found
+            // Arrange - SESSION_IDS = "session1", requested session = "session99" -> not found
             SetupCollectionMock("test-col", "col-uuid", sessionIds: "session1", currentSessionId: "session1");
-            var sut = CreateSutWithWireMock();
+            var sut = CreateSut();
 
             // Act
             Func<Task> act = () => sut.GetSessionChunks("test-col", "session99");
@@ -210,100 +191,72 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
             await act.Should().ThrowAsync<NotImplementedException>();
         }
 
-        // --- Mock / stub helpers ---
+        // --- Mock helpers ---
 
-        // Sets up IChromaClient mocks and WireMock HTTP stub for the collection metadata chunk (ID "0").
-        // requestDocuments calls ChromaClientExtensions.GetDocuments which POSTs to:
-        //   {ServerUrl}/api/v1/collections/{collectionId}/get
-        private void SetupCollectionMock(string collectionName, string collectionId,
-            string sessionIds, string currentSessionId)
+        // Sets up IChromaDbClient so that ChromaRepository.GetCollection("collectionName") succeeds,
+        // returning the collection chunk (ID "0") shaped as a chat collection.
+        private void SetupCollectionMock(string collectionName, string collectionId, string sessionIds, string currentSessionId)
         {
-            _wireMock = WireMockServer.Start();
-
-            // IChromaClient mocks (used by CollectionExists and GetChunkById → GetCollectionAsync)
             _mockClient
-                .Setup(c => c.ListCollectionsAsync(It.IsAny<CancellationToken>()))
-                .Returns(AsyncEnumerable(collectionName));
+                .Setup(c => c.ListCollections())
+                .ReturnsAsync(new List<string> { collectionName });
 
             _mockClient
-                .Setup(c => c.GetCollectionAsync(collectionName, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ChromaCollectionModel { Id = collectionId, Name = collectionName });
+                .Setup(c => c.GetCollection(collectionName))
+                .ReturnsAsync(new ChromaCollection { Id = collectionId, Name = collectionName });
 
-            // HTTP stub: collection metadata chunk (ID "0")
-            var collectionMetaJson = JsonSerializer.Serialize(new
-            {
-                ids = new[] { "0" },
-                embeddings = (object?)null,
-                documents = new[] { "" },
-                metadatas = new[]
+            _mockClient
+                .Setup(c => c.GetDocuments(collectionId, It.Is<List<string>>(ids => ids.Count == 1 && ids[0] == "0"), true, null))
+                .ReturnsAsync(new ChromaDocumentModel
                 {
-                    new Dictionary<string, object>
+                    Ids = new List<string> { "0" },
+                    Documents = new List<string> { "" },
+                    Embeddings = new List<float[]>(),
+                    Metadatas = new List<Dictionary<string, object>>
                     {
-                        ["document_name"]          = collectionName,
-                        ["chunk_type"]             = 3,
-                        ["current_session_id"]     = currentSessionId,
-                        ["session_ids"]            = sessionIds,
-                        ["total_sessions"]         = 1,
-                        ["current_session_chunks"] = 0,
-                        ["agent_name"]             = "TestAgent",
-                        ["user_name"]              = "TestUser"
+                        new Dictionary<string, object>
+                        {
+                            ["document_name"] = collectionName,
+                            ["chunk_type"] = 3,
+                            ["current_session_id"] = currentSessionId,
+                            ["session_ids"] = sessionIds,
+                            ["total_sessions"] = 1,
+                            ["current_session_chunks"] = 0,
+                            ["agent_name"] = "TestAgent",
+                            ["user_name"] = "TestUser"
+                        }
                     }
-                }
-            });
-
-            _wireMock
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && (body.Contains("\"0\"") || body.Contains("'0'"))))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(collectionMetaJson));
+                });
         }
 
-        // HTTP stub for a specific chunk retrieved via GetChunkById.
-        private void StubChunkHttpGet(string collectionId, string chunkId, bool isSessionChunk)
+        // Stubs GetDocuments for a specific chunk id, as retrieved via GetChunkById.
+        private void StubChunkGet(string collectionId, string chunkId, bool isSessionChunk)
         {
-            var chunkJson = JsonSerializer.Serialize(new
-            {
-                ids = new[] { chunkId },
-                embeddings = (object?)null,
-                documents = new[] { "" },
-                metadatas = new[]
+            _mockClient
+                .Setup(c => c.GetDocuments(collectionId, It.Is<List<string>>(ids => ids.Count == 1 && ids[0] == chunkId), true, null))
+                .ReturnsAsync(new ChromaDocumentModel
                 {
-                    new Dictionary<string, object>
+                    Ids = new List<string> { chunkId },
+                    Documents = new List<string> { "" },
+                    Embeddings = new List<float[]>(),
+                    Metadatas = new List<Dictionary<string, object>>
                     {
-                        ["document_name"]  = "test-col",
-                        ["chunk_type"]     = 3,
-                        ["chat_init"]      = isSessionChunk,
-                        ["current"]        = isSessionChunk,
-                        ["total_messages"] = 0,
-                        ["session_id"]     = chunkId,
-                        ["session_chunks"] = 0
+                        new Dictionary<string, object>
+                        {
+                            ["document_name"] = "test-col",
+                            ["chunk_type"] = 3,
+                            ["chat_init"] = isSessionChunk,
+                            ["current"] = isSessionChunk,
+                            ["total_messages"] = 0,
+                            ["session_id"] = chunkId,
+                            ["session_chunks"] = 0
+                        }
                     }
-                }
-            });
-
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && body.Contains($"\"{chunkId}\"")))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(chunkJson));
+                });
         }
 
-        private static async IAsyncEnumerable<string> AsyncEnumerable(params string[] items)
-        {
-            foreach (var item in items)
-                yield return item;
-        }
-
-        // --- Subclase testable: intercepta la llamada al base QueryCollection(4-param) ---
-        // QueryCollection(string, embedding, int, dict) es el único método virtual+no-final en la clase base.
+        // --- Subclase testable: intercepta la llamada al base QueryCollection(6-param) ---
+        // QueryCollection(string, embedding, int, dict, int?, int?) es el único método virtual+no-final en la clase base.
 
         private class TestableChromaChatsRepository : ChromaChatsRepository
         {
@@ -312,14 +265,16 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
             public TestableChromaChatsRepository(
                 ILogger<ChromaChatsRepository> logger,
                 IOptions<ChromaSettings> settings,
-                IChromaClient client)
+                IChromaDbClient client)
                 : base(logger, settings, client) { }
 
             public override Task<List<ChromaQueryChunk>> QueryCollection(
-                string name,
+                string collectionName,
                 ReadOnlyMemory<float> queryEmbedding,
                 int resultsNumber,
-                Dictionary<string, object> filters)
+                Dictionary<string, object> filters = null!,
+                int? offset = null,
+                int? limit = null)
             {
                 CapturedFilters = filters != null
                     ? new Dictionary<string, object>(filters)

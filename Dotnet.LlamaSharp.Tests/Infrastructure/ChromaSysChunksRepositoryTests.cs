@@ -1,52 +1,35 @@
 using Dotnet.Chroma.Repositories;
+using Dotnet.Chroma.Repositories.Interfaces;
 using Dotnet.Chroma.Repositories.Models;
+using Dotnet.Chroma.Repositories.Models.Client.Request;
+using Dotnet.Chroma.Repositories.Models.Client.Response;
+using Dotnet.Chroma.Repositories.Models.Settings;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Infrastructure.Repositories.Chroma;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Connectors.Chroma;
 using Moq;
-using System.Text.Json;
-using WireMock.RequestBuilders;
-using WireMock.ResponseBuilders;
-using WireMock.Server;
-
-#pragma warning disable SKEXP0020
 
 namespace Dotnet.LlamaSharp.Tests.Infrastructure
 {
-    // requestDocuments hace POST a {ServerUrl}/api/v1/collections/{id}/get con filtros de metadatos.
-    // Las llamadas a GetCollectionAsync y ListCollectionsAsync son métodos de IChromaClient y se mockean con Moq.
-    // Las llamadas HTTP directas se interceptan con WireMock.Net.
+    // ChromaSysChunksRepository builds on top of ChromaRepository<TCol, TChunk>, which talks to Chroma
+    // exclusively through IChromaDbClient. Mocking that interface directly (with Moq) is enough to
+    // exercise the repository logic - no HTTP layer / WireMock is involved anymore.
 
-    public class ChromaSysChunksRepositoryTests : IDisposable
+    public class ChromaSysChunksRepositoryTests
     {
-        private readonly Mock<IChromaClient> _mockClient;
-        private WireMockServer? _wireMock;
+        private readonly Mock<IChromaDbClient> _mockClient;
 
         public ChromaSysChunksRepositoryTests()
         {
-            _mockClient = new Mock<IChromaClient>();
-        }
-
-        public void Dispose()
-        {
-            _wireMock?.Stop();
-            _wireMock?.Dispose();
-            _wireMock = null;
+            _mockClient = new Mock<IChromaDbClient>();
         }
 
         private ChromaSysChunksRepository CreateSut()
             => new ChromaSysChunksRepository(
                 NullLogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>>.Instance,
                 Options.Create(new ChromaSettings()),
-                _mockClient.Object);
-
-        private ChromaSysChunksRepository CreateSutWithWireMock()
-            => new ChromaSysChunksRepository(
-                NullLogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>>.Instance,
-                Options.Create(new ChromaSettings { ServerUrl = _wireMock!.Url! }),
                 _mockClient.Object);
 
         // --- CreateCollection ---
@@ -72,12 +55,12 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         public async Task ExistsMessage_ChunkFound_ReturnsTrue()
         {
             // Arrange
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "sys-msg",
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "sys-msg",
                 ids: ["1"],
                 texts: ["The system message"],
                 metadatas: [new Dictionary<string, object> { ["document_name"] = "sys-msg", ["chunk_type"] = 2 }]);
-            var sut = CreateSutWithWireMock();
+            var sut = CreateSut();
 
             // Act
             var result = await sut.ExistsMessage("sys-col", "sys-msg", null);
@@ -90,9 +73,9 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         public async Task ExistsMessage_ChunkNotFound_ReturnsFalse()
         {
             // Arrange
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "missing-msg", ids: [], texts: [], metadatas: []);
-            var sut = CreateSutWithWireMock();
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "missing-msg", ids: [], texts: [], metadatas: []);
+            var sut = CreateSut();
 
             // Act
             var result = await sut.ExistsMessage("sys-col", "missing-msg", null);
@@ -106,9 +89,9 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         [Fact]
         public async Task GetByName_ChunkFound_ReturnsChunkWithHighestId()
         {
-            // Arrange – GetByName sin versión ordena por ID numérico descendente y retorna el primero
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "sys-msg",
+            // Arrange - GetByName sin versión ordena por ID numérico descendente y retorna el primero
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "sys-msg",
                 ids: ["1", "2", "3"],
                 texts: ["v1", "v2", "v3"],
                 metadatas:
@@ -117,7 +100,7 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                     new Dictionary<string, object> { ["document_name"] = "sys-msg", ["chunk_type"] = 2 },
                     new Dictionary<string, object> { ["document_name"] = "sys-msg", ["chunk_type"] = 2 }
                 ]);
-            var sut = CreateSutWithWireMock();
+            var sut = CreateSut();
 
             // Act
             var result = await sut.GetByName("sys-col", "sys-msg");
@@ -131,9 +114,9 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         public async Task GetByName_ChunkNotFound_ThrowsFileNotFoundException()
         {
             // Arrange
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "missing-chunk", ids: [], texts: [], metadatas: []);
-            var sut = CreateSutWithWireMock();
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "missing-chunk", ids: [], texts: [], metadatas: []);
+            var sut = CreateSut();
 
             // Act
             Func<Task> act = () => sut.GetByName("sys-col", "missing-chunk");
@@ -148,18 +131,16 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         [Fact]
         public async Task DeleteByName_ChunkFound_ReturnsDeletedChunk()
         {
-            // Arrange – DeleteChunk verifica el borrado con GetChunkById justo después de DeleteEmbeddingsAsync.
-            // El stub devuelve vacío para que chunk==null → bSucceeded=true.
-            // updateCollectionChunksCount (disparado cuando bSucceeded=true) necesita el stub de upsert.
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "sys-msg",
+            // Arrange - DeleteChunk verifica el borrado con el 'deletedCount' devuelto por DeleteDocuments.
+            // updateCollectionChunksCount (disparado cuando el borrado tiene éxito) necesita el stub de upsert.
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "sys-msg",
                 ids: ["1"],
                 texts: ["The system message"],
                 metadatas: [new Dictionary<string, object> { ["document_name"] = "sys-msg", ["chunk_type"] = 2 }]);
-            StubChunkGetByIdEmpty("col-abc", "1");
-            StubDeleteChunk("col-abc");
-            StubUpsert("col-abc");
-            var sut = CreateSutWithWireMock();
+            StubDeleteDocuments("col-abc", "1");
+            StubUpsertDocument("col-abc");
+            var sut = CreateSut();
 
             // Act
             var result = await sut.DeleteByName("sys-col", "sys-msg");
@@ -173,9 +154,9 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         public async Task DeleteByName_ChunkNotFound_ThrowsFileNotFoundException()
         {
             // Arrange
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "missing-msg", ids: [], texts: [], metadatas: []);
-            var sut = CreateSutWithWireMock();
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "missing-msg", ids: [], texts: [], metadatas: []);
+            var sut = CreateSut();
 
             // Act
             Func<Task> act = () => sut.DeleteByName("sys-col", "missing-msg");
@@ -191,12 +172,12 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         public async Task GetSystemMessage_ChunkFound_ReturnsMessageText()
         {
             // Arrange
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "sys-prompt",
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "sys-prompt",
                 ids: ["1"],
                 texts: ["You are a helpful assistant."],
                 metadatas: [new Dictionary<string, object> { ["document_name"] = "sys-prompt", ["chunk_type"] = 2 }]);
-            var sut = CreateSutWithWireMock();
+            var sut = CreateSut();
 
             // Act
             var result = await sut.GetSystemMessage("sys-col", "sys-prompt");
@@ -209,9 +190,9 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         public async Task GetSystemMessage_ChunkNotFound_ThrowsFileNotFoundException()
         {
             // Arrange
-            SetupChromaDbMocks("sys-col", "col-abc");
-            StubGetChunksByFilter("col-abc", "missing-prompt", ids: [], texts: [], metadatas: []);
-            var sut = CreateSutWithWireMock();
+            SetupCollectionMock("sys-col", "col-abc");
+            StubFilterDocuments("col-abc", "missing-prompt", ids: [], texts: [], metadatas: []);
+            var sut = CreateSut();
 
             // Act
             Func<Task> act = () => sut.GetSystemMessage("sys-col", "missing-prompt");
@@ -221,122 +202,63 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
                 .WithMessage("*missing-prompt*");
         }
 
-        // --- Mock / stub helpers ---
+        // --- Mock helpers ---
 
-        // Inicia WireMock, mockea ListCollectionsAsync y GetCollectionAsync, y registra el stub HTTP
-        // para el chunk de metadatos de colección (ID "0"), necesario cuando GetCollection es invocado.
-        private void SetupChromaDbMocks(string collectionName, string collectionId)
-        {
-            _wireMock = WireMockServer.Start();
-
-            _mockClient
-                .Setup(c => c.ListCollectionsAsync(It.IsAny<CancellationToken>()))
-                .Returns(AsyncEnumerable(collectionName));
-
-            _mockClient
-                .Setup(c => c.GetCollectionAsync(collectionName, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ChromaCollectionModel { Id = collectionId, Name = collectionName });
-
-            // Stub para el chunk "0" (metadatos de colección), usado por GetCollection
-            var collectionMetaJson = JsonSerializer.Serialize(new
-            {
-                ids = new[] { "0" },
-                embeddings = (object?)null,
-                documents = new[] { "" },
-                metadatas = new[] { new Dictionary<string, object> { ["document_name"] = collectionName, ["chunk_type"] = 2 } }
-            });
-
-            _wireMock
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && (body.Contains("\"0\"") || body.Contains("'0'"))))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(collectionMetaJson));
-        }
-
-        // Stub HTTP para GET por filtro de metadatos (document_name = chunkName).
-        private void StubGetChunksByFilter(string collectionId, string chunkName,
-            string[] ids, string[] texts, Dictionary<string, object>[] metadatas)
-        {
-            var json = JsonSerializer.Serialize(new
-            {
-                ids,
-                embeddings = (object?)null,
-                documents = texts,
-                metadatas
-            });
-
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && body.Contains($"\"{chunkName}\"")))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(json));
-        }
-
-        // Stub HTTP para GET por ID de chunk que devuelve vacío.
-        // DeleteChunk llama a GetChunkById una sola vez DESPUÉS de DeleteEmbeddingsAsync para verificar el borrado.
-        // Devolver vacío hace que chunk==null → bSucceeded=true → DeleteChunk retorna true.
-        private void StubChunkGetByIdEmpty(string collectionId, string chunkId)
-        {
-            var emptyJson = JsonSerializer.Serialize(new
-            {
-                ids = Array.Empty<string>(),
-                embeddings = (object?)null,
-                documents = Array.Empty<string>(),
-                metadatas = Array.Empty<Dictionary<string, object>>()
-            });
-
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/get")
-                    .UsingPost()
-                    .WithBody(body => body != null && body.Contains($"\"{chunkId}\"")))
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithHeader("Content-Type", "application/json")
-                    .WithBody(emptyJson));
-        }
-
-        // Stub HTTP para update de metadatos. updateCollectionChunksCount llama a requestEmbeddingsUpsert
-        // con isCreate=false, que construye la URL como /api/v1/collections/{id}/update (no /upsert).
-        private void StubUpsert(string collectionId)
-        {
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/update")
-                    .UsingPost())
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithBody("{}"));
-        }
-
-        // Stub HTTP para DELETE y mock de IChromaClient.DeleteEmbeddingsAsync (cubre ambas rutas internas).
-        private void StubDeleteChunk(string collectionId)
+        // Sets up IChromaDbClient so that ChromaRepository.GetCollection("collectionName") succeeds,
+        // returning the collection chunk (ID "0") metadata.
+        private void SetupCollectionMock(string collectionName, string collectionId)
         {
             _mockClient
-                .Setup(c => c.DeleteEmbeddingsAsync(collectionId, It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.CompletedTask);
+                .Setup(c => c.ListCollections())
+                .ReturnsAsync(new List<string> { collectionName });
 
-            _wireMock!
-                .Given(Request.Create()
-                    .WithPath($"/api/v1/collections/{collectionId}/delete")
-                    .UsingPost())
-                .RespondWith(Response.Create()
-                    .WithStatusCode(200)
-                    .WithBody("{}"));
+            _mockClient
+                .Setup(c => c.GetCollection(collectionName))
+                .ReturnsAsync(new ChromaCollection { Id = collectionId, Name = collectionName });
+
+            _mockClient
+                .Setup(c => c.GetDocuments(collectionId, It.Is<List<string>>(ids => ids.Count == 1 && ids[0] == "0"), true, null))
+                .ReturnsAsync(new ChromaDocumentModel
+                {
+                    Ids = new List<string> { "0" },
+                    Documents = new List<string> { "" },
+                    Embeddings = new List<float[]>(),
+                    Metadatas = new List<Dictionary<string, object>>
+                    {
+                        new Dictionary<string, object> { ["document_name"] = collectionName, ["chunk_type"] = 2 }
+                    }
+                });
         }
 
-        private static async IAsyncEnumerable<string> AsyncEnumerable(params string[] items)
+        // Stubs FilterDocuments for a metadata filter matching document_name = chunkName (used by GetChunks).
+        private void StubFilterDocuments(string collectionId, string chunkName, string[] ids, string[] texts, Dictionary<string, object>[] metadatas)
         {
-            foreach (var item in items)
-                yield return item;
+            _mockClient
+                .Setup(c => c.FilterDocuments(
+                    collectionId,
+                    It.Is<Dictionary<string, object>>(f => f.ContainsKey("document_name") && (string)f["document_name"] == chunkName),
+                    false, null, null, null, null))
+                .ReturnsAsync(new ChromaDocumentModel
+                {
+                    Ids = ids.ToList(),
+                    Documents = texts.ToList(),
+                    Embeddings = new List<float[]>(),
+                    Metadatas = metadatas.ToList()
+                });
+        }
+
+        private void StubDeleteDocuments(string collectionId, string chunkId)
+        {
+            _mockClient
+                .Setup(c => c.DeleteDocuments(collectionId, It.Is<List<string>>(ids => ids.Count == 1 && ids[0] == chunkId)))
+                .ReturnsAsync(1);
+        }
+
+        private void StubUpsertDocument(string collectionId)
+        {
+            _mockClient
+                .Setup(c => c.UpsertDocument(collectionId, It.IsAny<ChromaClientUpsertRequest>()))
+                .ReturnsAsync(true);
         }
     }
 }
