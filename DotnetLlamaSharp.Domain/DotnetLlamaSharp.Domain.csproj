@@ -8,7 +8,7 @@
 
   <ItemGroup>
 
-    <PackageReference Include="Estrada.ChromaDB.Repositories" Version="0.0.3-beta-001" />
+    <PackageReference Include="Estrada.ChromaDB.Repositories" Version="0.0.3-beta" />
 
     <PackageReference Include="Estrada.OllamaSharp.LameChain.SDK" Version="0.1.4-beta" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
