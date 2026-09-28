@@ -24,7 +24,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders
             var pages = new List<DocumentPage>();
 
             using var document = PdfDocument.Open(fullPath);
-
+            
             foreach (var page in document.GetPages())
                 if(!string.IsNullOrEmpty(page.Text.Trim()))
                     pages.Add(new DocumentPage(page.Number, page.Text.Trim().Replace("\n", " ").Replace("\r\n", " ").Replace("\t", " ").Replace("\\", "")));

@@ -3,15 +3,9 @@ using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using DotnetLlamaSharp.Models.Common;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.Extensions.AI;
-using OllamaSharp;
-using OllamaSharp.Models;
 using System.Net;
 using System.Reflection;
-using Microsoft.Extensions.Options;
-using static OllamaSharp.OllamaApiClient;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
-using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 
@@ -71,7 +65,13 @@ namespace DotnetLlamaSharp.Extensions
                 ServiceLifetime.Transient => services.AddTransient<IDocumentLoader<PdfLoaderService>, PdfLoaderService>(),
                 _ => services
             };
-
+        public static IServiceCollection AddMarkdownDocumentLoader(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Scoped)
+            => lifetime switch
+            {
+                ServiceLifetime.Scoped => services.AddScoped<IDocumentLoader<MarkdownLoaderService>, MarkdownLoaderService>(),
+                ServiceLifetime.Transient => services.AddTransient<IDocumentLoader<MarkdownLoaderService>, MarkdownLoaderService>(),
+                _ => services
+            };
         private static IApplicationBuilder ConfigureGlobalErrorHandler(this IApplicationBuilder app)
         {
             app.UseExceptionHandler(appError =>

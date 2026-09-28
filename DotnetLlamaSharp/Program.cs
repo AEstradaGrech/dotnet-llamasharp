@@ -58,6 +58,7 @@ try
         .AddDefaultChromaRepository()
         .AddChromaDbClient(builder.Configuration)
         .AddPdfDocumentLoader()
+        .AddMarkdownDocumentLoader()
         .AddAutoMapper(cfg => {
             cfg.AddMaps(new[] {
                 typeof(DocumentsMappingProfile),
@@ -77,6 +78,7 @@ try
             cfg.SwaggerDoc("LangSearchController", new OpenApiInfo { Title = "Lang Search", Version = "v1" });
             cfg.SwaggerDoc("PromptingController", new OpenApiInfo { Title = "Prompting", Version = "v1" });
             cfg.SwaggerDoc("ChromaController", new OpenApiInfo { Title = "Chroma", Version = "v1" });
+            cfg.SwaggerDoc("FilesController", new OpenApiInfo { Title = "Files", Version = "v1" });
             cfg.SwaggerDoc("ApiManagementController", new OpenApiInfo { Title = "ApiManagement", Version = "v1" });
             cfg.SwaggerDoc("EmbeddingsController", new OpenApiInfo { Title = "Embeddings", Version = "v1" });
         });
@@ -92,6 +94,7 @@ try
            cfg.SwaggerEndpoint("/swagger/PromptingController/swagger.json", "Prompting");
            cfg.SwaggerEndpoint("/swagger/LameSamplesController/swagger.json", "Lame Samples");
            cfg.SwaggerEndpoint("/swagger/LangSearchController/swagger.json", "Lang Search");
+           cfg.SwaggerEndpoint("/swagger/FilesController/swagger.json", "Files");
            cfg.SwaggerEndpoint("/swagger/ApiManagementController/swagger.json", "ApiManagement");
            cfg.SwaggerEndpoint("/swagger/EmbeddingsController/swagger.json", "Embeddings");
        });

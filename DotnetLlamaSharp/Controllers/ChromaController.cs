@@ -1,14 +1,9 @@
 ﻿using AutoMapper;
 using Dotnet.Chroma.Repositories.Models;
-using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Utilities;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
-using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
 using DotnetLlamaSharp.Domain.Models.Request.Chroma;
-using DotnetLlamaSharp.Domain.Services.DocumentLoader;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
-using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;
-using DotnetLlamaSharp.Models.Common.Documents;
 using DotnetLlamaSharp.Models.Request.Chroma;
 using DotnetLlamaSharp.Models.Request.Embeddings;
 using DotnetLlamaSharp.Models.Response.Chroma;
@@ -20,15 +15,13 @@ namespace DotnetLlamaSharp.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = nameof(ChromaController))]
-    public class ChromaController(IChromaService service, IDocumentLoader<PdfLoaderService> docLoader, IMapper mapper) : ControllerBase
+    public class ChromaController(IChromaService service, IMapper mapper) : ControllerBase
     {
         private readonly IChromaService _service = service;
-        private readonly IDocumentLoader<PdfLoaderService> _loader = docLoader;
         private readonly IMapper _mapper = mapper;
 
         [HttpGet("/collection/list")]
         public async Task<IActionResult> GetDbCollections()
-            //=> Ok(OllamaTools.FromMethod(_service.GetType().GetMethod(nameof(_service.GetSysMessage))));
             => Ok(await _service.GetDbCollections());
 
         [HttpPost("/new/collection")]
@@ -40,7 +33,7 @@ namespace DotnetLlamaSharp.Controllers
 
             return Ok(result);
         }
-        //---------------
+
         [HttpGet("/collection/{name}")]
         public async Task<IActionResult> GetCollection(string name)
             => Ok(_mapper.Map<ChromaChunksCollection<ChromaChunk>, ChromaChunksCollectionDto<ChromaChunkDto>>(await _service.GetCollection(name)));
@@ -104,18 +97,6 @@ namespace DotnetLlamaSharp.Controllers
         [HttpDelete("/collection/system/{collection}/message/id/{id}")]
         public async Task<IActionResult> DeleteSystemChunkById(string collection, string id)
             => Ok(_mapper.Map<ChromaSysChunk, ChromaSysChunkDto>(await _service.DeleteSysMessageById(collection, id)));
-
-        [HttpGet("/documents/load/{docName}")]
-        public async Task<IActionResult> LoadDocument(string docName)
-            => Ok(_mapper.Map<Document, DocumentDto>(await _loader.LoadDocument(docName)));
-
-        [HttpGet("/documents/load/{docName}/page/{index}")]
-        public async Task<IActionResult> LoadDocumentPage(string docName, int index)
-            => Ok(_mapper.Map<DocumentPage, DocumentPageDto>(await _loader.LoadPage(docName, index)));
-
-        [HttpGet("/documents/load/{docName}/page/{index}/size/{batchSize}")]
-        public async Task<IActionResult> LoadDocumentPages(string docName, int index, int batchSize)
-            => Ok(_mapper.Map<IEnumerable<DocumentPage>, IEnumerable<DocumentPageDto>>(await _loader.LoadPages(docName, index, batchSize)));
     }
 
 }
