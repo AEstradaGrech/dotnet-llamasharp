@@ -1,6 +1,4 @@
-﻿using DotnetLlamaSharp.Domain.Services.DocumentLoader;
-using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;
-using DotnetLlamaSharp.Infrastructure.Settings;
+﻿using DotnetLlamaSharp.Infrastructure.Settings;
 using DotnetLlamaSharp.Models.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using System.Net;
@@ -59,19 +57,7 @@ namespace DotnetLlamaSharp.Extensions
                    .AllowAnyHeader()
                    .AllowCredentials());
            });
-        public static IServiceCollection AddPdfDocumentLoader(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Scoped)
-            => lifetime switch {
-                ServiceLifetime.Scoped => services.AddScoped<IDocumentLoader<PdfLoaderService>, PdfLoaderService>(),
-                ServiceLifetime.Transient => services.AddTransient<IDocumentLoader<PdfLoaderService>, PdfLoaderService>(),
-                _ => services
-            };
-        public static IServiceCollection AddMarkdownDocumentLoader(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Scoped)
-            => lifetime switch
-            {
-                ServiceLifetime.Scoped => services.AddScoped<IDocumentLoader<MarkdownLoaderService>, MarkdownLoaderService>(),
-                ServiceLifetime.Transient => services.AddTransient<IDocumentLoader<MarkdownLoaderService>, MarkdownLoaderService>(),
-                _ => services
-            };
+
         private static IApplicationBuilder ConfigureGlobalErrorHandler(this IApplicationBuilder app)
         {
             app.UseExceptionHandler(appError =>

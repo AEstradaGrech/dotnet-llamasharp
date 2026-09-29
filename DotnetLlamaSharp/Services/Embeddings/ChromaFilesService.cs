@@ -1,14 +1,14 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service.DocumentLoader;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.DocumentLoader;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services.DocumentLoader;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
-using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
 using DotnetLlamaSharp.Domain.Models.Request.Chroma;
 using DotnetLlamaSharp.Domain.Repositories.Chroma;
-using DotnetLlamaSharp.Domain.Services.DocumentLoader;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Infrastructure.Exceptions;
-using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;
 using DotnetLlamaSharp.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using System.Net;

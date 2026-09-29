@@ -2,6 +2,7 @@
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using DotnetLlamaSharp.Domain.Models.Request;
@@ -24,5 +25,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<List<ILameSearchResult>> VectorSearchCommand(VectorSearchRequest request);
         Task<List<string>> VectorSearchSourceable(VectorSearchRequest request);
         StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class;
+
+        Task<string> AgentPromptSample(string prompt, string model, string? name, string? description, PromptSettings? settings);
     }
 }

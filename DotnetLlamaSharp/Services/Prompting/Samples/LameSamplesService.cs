@@ -1,4 +1,5 @@
-﻿using Dotnet.LangSearch.SDK;
+﻿using Anthropic.Services.Beta;
+using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Bases;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
@@ -10,8 +11,10 @@ using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
@@ -25,7 +28,9 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
+using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
 using DotnetLlamaSharp.Infrastructure.Settings;
+using DotnetLlamaSharp.Services.Embeddings;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models.Chat;
 using System.Text;
@@ -35,13 +40,18 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
     public class LameSamplesService : ILameSamplesService
     {
         private readonly IPromptCommandsFactory _factory;
+        private readonly IAgentsFactory _agentsFactory;
+
+        private readonly IToolsService<LlamaSharpTools> _toolsService;
         private readonly ILangSearchService _langSearch;
         private readonly IChromaService _chromaService;
         private readonly ILogger<LameSamplesService> _logger;
         private readonly ApiSettings _apiSettings;
-        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService, IOptions<ApiSettings> apiSettings, ILogger<LameSamplesService> logger)
+        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService, IAgentsFactory agentsFactory, IToolsService<LlamaSharpTools> toolsService, IOptions<ApiSettings> apiSettings, ILogger<LameSamplesService> logger)
         {
             _factory = promptsFactory;
+            _agentsFactory = agentsFactory;
+            _toolsService = toolsService;
             _langSearch = langSearch;
             _chromaService = chromaService;
             _apiSettings = apiSettings.Value;
@@ -949,5 +959,17 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
 
         public StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class
             => _factory.GetStoreable<TStored>(storingLambda);
+
+        public async Task<string> AgentPromptSample(string prompt, string model, string? name, string? description, PromptSettings? settings)
+        {
+            var agent = _agentsFactory.CreateAgent(model, settings)
+                //.AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)))
+                //.AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
+                //.WithToolsbox(_toolsService) <-- añade todas las tools de un ToolService
+                .WithSkills(["jamaican-assistant"]);
+                //.AddDataSources("some-web-data", ["blah blah from LangSearch"]);
+
+            return await agent.RunPrompt(prompt);
+        }
     }
 }

@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.DocumentLoader;
 using DotnetLlamaSharp.Models.Common.Documents;
 
 namespace DotnetLlamaSharp.Mappers

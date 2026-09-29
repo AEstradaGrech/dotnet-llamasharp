@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using DotnetLlamaSharp.Domain.Models.Primitives.DocumentLoader;
-using DotnetLlamaSharp.Domain.Services.DocumentLoader;
-using DotnetLlamaSharp.Infrastructure.Services.DocumentLoaders;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service.DocumentLoader;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.DocumentLoader;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services.DocumentLoader;
 using DotnetLlamaSharp.Models.Common.Documents;
 using Microsoft.AspNetCore.Mvc;
 

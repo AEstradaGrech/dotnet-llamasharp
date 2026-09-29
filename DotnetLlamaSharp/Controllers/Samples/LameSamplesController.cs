@@ -6,7 +6,6 @@ using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
-using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Utilities;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
@@ -480,7 +479,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
         }
 
         [HttpPost("/commands/tools/rag-example")]
-        public async Task<IActionResult> ProviderMessageTest([FromBody] ChatPromptRequestDto request)
+        public async Task<IActionResult> ToolsUsageExample([FromBody] ChatPromptRequestDto request)
         {
             
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
@@ -491,6 +490,47 @@ namespace DotnetLlamaSharp.Controllers.Samples
             commandReq.AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)));
 
             var response = await _ollamaCommands.PromptCommand<MessagePromptCommand, ChatMessage>(commandReq, request.SystemMessage, chatCommandReq.Settings);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/agents/example")]
+        public async Task<IActionResult> LameAgentExample([FromBody] ChatPromptRequestDto request)
+        {
+            /*
+             {
+              "prompt": "What can you tell me about Reasoning Agents in the context of Game AI",
+              "isGuidanceAppend": true,
+               "settings": {
+                "model": "llama3.1:8b",
+                "maxTokens": 600,
+                "contextLength": 4096,
+                "temperature": 0.7,
+                "topP": 0.6,
+                "topK": 10,
+                "miroStat": 1,
+               "miroStatEta": 0.2,
+            "miroStatTau": 5.0,
+            "repeatPenalty": 1.1,
+            "repeatLastN": 0,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "",
+                "useDefaultCommandMessage": true
+              },
+              "chatHistory": [
+   
+              ]
+            }
+             */
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
+
+            var response = await _samplesService.AgentPromptSample(request.Prompt, commandReq.Model, "Fulano", null, chatCommandReq.Settings);
 
             if (response != null)
                 return Ok(response);

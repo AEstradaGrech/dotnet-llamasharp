@@ -9,16 +9,12 @@
   <ItemGroup>
 
     <PackageReference Include="Estrada.ChromaDB.Repositories" Version="0.0.3-beta" />
-
-    <PackageReference Include="Estrada.OllamaSharp.LameChain.SDK" Version="0.1.4-beta" />
-
-    <PackageReference Include="Markdig" Version="1.4.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
-    <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\dotnet-lamechain-sdk\Dotnet.OllamaSharp.LameChain.SDK\Dotnet.OllamaSharp.LameChain.SDK.csproj" />
     <ProjectReference Include="..\DotnetLlamaSharp.Domain\DotnetLlamaSharp.Domain.csproj" />
   </ItemGroup>
 
