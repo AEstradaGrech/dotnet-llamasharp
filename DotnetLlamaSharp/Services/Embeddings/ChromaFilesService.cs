@@ -460,6 +460,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         private string getTopicTagString(List<string> tags)
         {
+            if(tags.Count == 0) return "";
+
             StringBuilder sb = new StringBuilder();
 
             tags.ForEach(tag => sb.Append(tag).Append(","));
