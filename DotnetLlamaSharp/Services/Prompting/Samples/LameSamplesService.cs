@@ -960,16 +960,82 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
         public StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class
             => _factory.GetStoreable<TStored>(storingLambda);
 
-        public async Task<string> AgentPromptSample(string prompt, string model, string? name, string? description, PromptSettings? settings)
-        {
-            var agent = _agentsFactory.CreateAgent(model, settings)
-                //.AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)))
-                //.AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
-                //.WithToolsbox(_toolsService) <-- añade todas las tools de un ToolService
-                .WithSkills(["jamaican-assistant"]);
-                //.AddDataSources("some-web-data", ["blah blah from LangSearch"]);
+        /* 06-10-2026 
+         checked with:
 
-            return await agent.RunPrompt(prompt);
+        {
+            "prompt": "Hey Gómez, what can you tell me about reasoning agents",
+            "systemMessage": "You are an assistant with access to a ChromaDB knowledge base. To answer, ALWAYS call ChromaCollectionSelector first with the user query. NEVER invent collection names: only call ChromaSearchTool with the exact collection name returned by ChromaCollectionSelector.",
+            "isGuidanceAppend": false,
+            "reasoning" : "none",
+               "settings": {
+                "model": "HammerAI/gemma-4-12b-heretic",
+                "maxTokens": 1000,
+                "contextLength": 10000,
+                "temperature": 0.7,
+                "topP": 0.6,
+                "topK": 10,
+            "repeatPenalty": 1.1,
+            "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "",
+                "useDefaultCommandMessage": true
+              },
+              "chatHistory": [
+   
+              ]
         }
+        Note: this version requires instructions about the tool selection order to be in the ToolDescription (that description is commented since the tool orchestration is handled by a skill now)
+        Note: a 12B model seems to be too dumb to use the tools without enforcing the usage with the system instruction present in the request when the behavioral skill is added. 
+              Works without the system message guidance when you remove the behavioral skill / character role bias
+        Note: heretic just means the model has been uncensored, nothing else (google it). I choose that model to allow a more 'realistic' and less 'polite' assistant behavior and avoid the 'always try to please the user' bias.
+        Note: The request checks the 'name' and 'description' usage by calling the agent with the wrong name, it is just a simple / dumb test to check how smart is the model.
+        Note: requires at least 2 chroma collections to choose from, with descriptive collection descriptions.
+         */
+        public async Task<string> AgentPromptSample_ToolsAndSkill(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
+            => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
+                _agentsFactory.CreateAgent(model, settings) :
+                _agentsFactory.CreateAgent(model, name, description, settings))
+                .AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)))
+                .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
+                .WithSkills(["jamaican-assistant"])
+                .RunPrompt(prompt, instruction);
+
+        /*
+         * {
+              "prompt": "Hey Gómez, what can you tell me about reasoning agents. Can they be used in videogames?",
+              "isGuidanceAppend": false,
+            "reasoning" : "none",
+               "settings": {
+                "model": "HammerAI/gemma-4-12b-heretic",
+                "maxTokens": 1000,
+                "contextLength": 10000,
+                "temperature": 0.7,
+                "topP": 0.6,
+                "topK": 10,
+            "repeatPenalty": 1.1,
+            "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "",
+                "useDefaultCommandMessage": true
+              },
+              "chatHistory": [
+   
+              ]
+            }
+         Note: this version relies on the 'chroma-query' skill to instruct the model about how to orchestrate the chroma tools. 
+               It works without the system message guidance and without having to hardcode usage instruction in the tool [Description] attribute.
+         */
+        public async Task<string> AgentPromptSample_ToolsFromSkills(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
+            => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
+                _agentsFactory.CreateAgent(model, settings) :
+                _agentsFactory.CreateAgent(model, name, description, settings))
+                .AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)))
+                .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
+                .WithSkills(["jamaican-assistant", "chroma-query"])
+                .RunPrompt(prompt, instruction);
+        
     }
 }

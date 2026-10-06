@@ -26,6 +26,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<List<string>> VectorSearchSourceable(VectorSearchRequest request);
         StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class;
 
-        Task<string> AgentPromptSample(string prompt, string model, string? name, string? description, PromptSettings? settings);
+        Task<string> AgentPromptSample_ToolsAndSkill(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
+        Task<string> AgentPromptSample_ToolsFromSkills(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
     }
 }

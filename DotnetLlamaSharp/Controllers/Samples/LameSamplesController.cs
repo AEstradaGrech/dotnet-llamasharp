@@ -497,40 +497,31 @@ namespace DotnetLlamaSharp.Controllers.Samples
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
-        [HttpPost("/agents/example")]
-        public async Task<IActionResult> LameAgentExample([FromBody] ChatPromptRequestDto request)
+        [HttpPost("/agents/example/tools-and-skill")]
+        public async Task<IActionResult> LameAgentExample_ToolsAndSkill([FromBody] ChatPromptRequestDto request)
         {
-            /*
-             {
-              "prompt": "What can you tell me about Reasoning Agents in the context of Game AI",
-              "isGuidanceAppend": true,
-               "settings": {
-                "model": "llama3.1:8b",
-                "maxTokens": 600,
-                "contextLength": 4096,
-                "temperature": 0.7,
-                "topP": 0.6,
-                "topK": 10,
-                "miroStat": 1,
-               "miroStatEta": 0.2,
-            "miroStatTau": 5.0,
-            "repeatPenalty": 1.1,
-            "repeatLastN": 0,
-                "commandValidations": 0,
-                "validationType": 0,
-                "validatorModel": "",
-                "useDefaultCommandMessage": true
-              },
-              "chatHistory": [
-   
-              ]
-            }
-             */
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
 
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
-            var response = await _samplesService.AgentPromptSample(request.Prompt, commandReq.Model, "Fulano", null, chatCommandReq.Settings);
+            // Name and description are added to the system message and modifies the behavior of the agent. This is a simple / naive test to add another condition to the final response
+            // You don't need to add a name and description to build the agent, these are extra optional parameters
+            var response = await _samplesService.AgentPromptSample_ToolsAndSkill(commandReq.Model, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/agents/example/skill-tools")]
+        public async Task<IActionResult> LameAgentExample_ToolsFromSkills([FromBody] ChatPromptRequestDto request)
+        {
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
+
+            var response = await _samplesService.AgentPromptSample_ToolsFromSkills(commandReq.Model, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
                 return Ok(response);

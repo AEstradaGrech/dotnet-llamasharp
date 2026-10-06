@@ -22,7 +22,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
             _logger = logger;
         }
 
-        [Description("Tool to select the best ChromaDB collection to query based on the user input. Use this tool to get the name of the collection that best matches with the user intent.")]
+        [Description("Tool to select the best ChromaDB collection to query based on the user input.")]
         public async Task<string> ChromaCollectionSelector(
             [Description("User input to analyze to extract the intent and select the best collection")] string userQuery)
         {
@@ -60,7 +60,10 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
             return choice;
         }
 
-        [Description($"Tool to retrieve data from the specified collection Chroma and user query. This tool is complementary to the {nameof(ChromaCollectionSelector)} tool and MUST be used AFTER calling the {nameof(ChromaCollectionSelector)} tool")]
+        //[Description($"Tool to retrieve data from the specified collection Chroma and user query. This tool is complementary to the {nameof(ChromaCollectionSelector)} tool and MUST be used AFTER calling the {nameof(ChromaCollectionSelector)} tool")]
+        // Note: the above description includes instructions about how to orchestrate the tools and it is necessary to use tools without a skill or system instruction specifying how to use the tools. It is here for demonstrative purposes (use LameAgents + Skills)
+
+        [Description($"Tool to retrieve data from the specified collection Chroma and user query.")]
         public async Task<List<string>> ChromaSearchTool(
             [Description("Name of the ChromaDB collection to query")] string collectionName,
             [Description("User input that will be used to query the specified chroma collection")] string userQuery)
