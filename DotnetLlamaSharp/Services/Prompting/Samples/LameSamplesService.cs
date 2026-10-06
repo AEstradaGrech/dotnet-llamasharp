@@ -58,29 +58,8 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             _logger = logger;
         }
         public Action<Guid, string, LogLevel> GetBroadcastAction()
-            => new Action<Guid,string, LogLevel>(broadcaster);
+            => new Action<Guid,string, LogLevel>(chainBroadcaster);
         
-        private void broadcaster(Guid runnerId, string message, LogLevel level)
-        {
-            string logMessage = $"{level} >> CHAIN STEP {runnerId} >> {message}";
-
-            switch (level)
-            {
-                case (LogLevel.Error):
-                case (LogLevel.Critical):
-                    _logger.LogError(logMessage);
-                    break;
-                case (LogLevel.Warning):
-                    _logger.LogWarning(logMessage);
-                    break;
-                case (LogLevel.Information):
-                case (LogLevel.Debug):
-                case (LogLevel.Trace):
-                default:
-                    _logger.LogInformation(logMessage);
-                    break;
-            }
-        }
         public async Task<ChatPrompt> TemplatedExamples(ChainedPrompt request)
         {
             // Example of simple sequencing. This is just a demonstration of how a simple action like a Question-Answer chatbot
@@ -1032,10 +1011,55 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
                 _agentsFactory.CreateAgent(model, settings) :
                 _agentsFactory.CreateAgent(model, name, description, settings))
+                .WithBroadcast(agentBroadcaster)
                 .AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)))
                 .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
                 .WithSkills(["jamaican-assistant", "chroma-query"])
                 .RunPrompt(prompt, instruction);
-        
+
+        private void chainBroadcaster(Guid runnerId, string message, LogLevel level)
+        {
+            string logMessage = $"{level} >> CHAIN STEP {runnerId} >> {message}";
+
+            switch (level)
+            {
+                case (LogLevel.Error):
+                case (LogLevel.Critical):
+                    _logger.LogError(logMessage);
+                    break;
+                case (LogLevel.Warning):
+                    _logger.LogWarning(logMessage);
+                    break;
+                case (LogLevel.Information):
+                case (LogLevel.Debug):
+                case (LogLevel.Trace):
+                default:
+                    _logger.LogInformation(logMessage);
+                    break;
+            }
+        }
+
+        private void agentBroadcaster(Guid agentId, string message, LogLevel level)
+        {
+            string logMessage = $"{level} >> Agent ID: {agentId} >> {message}";
+
+            switch (level)
+            {
+                case (LogLevel.Error):
+                case (LogLevel.Critical):
+                    _logger.LogError(logMessage);
+                    break;
+                case (LogLevel.Warning):
+                    _logger.LogWarning(logMessage);
+                    break;
+                case (LogLevel.Information):
+                case (LogLevel.Debug):
+                case (LogLevel.Trace):
+                default:
+                    _logger.LogInformation(logMessage);
+                    break;
+            }
+        }
+
     }
 }

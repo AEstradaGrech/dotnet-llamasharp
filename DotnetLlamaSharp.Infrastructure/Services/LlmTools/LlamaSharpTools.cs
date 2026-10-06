@@ -74,7 +74,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
 
             _logger.LogWarning($"TOOL_CALL: {nameof(ChromaSearchTool)} >> retrieving collection: {collectionName}");
 
-            var collection = await chromaService.GetCollection(collectionName);
+            var collection = await chromaService.GetCollection(collectionName.Replace("\"", ""));
 
             if (collection == null) return [];
 
