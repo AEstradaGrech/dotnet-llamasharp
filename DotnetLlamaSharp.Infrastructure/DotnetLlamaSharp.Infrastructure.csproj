@@ -9,12 +9,13 @@
   <ItemGroup>
 
     <PackageReference Include="Estrada.ChromaDB.Repositories" Version="0.0.3-beta" />
+
+    <PackageReference Include="Estrada.OllamaSharp.LameChain.SDK" Version="0.2.0-beta" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\dotnet-lamechain-sdk\Dotnet.OllamaSharp.LameChain.SDK\Dotnet.OllamaSharp.LameChain.SDK.csproj" />
     <ProjectReference Include="..\DotnetLlamaSharp.Domain\DotnetLlamaSharp.Domain.csproj" />
   </ItemGroup>
 
