@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.Models.Response.Chroma
+﻿using DotnetLlamaSharp.Models.Request.Chroma;
+
+namespace DotnetLlamaSharp.Models.Response.Chroma
 {
     public class ChromaChunksCollectionDto<T> where T : ChromaChunkDto
     {
@@ -8,6 +10,7 @@
         public string EmbeddingModel { get; set; }
         public int EmbeddingDimensions { get; set; }
         public int TotalChunks { get; set; }
+        public CollectionHnswDto Config { get; set; }
         public List<T> Chunks { get; set; } = new List<T>();
     }
 }

@@ -1,4 +1,5 @@
-﻿using Dotnet.Chroma.Repositories.Models;
+﻿using Dotnet.Chroma.Repositories;
+using Dotnet.Chroma.Repositories.Models;
 using Dotnet.Chroma.Repositories.Models.Interfaces;
 using Dotnet.Chroma.Repositories.Models.Metadata;
 using Dotnet.Chroma.Repositories.Models.Settings;
@@ -38,7 +39,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         public async Task<ChromaFilesCollection> CreateCollectionFromFile(EmbedCollectionRequest request)
             => await _fileMgmtService.CreateCollectionFromFile(request);
-
+        public async Task<ChromaCollection> GetDbCollectionInfo(string name)
+            => await _repo.GetDbCollectionInfo(name);
         public async Task<bool> DeleteCollection(string name)
             => await _repo.DeleteCollection(name);
 
