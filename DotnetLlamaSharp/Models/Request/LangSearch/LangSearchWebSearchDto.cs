@@ -7,6 +7,7 @@ namespace DotnetLlamaSharp.Models.Request.LangSearch
         public string Query { get; set; }
         public int Count { get; set; }
         public EQueryFreshness Freshness { get; set; }
-        public bool? WithSummary { get; set; }
+        public bool? IsFullText { get; set; }
+        public int? MaxTextCharacters { get; set; }
     }
 }

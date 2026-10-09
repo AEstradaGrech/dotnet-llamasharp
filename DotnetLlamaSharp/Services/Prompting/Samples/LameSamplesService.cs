@@ -259,7 +259,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 // Add a nice rebujito of sources to ALL the instructions in the SplittedStep to give them the same context despite their different tasks
                 .WithRebujito(
                     // In this case the example simulates a web search about the topic that might be relevant to ALL processess in the step (splitted AND branches)
-                    await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 3, Query = "Market trends 2026" }, returnSnippet: false),
+                    await _langSearch.SearchWebTexts(new WebSearchRequest("Market trends 2026", results: 3, isFullText: false)),
                     guidance: "Use the below data to do X (here you can add a guidance message for the LLM that will be fed into the context window of each request)", 
                     feedDose: 800 // Also, you can clamp each source in the list to a specific string size to avoid bloating the context window (Note: this chops every source without any content check)
                  ) 
@@ -325,7 +325,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 .Join(new StepSettings(_factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(instruction: "Summarize all the previous sources in a well structured report", request.Settings)))
                 // You can add rebujitos to SingleThrow steps too.
                 .WithRebujito(
-                    await _langSearch.SearchRankedTexts(new RankedPageRequest { Count = 3, Query = "Market trends 2026" }, returnSnippet: false),
+                    await _langSearch.SearchWebTexts(new WebSearchRequest("Market trends 2026", results: 3, isFullText: false)),
                     guidance: "Use the below data to do X (here you can add a guidance message for the LLM that will be fed into the context window of each request)",
                     feedDose: 800
                  )
@@ -424,8 +424,8 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                         // In this case I'm adding semi-random data to the bias the generated character base profile towards specific styles.
                         // But ideally you would add here well processed sources (in this example it could be real human-made character concepts made by the game studio artists
                             "Use the below data to bias your final response towards that style, ambience, topic or vibe",
-                            await _langSearch.SearchWebTexts(new WebSearchRequest("Don Pablo o La vida del buscón. Lazarillo de Tormes, sinopsis.", 5), returnSnippet: false, resultsClamp: 100)),
-                            // Guide the refining / summarizing step to leverage the output of the different branches and get more consistent results
+                            await _langSearch.SearchWebTexts(new WebSearchRequest("Don Pablo o La vida del buscón. Lazarillo de Tormes, sinopsis.", results:5, isFullText: false))
+                        ) // Guide the refining / summarizing step to leverage the output of the different branches and get more consistent results
                     ])
                 // Now that the chain has been splitted in 3 branches, it is possible to work on each branch indepently by piping commands that will be executed on each recieved previous output
                 // This part of the example tries to demonstrate how to use another step to post-process the generated outputs and get more consistent results by generating
@@ -442,10 +442,10 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 // In this case I'm simulating more style biasing without filtering it, but ideally you would add business content that you would like to apply on each branch.
                 // In this example, it could be more content produced by the game studio staff (like scene scripts or even quest scripts, the idea
                 // is to add get results that are aligned with the game lore so the final junction step does not hallucinate and add content from it's training dataset
-                //.WithRebujito(
-                //    await _langSearch.SearchWebTexts(new WebSearchRequest("Revuelta de los Comuneros. Rebelion de las Germanias", results: 3), returnSnippet: false),
-                //    guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore. Output your response in always in English despite the source language.", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
-                //    feedDose: 100)
+                .WithRebujito(
+                    await _langSearch.SearchWebTexts(new WebSearchRequest("Revuelta de los Comuneros. Rebelion de las Germanias", results: 3, isFullText: false)),
+                    guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore. Output your response in always in English despite the source language.", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
+                    feedDose: 100)
                 .Join(new StepSettings(
                     _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
                         instruction: "Generate a full character profile (400-500 words) with the provided data. Review the character Faction and place of origin, you MUST include those in your profile. Include a background story, a psychological profile and a 'usual routines' section"),
@@ -474,7 +474,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     new StashSettings(
                         _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch),
                         new VectorSearchRequest(
-                            index: "game-lore-sources",
+                            index: "game-lore",
                             query: request.Prompt,
                             embedder: "nomic-embed-text",
                             dimensions: 512,
@@ -530,7 +530,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                             isIsolated: true))
                     .Stash(new StashSettings(
                             _factory.GetVectorSearchSourceable(_chromaService.SimilaritySearch), // style bias docs
-                            new VectorSearchRequest(index:"game-lore-sources", query: request.Prompt, "nomic-embed-text", dimensions: 512, results: 4),
+                            new VectorSearchRequest(index:"game-lore", query: request.Prompt, "nomic-embed-text", dimensions: 512, results: 4),
                             feedFwd: "Use this sources to set the style and ambience of your generated character", 
                             isGreedy: true, 
                             isIsolated: false,
@@ -565,7 +565,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     )
                 )
                 .WithRebujito(
-                    await _langSearch.SearchWebTexts(new WebSearchRequest("Revuelta de los Comuneros. Rebelion de las Germanias", results: 3), returnSnippet: false),
+                    await _langSearch.SearchWebTexts(new WebSearchRequest("Revuelta de los Comuneros. Rebelion de las Germanias", results: 3, isFullText: false)),
                     guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore. Output your response in always in English despite the source language.", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
                     feedDose: 300)
                 .ChainFeedsFrom([thenId, stashId])

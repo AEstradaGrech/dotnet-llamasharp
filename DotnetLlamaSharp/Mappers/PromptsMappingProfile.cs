@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK.Models.Request;
-using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
@@ -10,7 +9,6 @@ using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.LangSearch;
 using DotnetLlamaSharp.Models.Response;
-using OllamaSharp.Models.Chat;
 
 namespace DotnetLlamaSharp.Mappers
 {
@@ -102,11 +100,13 @@ namespace DotnetLlamaSharp.Mappers
 
             // LangSearch models
             CreateMap<LangSearchWebSearchDto, WebSearchRequest>()
-                .ForMember(dest => dest.Summary, opt => opt.MapFrom(opt => opt.WithSummary));
-            CreateMap<LangSearchRankedPageRequestDto, RankedPageRequest>()
-                .ForMember(dest => dest.Model, opt => opt.MapFrom(dest => dest.RankingModel));
-            CreateMap<LangSearchRankedRequestDto, RankedSearchRequest>()
-                .ForMember(dest => dest.QueriedDocuments, opt => opt.MapFrom(dest => dest.Sources));
+                .ForMember(dest => dest.Contents, 
+                    opt => opt.MapFrom(opt => opt.IsFullText.HasValue ? 
+                        opt.MaxTextCharacters.HasValue ? new Dictionary<string, object> { { "text", new { maxCharacters = opt.MaxTextCharacters.Value } } } :
+                        new Dictionary<string, object> { { "text", opt.IsFullText.Value } } :  
+                        null
+                    )
+                );
         }
     }
 }
