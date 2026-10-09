@@ -230,8 +230,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                                 dimensions: 512,
                                 model: "nomic-embed-text",
                                 filters: null),
-                            withFullContext: false,
-                            withPrevSchema: false
+                            withFullContext: false
                             
                         ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) as StashSettings, //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step, //Chroma metadata filters 
                         out var smartQueryId)

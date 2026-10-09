@@ -8,9 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="16.1.1" />
-    <PackageReference Include="Estrada.ChromaDB.Repositories" Version="0.0.3-beta" />
     <PackageReference Include="Estrada.LangSearch.SDK" Version="0.2.0-alpha" />
-    <PackageReference Include="Estrada.OllamaSharp.LameChain.SDK" Version="0.2.0-beta" />
 
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.5.1" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.5.0" />
@@ -23,6 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+
+    <ProjectReference Include="..\..\dotnet-chroma-repositories\Dotnet.Chroma.Repositories\Dotnet.Chroma.Repositories.csproj" />
+
+    <ProjectReference Include="..\..\dotnet-lamechain-sdk\Dotnet.OllamaSharp.LameChain.SDK\Dotnet.OllamaSharp.LameChain.SDK.csproj" />
 
     <ProjectReference Include="..\DotnetLlamaSharp.Domain\DotnetLlamaSharp.Domain.csproj" />
     <ProjectReference Include="..\DotnetLlamaSharp.Infrastructure\DotnetLlamaSharp.Infrastructure.csproj" />

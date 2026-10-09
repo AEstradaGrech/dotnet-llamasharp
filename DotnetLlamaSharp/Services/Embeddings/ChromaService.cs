@@ -214,10 +214,10 @@ namespace DotnetLlamaSharp.Services.Embeddings
                 if (col == null)
                     throw new ArgumentNullException($"{nameof(OnNewChatMessage)} >> AN ERROR HAS OCCURED WHILE CREATING THE COLLECTION");
             }
-        
-            var embeddedText = await _embeddingsService.GenerateEmbeddings(message.Content);
 
             var chunk = await _chatsRepo.DefaultChunk(chatCollection);
+
+            var embeddedText = await _embeddingsService.GenerateEmbeddings(message.Content, chunk.DefaultMetadata.DIMENSIONS, chunk.DefaultMetadata.MODEL);
 
             chunk.Text = message.Content;
             chunk.Embedding = embeddedText.GeneratedEmbeddings.First().Vector;

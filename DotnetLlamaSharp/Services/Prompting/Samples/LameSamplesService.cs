@@ -30,7 +30,6 @@ using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
 using DotnetLlamaSharp.Infrastructure.Settings;
-using DotnetLlamaSharp.Services.Embeddings;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models.Chat;
 using System.Text;
@@ -86,8 +85,8 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                      feedFwd: "Use this as a base or guidance to develop the topic",
                      requestPrompt: null,// You can pass guidance instructions to the next step to get more focused results from the LLM. 
                      isGuidanceAppend: true, // In case you don't want to add a specific user instruction you can use this constructor overload that requires ONLY the command
-                     withFullContext: true, // this are the available options...
-                     withPrevSchema: false) 
+                     withFullContext: true // this are the available options...
+                    ) 
                 )
                 .Then( // ...and this is the most simple usage (only command + default chain user prompt) with an optional feed forward message to guide the next one
                      new StepSettings(
@@ -685,8 +684,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                         feedFwd: null,
                         isGreedy: true,
                         isIsolated:true,
-                        withFullContext: false,
-                        withPrevSchema: false
+                        withFullContext: false
                        ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) as StashSettings, 
                         //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step
                         // A nested feed is a feed that should go to a sub step or a sub command inside a step
