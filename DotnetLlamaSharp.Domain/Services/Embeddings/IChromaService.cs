@@ -14,7 +14,9 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
     {
         Task<IEnumerable<string>> GetDbCollections();
         Task<string> GetDatabaseCatalogue();
-        Task<string> CreateCollection(string name, HnswSettings? config);
+        Task<bool> CollectionExists(string name);
+        Task<string> CreateNewCollection(string name, HnswSettings? config);
+        Task<ChromaChunksCollection<ChromaChunk>> CreateCollection(string name, string description, HnswSettings? config = null);
         Task<ChromaCollection> GetDbCollectionInfo(string name);
         Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request);
         Task<bool> DeleteCollection(string name);

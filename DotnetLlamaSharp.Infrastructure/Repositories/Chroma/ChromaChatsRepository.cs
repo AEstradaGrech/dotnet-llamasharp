@@ -58,7 +58,7 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.CHUNK_TYPE).ToLower(), EChunkType.CHAT);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.DOCUMENT_NAME).ToLower(), validatedName, resetDefault: true);
-            collectionChunk.Text = description ?? $"Ollama Rag Chat >> {agentName} - {userName} >> {DateTime.Now}";
+            collectionChunk.Text = description ?? $"Chat History >> {agentName} - {userName} >> Creation date: {DateTime.Now}";
 
             return await CreateCollection(validatedName, collectionChunk);
         }

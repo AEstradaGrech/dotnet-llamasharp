@@ -64,7 +64,7 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
         //[Description($"Tool to retrieve data from the specified collection Chroma and user query. This tool is complementary to the {nameof(ChromaCollectionSelector)} tool and MUST be used AFTER calling the {nameof(ChromaCollectionSelector)} tool")]
         // Note: the above description includes instructions about how to orchestrate the tools and it is necessary to use tools without a skill or system instruction specifying how to use the tools. It is here for demonstrative purposes (use LameAgents + Skills)
 
-        [Description($"Tool to retrieve data from the specified Chroma collectionand input query.")]
+        [Description($"Tool to retrieve data from the specified Chroma collection and input query.")]
         public async Task<List<string>> ChromaSearchTool(
             [Description("Name of the ChromaDB collection to query")] string collectionName,
             [Description("Text input that will be used to query the specified chroma collection")] string userQuery)
@@ -93,22 +93,28 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
         }
 
         [Description($"Tool to save text data to the specified Chroma collection.")]
-        public async Task ChromaTextSave(
+        public async Task<string> ChromaSaveTool(
             [Description("Name of the ChromaDB collection to save the text to")] string collectionName,
             [Description("Text input that will be saved to the specified chroma collection")] string text)
         {
-            _logger.LogWarning($"USING TOOL: {nameof(ChromaTextSave)}");
+            _logger.LogWarning($"USING TOOL: {nameof(ChromaSaveTool)}");
 
             var chromaService = _services.GetRequiredService<IChromaService>();
 
-            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaTextSave)} >> saving to collection: {collectionName}");
+            _logger.LogWarning($"TOOL_CALL: {nameof(ChromaSaveTool)} >> saving to collection: {collectionName}");
 
             var insert = await chromaService.StoreChunk(collectionName.Replace("\"", ""), text);
 
             if(insert != null)
-                _logger.LogWarning($"TOOL_CALL: {nameof(ChromaTextSave)} >> Text: {text}");
+            {
+                _logger.LogWarning($"TOOL_CALL: {nameof(ChromaSaveTool)} >> Text: {text}");
 
-            else _logger.LogError($"TOOL_CALL: {nameof(ChromaTextSave)} >> failed to save text: {text}");
+                return insert.Text;
+            }
+                
+            else _logger.LogError($"TOOL_CALL: {nameof(ChromaSaveTool)} >> failed to save text: {text}");
+
+            return string.Empty;
         }
 
         [Description($"Tool to retrieve a catalogue of all the available Chroma collections along with their details.")]
@@ -119,6 +125,44 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
             var defaultRepo = _services.GetRequiredService<IChromaChunksRepository>();
 
             return await defaultRepo.GetCollectionsInfo();
+        }
+
+        [Description($"Tool to create new chroma collections with the specified name and description")]
+        public async Task<string> CreateChromaCollection(
+            [Description("Name of the new ChromaDB collection")] string collectionName,
+            [Description("Text description for the new collection defining its purpose")] string description)
+        {
+            _logger.LogWarning($"USING TOOL: {nameof(CreateChromaCollection)}");
+
+            var chromaService = _services.GetRequiredService<IChromaService>();
+
+            if(string.IsNullOrWhiteSpace(collectionName))
+            {
+                _logger.LogError($"TOOL_CALL: {nameof(CreateChromaCollection)} >> collection name is empty or whitespace");
+
+                return string.Empty;
+            }
+
+            if(await chromaService.CollectionExists(collectionName.Replace("\"", "")))
+            {
+                _logger.LogWarning($"TOOL_CALL: {nameof(CreateChromaCollection)} >> collection already exists: {collectionName}");
+
+                return string.Empty;
+            }
+
+            _logger.LogWarning($"TOOL_CALL: {nameof(CreateChromaCollection)} >> saving to collection: {collectionName}");
+
+            var insert = await chromaService.CreateCollection(collectionName.Replace("\"", ""), description);
+
+            if (insert != null)
+            {
+                _logger.LogWarning($"TOOL_CALL: {nameof(CreateChromaCollection)} >> Collection created: {collectionName}");
+            
+                return insert.Name;
+            }
+            else _logger.LogError($"TOOL_CALL: {nameof(CreateChromaCollection)} >> failed to create collection: {collectionName}");
+
+            return string.Empty;
         }
     }
 }

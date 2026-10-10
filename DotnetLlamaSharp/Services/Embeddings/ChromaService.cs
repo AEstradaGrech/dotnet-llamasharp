@@ -37,8 +37,68 @@ namespace DotnetLlamaSharp.Services.Embeddings
         public async Task<string> GetDatabaseCatalogue()
             => await _repo.GetCollectionsInfo();
 
+        public async Task<IEnumerable<string>> GetDbCollections()
+           => await _repo.GetDbCollections();
+
+        public async Task<string> CreateNewCollection(string name, HnswSettings? config)
+        {
+            var collection = await _repo.CreateDbCollection(name, config);
+
+            if (collection == null)
+                throw new InvalidOperationException($"{nameof(CreateNewCollection)} >> {name} >> An error has occured while creating the collection");
+
+            return collection.Name;
+        }
+
+        public async Task<ChromaChunk> StoreChunk(string collectionName, string text)
+        {
+            var isExistingCollection = await _repo.CollectionExists(collectionName);
+
+            var collection = isExistingCollection ?
+                await _repo.GetCollection(collectionName) :
+                await _repo.CreateCollection(collectionName, collectionName, null, null);
+
+            var chunk = await _repo.DefaultChunk(collectionName);
+
+            var embedding = await _embeddingsService.GenerateEmbeddings(text, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+
+            chunk.Embedding = embedding.GeneratedEmbeddings.First().Vector;
+            chunk.Text = text;
+
+            return await _repo.InsertChunk(collectionName, chunk);
+        }
+
+        public async Task<string> GetFileCollectionsCatalogue()
+            => await _fileMgmtService.GetCollectionsCatalogue();
+
+        public async Task<string> GetChatsCollectionsCatalogue()
+            => await _chatsRepo.GetCollectionsInfo();
+
+        public async Task<string> GetSysCollectionsCatalogue()
+            => await _sysRepo.GetCollectionsInfo();
+
+        public async Task<bool> CollectionExists(string name)
+            => await _repo.CollectionExists(name);
+
         public async Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request)
             => await _fileMgmtService.CreateEmptyFileCollection(request);
+
+        public async Task<ChromaChunksCollection<ChromaChunk>> CreateCollection(string name, string description, HnswSettings? config)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentNullException($"{nameof(CreateCollection)} >> No collection name has been provided");
+
+            if (await _repo.CollectionExists(name))
+                throw new InvalidOperationException($"{nameof(CreateCollection)} >> A collection with name {name} already exists");
+
+            if (string.IsNullOrEmpty(description))
+                description = name;
+
+            if(await _repo.CollectionExists(name))
+                throw new InvalidOperationException($"{nameof(CreateCollection)} >> A collection with name {name} already exists");
+
+            return await _repo.CreateCollection(name, description);
+        }
 
         public async Task<ChromaFilesCollection> CreateCollectionFromFile(EmbedCollectionRequest request)
             => await _fileMgmtService.CreateCollectionFromFile(request);
@@ -270,45 +330,5 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
             return await _sysRepo.InsertChunk(collectionName, newChunk);
         }
-
-        public async Task<IEnumerable<string>> GetDbCollections()
-            => await _repo.GetDbCollections();
-
-        public async Task<string> CreateCollection(string name, HnswSettings? config)
-        {
-            var collection = await _repo.CreateDbCollection(name, config);
-
-            if(collection == null)
-                throw new InvalidOperationException($"{nameof(CreateCollection)} >> {name} >> An error has occured while creating the collection");
-
-            return collection.Name;
-        }
-
-        public async Task<ChromaChunk> StoreChunk(string collectionName, string text)
-        {
-            var isExistingCollection = await _repo.CollectionExists(collectionName);
-
-            var collection = isExistingCollection ? 
-                await _repo.GetCollection(collectionName) :  
-                await _repo.CreateCollection(collectionName, collectionName, null, null);
-
-            var chunk = await _repo.DefaultChunk(collectionName);
-
-            var embedding = await _embeddingsService.GenerateEmbeddings(text, collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
-
-            chunk.Embedding = embedding.GeneratedEmbeddings.First().Vector;
-            chunk.Text = text;
-            
-            return await _repo.InsertChunk(collectionName, chunk);
-        }
-
-        public async Task<string> GetFileCollectionsCatalogue()
-            => await _fileMgmtService.GetCollectionsCatalogue();
-
-        public async Task<string> GetChatsCollectionsCatalogue()
-            => await _chatsRepo.GetCollectionsInfo();
-
-        public async Task<string> GetSysCollectionsCatalogue()
-            => await _sysRepo.GetCollectionsInfo();
     }
 }

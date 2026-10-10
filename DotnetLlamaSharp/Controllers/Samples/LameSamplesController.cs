@@ -528,5 +528,20 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
+
+        [HttpPost("/agents/example/chroma-agent")]
+        public async Task<IActionResult> LameAgentExample_ChromaAgent([FromBody] ChatPromptRequestDto request)
+        {
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
+
+            var response = await _samplesService.AgentPromptSample_ChromaAgent(commandReq.Model, request.Prompt, "Chromy", "A helpful corporative pet and assistant to read, write and create ChromaDB collections", chatCommandReq.Settings, request.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
     }
 }

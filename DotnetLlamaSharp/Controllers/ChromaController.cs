@@ -33,7 +33,7 @@ namespace DotnetLlamaSharp.Controllers
         {
             var request = _mapper.Map<CreateCollectionRequestDto, CreateCollectionRequest>(dto);
 
-            var result = await _service.CreateCollection(request.Name, request.HnswSettings);
+            var result = await _service.CreateCollection(request.Name, request.Description, request.HnswSettings);
 
             return Ok(result);
         }

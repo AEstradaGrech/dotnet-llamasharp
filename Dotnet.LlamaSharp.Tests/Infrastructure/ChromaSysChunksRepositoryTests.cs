@@ -39,10 +39,9 @@ namespace Dotnet.LlamaSharp.Tests.Infrastructure
         {
             // Arrange
             var sut = CreateSut();
-            var emptyEmbedding = new ReadOnlyMemory<float>(Array.Empty<float>());
 
             // Act
-            Func<Task> act = () => sut.CreateCollection("test-col", emptyEmbedding, null);
+            Func<Task> act = () => sut.CreateCollection("test-col", "test-col description", null);
 
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>()

@@ -1014,6 +1014,18 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
                 .WithSkills(["jamaican-assistant", "chroma-query"])
                 .RunPrompt(prompt, instruction);
+        
+        public async Task<string> AgentPromptSample_ChromaAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
+            => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
+                _agentsFactory.CreateAgent(model, settings) :
+                _agentsFactory.CreateAgent(model, name, description, settings))
+                .WithBroadcast(agentBroadcaster)
+                .AddTool(nameof(LlamaSharpTools.ChromaDatabaseExplorer), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaDatabaseExplorer)))
+                .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
+                .AddTool(nameof(LlamaSharpTools.ChromaSaveTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSaveTool)))
+                .AddTool(nameof(LlamaSharpTools.CreateChromaCollection), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.CreateChromaCollection)))
+                .WithSkills(["chroma-dba"])
+                .RunPrompt(prompt, instruction);
 
         private void chainBroadcaster(Guid runnerId, string message, LogLevel level)
         {
@@ -1058,6 +1070,5 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     break;
             }
         }
-
     }
 }
