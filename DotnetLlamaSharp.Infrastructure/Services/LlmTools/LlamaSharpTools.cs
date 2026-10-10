@@ -164,5 +164,40 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
 
             return string.Empty;
         }
+
+        [Description($"Tool to delete chroma collections with the specified name")]
+        public async Task<string> DeleteChromaCollection([Description("Name of the chroma collection to delete")] string collectionName)
+        {
+            _logger.LogWarning($"USING TOOL: {nameof(DeleteChromaCollection)}");
+
+            var chromaService = _services.GetRequiredService<IChromaService>();
+
+            if (string.IsNullOrWhiteSpace(collectionName))
+            {
+                _logger.LogError($"TOOL_CALL: {nameof(DeleteChromaCollection)} >> collection name is empty or whitespace");
+
+                return string.Empty;
+            }
+
+            if (!await chromaService.CollectionExists(collectionName.Replace("\"", "")))
+            {
+                _logger.LogWarning($"TOOL_CALL: {nameof(DeleteChromaCollection)} >> collection does not exist: {collectionName}");
+
+                return string.Empty;
+            }
+
+            _logger.LogWarning($"TOOL_CALL: {nameof(DeleteChromaCollection)} >> deleting collection: {collectionName}");
+
+            if (await chromaService.DeleteCollection(collectionName.Replace("\"", "")))
+            {
+                _logger.LogWarning($"TOOL_CALL: {nameof(DeleteChromaCollection)} >> Collection deleted: {collectionName}");
+
+                return collectionName;
+            }
+
+            else _logger.LogError($"TOOL_CALL: {nameof(DeleteChromaCollection)} >> failed to delete collection: {collectionName}");
+
+            return string.Empty;
+        }
     }
 }

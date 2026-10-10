@@ -1024,6 +1024,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
                 .AddTool(nameof(LlamaSharpTools.ChromaSaveTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSaveTool)))
                 .AddTool(nameof(LlamaSharpTools.CreateChromaCollection), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.CreateChromaCollection)))
+                .AddTool(nameof(LlamaSharpTools.DeleteChromaCollection), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.DeleteChromaCollection)))
                 .WithSkills(["chroma-dba"])
                 .RunPrompt(prompt, instruction);
 
