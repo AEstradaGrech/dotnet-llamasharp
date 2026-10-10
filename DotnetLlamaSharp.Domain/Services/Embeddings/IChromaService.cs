@@ -13,6 +13,7 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
     public interface IChromaService
     {
         Task<IEnumerable<string>> GetDbCollections();
+        Task<string> GetDatabaseCatalogue();
         Task<string> CreateCollection(string name, HnswSettings? config);
         Task<ChromaCollection> GetDbCollectionInfo(string name);
         Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request);
@@ -33,17 +34,21 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<ChromaSysChunk> PatchSysMessage(string collectionName, string id, string newText, Dictionary<string, object>? metas = null);
 
         Task<SysChunksCollection> GetSysChunksPage(string collectionName, int pageSize = 10, int page = 0, Dictionary<string, object> filters = null);
+        Task<string> GetFileCollectionsCatalogue();
+        Task<string> GetChatsCollectionsCatalogue();
+        Task<string> GetSysCollectionsCatalogue();
         Task<List<ChromaFilesCollection>> GetAllFileCollections();
         Task<List<ChromaChatsCollection>> GetAllChatCollections();
 
         //LameChain support
-        // Todos los conectores implementan esto (o el usuario se hace un servicio en su api con esta firma)
-        // Task<ICommandEmbeddings> QueryCollection(string collection, ReadOnlyMemory<float> queryEmbeddings, int results, Dictionary<string, object> filters);
         Task<string> GetSystemInstruction(string collectionName, string messageName);
 
         // Storeable
         Task<ChromaSysChunk> StoreSysChunk(ChromaSysChunk chunk, string collectionName);
         Task<ChatMessage> OnNewChatMessage(ChatMessage message, string chatCollection);
-        //Task<TStored> StoreLameOutput<TStored>(string collectionName) where TStored : class;
+
+        // Default generic save
+        Task<ChromaChunk> StoreChunk(string collectionName, string text);
+
     }
 }

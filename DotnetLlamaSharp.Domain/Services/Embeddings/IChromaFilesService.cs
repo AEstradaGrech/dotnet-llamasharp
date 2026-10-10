@@ -10,6 +10,7 @@ namespace DotnetLlamaSharp.Domain.Services.Embeddings
         Task<ChromaFilesCollection> CreateEmptyFileCollection(CreateCollectionRequest request);
         Task<ChromaFilesCollection> InspectCollection(string name, int startIndex = 0, int samples = 0, bool includeEmbeddings = false); // Default: all chunks from idx 0
         Task<List<ChromaFilesCollection>> GetAllCollections();
+        Task<string> GetCollectionsCatalogue();
 
     }
 }

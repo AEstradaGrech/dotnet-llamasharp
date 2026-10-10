@@ -473,5 +473,8 @@ namespace DotnetLlamaSharp.Services.Embeddings
 
         public async Task<List<ChromaFilesCollection>> GetAllCollections()
             => await _repo.CollectionsOf((int)EChunkType.FILE);
+
+        public async Task<string> GetCollectionsCatalogue()
+            => await _repo.GetCollectionsInfo();
     }
 }

@@ -142,7 +142,7 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<RagPrompt> SimpleSmartQuery(SimpleSmartQueryRequest request)
         {
             var userIntent = await _factory
-                .GetCommand<UserIntentCommand,ChatMessage>(systemMessage:null, request.Settings)
+                .GetCommand<UserIntentCommand, ChatMessage>(systemMessage: null, request.Settings)
                 .Prompt(new PromptCommandRequest(request.Prompt));
 
             var intentEvaluationPrompt = $"- USER INTENT = {userIntent.Content}";
@@ -164,13 +164,13 @@ namespace DotnetLlamaSharp.Services.Prompting
 
                 var availableCollections = await _chromaService.GetAllFileCollections();
 
-                availableCollections.ForEach(collection => choices.Add(getFileCollectionRagText(collection), collection.Name));
+                availableCollections.ForEach(collection => choices.Add(collection.GetCollectionInfo(), collection.Name));
 
                 if (request.WithChatCollections)
                 {
                     var availableChats = await _chromaService.GetAllChatCollections();
 
-                    availableChats.ForEach(collection => choices.Add(getChatCollectionRagText(collection), collection.Name));
+                    availableChats.ForEach(collection => choices.Add(collection.GetCollectionInfo(), collection.Name));
                 }
 
                 var selectorGuidance = "Select ONLY the 'COLLECTION NAME' value of the provided list OR empty list if there are no collections relevant for the user query.";
@@ -231,7 +231,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                                 model: "nomic-embed-text",
                                 filters: null),
                             withFullContext: false
-                            
+
                         ).WithNestedFeed(nameof(MultiChoiceCommand), [ragExpansion.WhoIsPrevious], isForStep: false) as StashSettings, //This is the only way of feeding a subranch nested COMMAND (not a step substep) from the owning step, //Chroma metadata filters 
                         out var smartQueryId)
                     .ChainFeedsFrom([ragExpansion.GetRunnerId, queryAugmentId])
@@ -412,6 +412,26 @@ namespace DotnetLlamaSharp.Services.Prompting
         public async Task<string> QueryCollections(string text, List<string> names, int resultsNumber, double? maxDistance, Dictionary<string, object> filters)
             => getFileRagStringResult(await QueryCollections(names, text, resultsNumber, maxDistance, filters));
 
+        public async Task<List<string>> GetChromaCollectionChoices(bool withChatCollections = false)
+        {
+            var formattedChoices = new List<string>();
+
+            var filesInfo = await getFileCollectionsRagText();
+
+            if (!string.IsNullOrEmpty(filesInfo))
+                formattedChoices.Add(filesInfo);
+
+            if (withChatCollections)
+            {
+                var chatsInfo = await getChatCollectionsRagText();
+
+                if (!string.IsNullOrEmpty(chatsInfo))
+                    formattedChoices.Add(chatsInfo);
+            }
+
+            return formattedChoices;
+        }
+
         // RagChat chunks processor
         private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatsCollection collection, List<ChatMessage> overlaps, bool isSessionInit = false)
         {
@@ -468,7 +488,7 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return nextChunk;
         }
-        
+
         // Smart Rag chain helper methods
         private string getFileRagStringResult(Dictionary<string, ChromaQuery> collectionQueries)
         {
@@ -489,68 +509,19 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             return sb.ToString().Trim();
         }
-        public async Task<List<string>> GetChromaCollectionChoices(bool withChatCollections = false)
-        {
-            var formattedChoices = new List<string>();
 
-            var collections = await _chromaService.GetAllFileCollections();
-
-            collections.ForEach(collection => formattedChoices.Add(getFileCollectionRagText(collection)));
-
-            if(withChatCollections)
-            {
-                var chats = await _chromaService.GetAllChatCollections();
-
-                chats.ForEach(chat => formattedChoices.Add(getChatCollectionRagText(chat)));
-            }
-
-            return formattedChoices;
-        }
-        
         // Simple Smart Rag helper methods
-        private async Task<string> getFileCollectionsRagText(string itemSplitMark = null)
-        {
-            var sb = new StringBuilder();
+        private async Task<string> getFileCollectionsRagText()
+            => getCollectionsInfo<ChromaFilesCollection, ChromaFileChunk>(await _chromaService.GetAllFileCollections());
 
-            var collections = await _chromaService.GetAllFileCollections();
-
-            collections.ForEach(collection => sb.Append(getFileCollectionRagText(collection, itemSplitMark)));
-
-            return sb.ToString().Trim();
-        }
-        
         private async Task<string> getChatCollectionsRagText()
+            => getCollectionsInfo<ChromaChatsCollection, ChromaChatChunk>(await _chromaService.GetAllChatCollections());
+
+        private string getCollectionsInfo<TCol, TChunk>(List<TCol> collections) where TCol : ChromaChunksCollection<TChunk> where TChunk : ChromaChunk
         {
             var sb = new StringBuilder();
-
-            var collections = await _chromaService.GetAllChatCollections();
-
-            collections.ForEach(collection => sb.Append(getChatCollectionRagText(collection)));
-
-            return sb.ToString();
-        }
-        private string getFileCollectionRagText(ChromaFilesCollection collection, string itemSplitMark = null)
-        {
-            var sb = new StringBuilder();
-
-            sb.Append(string.IsNullOrEmpty(itemSplitMark) ? "" : itemSplitMark)
-                  .AppendLine()
-                  .AppendLine($"## COLLECTION NAME = {collection.Name}")
-                  .AppendLine(string.IsNullOrEmpty(collection.Description) ? "" : $"\n> {collection.Name} DESCRIPTION: {collection.Description}")
-                  .Append($"> {collection.Name} TOPICS: ")
-                  .Append(collection.GetMeta<FileCollectionMetadata>().TOPICS);
-
-            return sb.ToString();
-        }
-        private string getChatCollectionRagText(ChromaChatsCollection collection)
-        {
-            var sb = new StringBuilder();
-
-            sb.Append("\n\n- COLLECTION NAME =  ")
-              .Append(collection.Name)
-              .Append($" - {collection.Description}\n");
-
-            return sb.ToString();
+            collections.ForEach(collection => sb.AppendLine().AppendLine(collection.GetCollectionInfo()));
+            return sb.ToString().Trim();
         }
     }
 }

@@ -1,10 +1,8 @@
 ﻿using Dotnet.Chroma.Repositories.Models;
+using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
-using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
-using System.Xml.Linq;
 
 namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
 {
@@ -28,5 +26,14 @@ namespace DotnetLlamaSharp.Domain.Models.Entities.Chroma
             UserName = GetMeta<ChatCollectionMetadata>().USER_NAME;
             CollectionName = DefaultMetadata.DOCUMENT_NAME;
         }
+
+        public override string GetCollectionInfo()
+            => new StringBuilder()
+                .AppendLine(GetCollectionInfo<EChunkType>())
+                .AppendLine($"- AGENT: {AgentName}")
+                .AppendLine($"- USER: {UserName}")
+                .ToString()
+                .Trim();
+           
     }
 }

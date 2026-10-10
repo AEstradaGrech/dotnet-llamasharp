@@ -15,14 +15,20 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
     {
         public ChromaSysChunksRepository(ILogger<ChromaRepository<SysChunksCollection, ChromaSysChunk>> logger, IOptions<ChromaSettings> dbSettings, IChromaDbClient dbClient) : base(dbClient, dbSettings)  { }
 
-        public async Task<SysChunksCollection> CreateCollection(string name, ReadOnlyMemory<float> embedding, string? description)
+        public override async Task<IEnumerable<string>> GetDbCollections()
         {
-            if(embedding.Length == 0)
-                throw new InvalidOperationException($"Collection embedding length is 0. Embedding is required to perform collection queries (chroma requires an embedding despite the metadata)");
+            var collections = await CollectionsOf((int)EChunkType.SYSTEM);
 
-            var collectionChunk = DefaultChunk();
+            return collections.Count > 0 ? collections.Select(c => c.Name) : Enumerable.Empty<string>();
+        }
+
+        public async Task<SysChunksCollection> CreateCollection(string name, string? description, string? embeddingModel = null, int? embeddingDimensions = null)
+        {
+            var collectionChunk = DefaultChunk(embeddingModel ?? _settings.EmbeddingModel, embeddingDimensions ?? _settings.EmbeddingDimensions);
             
             collectionChunk.AddMetadata(nameof(ChromaCollectionMetadata.CHUNK_TYPE).ToLower(), EChunkType.SYSTEM);
+
+            collectionChunk.Text = string.IsNullOrEmpty(description) ? $"System Messages collection" : description;
 
             return await CreateCollection(name, collectionChunk);
         }

@@ -24,6 +24,10 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> GetDbCollections()
             => Ok(await _service.GetDbCollections());
 
+        [HttpGet("/database/catalogue")]
+        public async Task<IActionResult> GetDatabaseCatalogue()
+            => Ok(await _service.GetDatabaseCatalogue());
+
         [HttpPost("/new/collection")]
         public async Task<IActionResult> NewCollection([FromBody] CreateCollectionRequestDto dto)
         {
@@ -42,15 +46,19 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> DeleteCollection(string name)
             => Ok(await _service.DeleteCollection(name));
 
-        [HttpPost("/collection/create")]
+        [HttpGet("/collection/files/catalogue")]
+        public async Task<IActionResult> GetFileCollectionsCatalogue()
+            => Ok(await _service.GetFileCollectionsCatalogue());
+
+        [HttpPost("/collection/files/create")]
         public async Task<IActionResult> CreateCollection([FromBody] CreateCollectionRequestDto request)
             => Ok(_mapper.Map<ChromaFilesCollection, ChromaFilesCollectionDto>(await _service.CreateEmptyFileCollection(_mapper.Map<CreateCollectionRequestDto, CreateCollectionRequest>(request))));
 
-        [HttpPost("/collection/embed")]
+        [HttpPost("/collection/files/embed")]
         public async Task<IActionResult> EmbedCollection([FromBody]EmbedCollectionRequestDto request)
             => Ok(_mapper.Map<ChromaFilesCollection, ChromaFilesCollectionDto>(await _service.CreateCollectionFromFile(_mapper.Map<EmbedCollectionRequestDto, EmbedCollectionRequest>(request))));
 
-        [HttpPost("/collection/inspect/file")]
+        [HttpPost("/collection/files/inspect")]
         public async Task<IActionResult> InspectFilesCollection([FromBody] InspectCollectionRequestDto request) 
             => Ok(_mapper.Map<ChromaFilesCollection, ChromaFilesCollectionDto>(await _service.InspectFilesCollection(request.Name, request.StartIndex, request.SamplesNumber, request.IncludeEmbeddings)));
 
@@ -62,13 +70,10 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> QueryCollection([FromBody] SimilaritySearchRequestDto request)
             => Ok(_mapper.Map<ChromaQuery, ChromaQueryResponseDto>(await _service.QueryCollection(request.Collection, request.Query.Trim(), request.ResultsNumber, request.MetadataFilters)));
 
-        [HttpGet("/collection/system/{name}/create")]
-        public async Task<IActionResult> CreateSysChunksCollection(string name, [FromQuery] string? description)
-            => Ok(_mapper.Map<ChromaChunksCollection<ChromaSysChunk>, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.CreateSystemChunksCollection(name, description)));
 
-        [HttpPost("/collection/system/{name}/page")]
-        public async Task<IActionResult> GetSystemChunksPage(string name, [FromBody] ChromaPageRequestDto dto)
-            => Ok(_mapper.Map<SysChunksCollection, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.GetSysChunksPage(name, dto.PageSize, dto.Page, dto.Filters)));
+        [HttpGet("/collection/chats/catalogue")]
+        public async Task<IActionResult> GetChatsCollectionsCatalogue()
+            => Ok(await _service.GetChatsCollectionsCatalogue());
 
         [HttpPost("/collection/chats/{name}/page/{page}/size/{pageSize}/chunks")]
         public async Task<IActionResult> GetSessionChunkPage(string name, int page, int pageSize, [FromQuery] bool excludeSession = false)
@@ -77,6 +82,19 @@ namespace DotnetLlamaSharp.Controllers
         [HttpPost("/collection/chats/{name}/{sessionId}/page/{page}/size/{pageSize}/chunks")]
         public async Task<IActionResult> GetSessionChunksPage(string name, string sessionId, int page, int pageSize, [FromQuery] bool excludeSession = false)
            => Ok(_mapper.Map<ChromaChatsCollection, ChromaChatSessionDto>(await _service.GetChatsCollection(name, excludeSession, sessionId, pageSize, page)));
+
+
+        [HttpGet("/collection/system/catalogue")]
+        public async Task<IActionResult> GetSysCollectionsCatalogue()
+            => Ok(await _service.GetSysCollectionsCatalogue());
+
+        [HttpGet("/collection/system/{name}/create")]
+        public async Task<IActionResult> CreateSysChunksCollection(string name, [FromQuery] string? description)
+            => Ok(_mapper.Map<ChromaChunksCollection<ChromaSysChunk>, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.CreateSystemChunksCollection(name, description)));
+
+        [HttpPost("/collection/system/{name}/page")]
+        public async Task<IActionResult> GetSystemChunksPage(string name, [FromBody] ChromaPageRequestDto dto)
+            => Ok(_mapper.Map<SysChunksCollection, ChromaChunksCollectionDto<ChromaSysChunkDto>>(await _service.GetSysChunksPage(name, dto.PageSize, dto.Page, dto.Filters)));
 
         [HttpPost("/collection/system/{name}/create/message")]
         public async Task<IActionResult> CreateSysChunk(string name, [FromBody] CreateSysChunkRequestDto dto)

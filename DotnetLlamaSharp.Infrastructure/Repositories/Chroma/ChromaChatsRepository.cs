@@ -13,12 +13,18 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
 {
     public class ChromaChatsRepository : ChromaRepository<ChromaChatsCollection, ChromaChatChunk>, IChromaChatsRepository
     {
-#pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         public ChromaChatsRepository(ILogger<ChromaChatsRepository> logger, IOptions<ChromaSettings> dbSettings, IChromaDbClient dbClient) : base(dbClient, dbSettings) { }
 
         public Task<List<ChromaChatChunk>> GetCollectionSessions(string collectionName)
         {
             throw new NotImplementedException();
+        }
+
+        public override async Task<IEnumerable<string>> GetDbCollections()
+        {
+            var collections = await CollectionsOf((int)EChunkType.CHAT);
+
+            return collections.Count > 0 ? collections.Select(c => c.Name) : Enumerable.Empty<string>();
         }
 
         public async Task<ChromaChatChunk> GetCurrentSessionChunk(string collectionName)
