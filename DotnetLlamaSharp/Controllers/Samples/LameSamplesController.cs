@@ -543,5 +543,20 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
+
+        [HttpPost("/agents/example/selected-skills-agent")]
+        public async Task<IActionResult> LameAgentExample_SelectedSkillsAgent([FromBody] ChatPromptRequestDto request)
+        {
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
+
+            var response = await _samplesService.AgentPromptSample_SelectedSkillsAgent(commandReq.Model, request.Prompt, "Assistant", "A helpful assistant with skill selection features", chatCommandReq.Settings, request.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
     }
 }

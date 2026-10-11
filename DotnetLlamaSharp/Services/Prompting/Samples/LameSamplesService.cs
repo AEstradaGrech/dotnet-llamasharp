@@ -1064,5 +1064,12 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     break;
             }
         }
+
+        public async Task<string> AgentPromptSample_SelectedSkillsAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
+            => await 
+                _agentsFactory.CreateSelectedSkillsAgent(model, name, description, settings)
+                    .WithBroadcast(agentBroadcaster)
+                    .WithSkills(["chroma-dba", "mongo-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
+                    .RunPrompt(prompt, instruction);
     }
 }
