@@ -14,11 +14,11 @@ using System.ComponentModel;
 
 namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
 {
-    public class LlamaSharpTools : ToolsService<LlamaSharpTools>
+    public class ChromaTools : ToolsService<ChromaTools>
     {
-        private readonly ILogger<LlamaSharpTools> _logger;
-        public LlamaSharpTools() : base() { }
-        public LlamaSharpTools(IServiceProvider services, ILogger<LlamaSharpTools> logger) : base(services)
+        private readonly ILogger<ChromaTools> _logger;
+        public ChromaTools() : base() { }
+        public ChromaTools(IServiceProvider services, ILogger<ChromaTools> logger) : base(services)
         {
             _logger = logger;
         }

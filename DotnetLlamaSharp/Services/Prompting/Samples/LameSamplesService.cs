@@ -41,12 +41,12 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
         private readonly IPromptCommandsFactory _factory;
         private readonly IAgentsFactory _agentsFactory;
 
-        private readonly IToolsService<LlamaSharpTools> _toolsService;
+        private readonly IToolsService<ChromaTools> _toolsService;
         private readonly ILangSearchService _langSearch;
         private readonly IChromaService _chromaService;
         private readonly ILogger<LameSamplesService> _logger;
         private readonly ApiSettings _apiSettings;
-        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService, IAgentsFactory agentsFactory, IToolsService<LlamaSharpTools> toolsService, IOptions<ApiSettings> apiSettings, ILogger<LameSamplesService> logger)
+        public LameSamplesService(IPromptCommandsFactory promptsFactory, ILangSearchService langSearch,  IChromaService chromaService, IAgentsFactory agentsFactory, IToolsService<ChromaTools> toolsService, IOptions<ApiSettings> apiSettings, ILogger<LameSamplesService> logger)
         {
             _factory = promptsFactory;
             _agentsFactory = agentsFactory;
@@ -974,8 +974,8 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
                 _agentsFactory.CreateAgent(model, settings) :
                 _agentsFactory.CreateAgent(model, name, description, settings))
-                .AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)))
-                .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
+                .AddTool(nameof(ChromaTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaCollectionSelector)))
+                .AddTool(nameof(ChromaTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaSearchTool)))
                 .WithSkills(["jamaican-assistant"])
                 .RunPrompt(prompt, instruction);
 
@@ -1010,8 +1010,6 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 _agentsFactory.CreateAgent(model, settings) :
                 _agentsFactory.CreateAgent(model, name, description, settings))
                 .WithBroadcast(agentBroadcaster)
-                .AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)))
-                .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
                 .WithSkills(["jamaican-assistant", "chroma-query"])
                 .RunPrompt(prompt, instruction);
         
@@ -1020,11 +1018,6 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                 _agentsFactory.CreateAgent(model, settings) :
                 _agentsFactory.CreateAgent(model, name, description, settings))
                 .WithBroadcast(agentBroadcaster)
-                .AddTool(nameof(LlamaSharpTools.ChromaDatabaseExplorer), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaDatabaseExplorer)))
-                .AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)))
-                .AddTool(nameof(LlamaSharpTools.ChromaSaveTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSaveTool)))
-                .AddTool(nameof(LlamaSharpTools.CreateChromaCollection), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.CreateChromaCollection)))
-                .AddTool(nameof(LlamaSharpTools.DeleteChromaCollection), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.DeleteChromaCollection)))
                 .WithSkills(["chroma-dba"])
                 .RunPrompt(prompt, instruction);
 

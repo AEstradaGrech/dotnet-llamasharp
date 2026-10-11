@@ -41,7 +41,7 @@ namespace DotnetLlamaSharp.Extensions
             };
 
         public static IServiceCollection AddToolServices(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Scoped)
-            => services.WithToolsFrom<LlamaSharpTools>(lifetime);
+            => services.WithToolsFrom<ChromaTools>(lifetime);
         public static IServiceCollection AddConfigurations(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<ApiSettings>(configuration.GetSection(nameof(ApiSettings)));

@@ -28,12 +28,12 @@ namespace DotnetLlamaSharp.Controllers.Samples
     [Route("api/[controller]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = nameof(LameSamplesController))]
-    public class LameSamplesController(IMapper mapper, ILameSamplesService samplesService, IPromptCommandsService commandsService, IChromaService chromaService, IToolsService<LlamaSharpTools> toolsService) : ControllerBase
+    public class LameSamplesController(IMapper mapper, ILameSamplesService samplesService, IPromptCommandsService commandsService, IChromaService chromaService, IToolsService<ChromaTools> toolsService) : ControllerBase
     {
         private readonly IMapper _mapper = mapper;
         private readonly ILameSamplesService _samplesService = samplesService;
         private readonly IChromaService _chromaService = chromaService;
-        private readonly IToolsService<LlamaSharpTools> _toolsService = toolsService;
+        private readonly IToolsService<ChromaTools> _toolsService = toolsService;
         // Inject the CommandsService in your app to execute commands or use the IPromptCommandsFactory if you prefer it
         private readonly IPromptCommandsService _ollamaCommands = commandsService;
 
@@ -486,8 +486,8 @@ namespace DotnetLlamaSharp.Controllers.Samples
             
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
-            commandReq.AddTool(nameof(LlamaSharpTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaCollectionSelector)));
-            commandReq.AddTool(nameof(LlamaSharpTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(LlamaSharpTools.ChromaSearchTool)));
+            commandReq.AddTool(nameof(ChromaTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaCollectionSelector)));
+            commandReq.AddTool(nameof(ChromaTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaSearchTool)));
 
             var response = await _ollamaCommands.PromptCommand<MessagePromptCommand, ChatMessage>(commandReq, request.SystemMessage, chatCommandReq.Settings);
 

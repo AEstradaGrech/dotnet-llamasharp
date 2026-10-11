@@ -52,7 +52,7 @@ try
         .AddGroqApiClient(builder.Configuration)
         .ConfigureClaudeApiClient(builder.Configuration)
         .ConfigureLameChain(builder.Configuration, ServiceLifetime.Scoped)
-        .WithToolsFrom<LlamaSharpTools>(ServiceLifetime.Scoped)
+        .WithToolsFrom<ChromaTools>(ServiceLifetime.Scoped)
         .ConfigureLangSearch(builder.Configuration)
         .AddChromaConfiguration(builder.Configuration)
         .AddDefaultChromaRepository()
