@@ -30,5 +30,6 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<string> AgentPromptSample_ToolsFromSkills(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ChromaAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_SelectedSkillsAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
+        Task<string> AgentPromptSample_AutoSkilledAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
     }
 }

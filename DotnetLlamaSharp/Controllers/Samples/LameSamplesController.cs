@@ -6,6 +6,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services.Tools;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
@@ -486,8 +487,8 @@ namespace DotnetLlamaSharp.Controllers.Samples
             
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
-            commandReq.AddTool(nameof(ChromaTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaCollectionSelector)));
-            commandReq.AddTool(nameof(ChromaTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaSearchTool)));
+            commandReq.AddTool(nameof(ChromaTools.ChromaCollectionSelector), new ToolBinding(_toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaCollectionSelector))));
+            commandReq.AddTool(nameof(ChromaTools.ChromaSearchTool), new ToolBinding(_toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaSearchTool))));
 
             var response = await _ollamaCommands.PromptCommand<MessagePromptCommand, ChatMessage>(commandReq, request.SystemMessage, chatCommandReq.Settings);
 
@@ -552,6 +553,21 @@ namespace DotnetLlamaSharp.Controllers.Samples
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
             var response = await _samplesService.AgentPromptSample_SelectedSkillsAgent(commandReq.Model, request.Prompt, "Assistant", "A helpful assistant with skill selection features", chatCommandReq.Settings, request.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/agents/example/auto-skilled-agent")]
+        public async Task<IActionResult> LameAgentExample_AutoSkilledAgent([FromBody] ChatPromptRequestDto request)
+        {
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
+
+            var response = await _samplesService.AgentPromptSample_AutoSkilledAgent(commandReq.Model, request.Prompt, "Assistant", "A helpful assistant with skill discovery and progressive loading features", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
                 return Ok(response);

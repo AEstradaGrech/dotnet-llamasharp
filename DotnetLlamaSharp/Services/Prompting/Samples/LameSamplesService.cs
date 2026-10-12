@@ -1,5 +1,4 @@
-﻿using Anthropic.Services.Beta;
-using Dotnet.LangSearch.SDK;
+﻿using Dotnet.LangSearch.SDK;
 using Dotnet.LangSearch.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Bases;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
@@ -15,6 +14,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services.Tools;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
@@ -974,8 +974,8 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
                 _agentsFactory.CreateAgent(model, settings) :
                 _agentsFactory.CreateAgent(model, name, description, settings))
-                .AddTool(nameof(ChromaTools.ChromaCollectionSelector), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaCollectionSelector)))
-                .AddTool(nameof(ChromaTools.ChromaSearchTool), _toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaSearchTool)))
+                .AddTool(nameof(ChromaTools.ChromaCollectionSelector), new ToolBinding(_toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaCollectionSelector))))
+                .AddTool(nameof(ChromaTools.ChromaSearchTool), new ToolBinding(_toolsService.GetType().GetMethod(nameof(ChromaTools.ChromaSearchTool))))
                 .WithSkills(["jamaican-assistant"])
                 .RunPrompt(prompt, instruction);
 
@@ -1009,16 +1009,22 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
                 _agentsFactory.CreateAgent(model, settings) :
                 _agentsFactory.CreateAgent(model, name, description, settings))
-                .WithBroadcast(agentBroadcaster)
-                .WithSkills(["jamaican-assistant", "chroma-query"])
-                .RunPrompt(prompt, instruction);
+                    .WithBroadcast(agentBroadcaster)
+                    .WithSkills(["jamaican-assistant", "chroma-query"])
+                    .RunPrompt(prompt, instruction);
         
         public async Task<string> AgentPromptSample_ChromaAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
             => await (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(description) ?
                 _agentsFactory.CreateAgent(model, settings) :
                 _agentsFactory.CreateAgent(model, name, description, settings))
+                    .WithBroadcast(agentBroadcaster)
+                    .WithSkills(["chroma-dba"])
+                    .RunPrompt(prompt, instruction);
+
+        public async Task<string> AgentPromptSample_SelectedSkillsAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
+            => await _agentsFactory.CreateSelectedSkillsAgent(model, name, description, settings)
                 .WithBroadcast(agentBroadcaster)
-                .WithSkills(["chroma-dba"])
+                .WithSkills(["chroma-dba", "mongo-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
                 .RunPrompt(prompt, instruction);
 
         private void chainBroadcaster(Guid runnerId, string message, LogLevel level)
@@ -1065,11 +1071,10 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             }
         }
 
-        public async Task<string> AgentPromptSample_SelectedSkillsAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
-            => await 
-                _agentsFactory.CreateSelectedSkillsAgent(model, name, description, settings)
-                    .WithBroadcast(agentBroadcaster)
-                    .WithSkills(["chroma-dba", "mongo-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
-                    .RunPrompt(prompt, instruction);
+        public async Task<string> AgentPromptSample_AutoSkilledAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
+            => await _agentsFactory.CreateAutoSkilledAgent(model, name, description, settings)
+                .WithBroadcast(agentBroadcaster)
+                .WithSkills(["chroma-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
+                .RunPrompt(prompt, instruction);
     }
 }
