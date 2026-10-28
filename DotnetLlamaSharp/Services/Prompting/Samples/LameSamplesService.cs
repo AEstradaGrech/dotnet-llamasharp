@@ -448,7 +448,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     feedDose: 100)
                 .Join(new StepSettings(
                     _factory.GetAsJsoneable<MessagePromptCommand, ChatMessage>(
-                        instruction: "Generate a full character profile (400-500 words) with the provided data. Review the character Faction and place of origin, you MUST include those in your profile. Include a background story, a psychological profile and a 'usual routines' section"),
+                        instruction: "Generate a full character profile (400-500 words) using the information from the previous outputs as guidance to generate your response. Review the character Faction and place of origin, you MUST include those in your profile. Include a background story, a psychological profile and a 'usual routines' section"),
                         new PromptCommandRequest(
                             message: "Generate the requested character profile",
                             isGuidanceAppend: true)
