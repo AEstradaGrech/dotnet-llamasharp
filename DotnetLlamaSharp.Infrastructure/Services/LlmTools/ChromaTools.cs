@@ -127,9 +127,9 @@ namespace DotnetLlamaSharp.Infrastructure.Services.LlmTools
             return await defaultRepo.GetCollectionsInfo();
         }
 
-        [Description($"Tool to create new chroma collections with the specified name and description")]
+        [Description($"Tool to create new chroma collections with the specified name and description (both required)")]
         public async Task<string> CreateChromaCollection(
-            [Description("Name of the new ChromaDB collection")] string collectionName,
+            [Description("Name of the new ChromaDB collection. REQUIRED")] string collectionName,
             [Description("Text description for the new collection defining its purpose")] string description)
         {
             _logger.LogWarning($"USING TOOL: {nameof(CreateChromaCollection)}");

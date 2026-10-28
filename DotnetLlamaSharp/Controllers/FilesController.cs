@@ -10,11 +10,13 @@ namespace DotnetLlamaSharp.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = nameof(FilesController))]
-    public class FilesController(IMapper mapper, IDocumentLoader<PdfLoaderService> pdfLoader, IDocumentLoader<MarkdownLoaderService> markdownLoader) : ControllerBase
+    public class FilesController(IMapper mapper, IDocumentLoader<PdfLoaderService> pdfLoader, IDocumentLoader<MarkdownLoaderService> markdownLoader, IDocumentLoader<SkillsLoaderService> skillsLoader) : ControllerBase
     {
         private readonly IMapper _mapper = mapper;
         private readonly IDocumentLoader<PdfLoaderService> _pdfLoader = pdfLoader;
         private readonly IDocumentLoader<MarkdownLoaderService> _markdownLoader = markdownLoader;
+
+        private readonly IDocumentLoader<SkillsLoaderService> _skillsLoader = skillsLoader;
 
 
         [HttpGet("/pdf/load/{docName}")]
@@ -40,5 +42,17 @@ namespace DotnetLlamaSharp.Controllers
         [HttpGet("/md/load/{docName}/page/{index}/size/{batchSize}")]
         public async Task<IActionResult> LoadMarkdownSections(string docName, int index, int batchSize)
             => Ok(_mapper.Map<IEnumerable<DocumentPage>, IEnumerable<DocumentPageDto>>(await _markdownLoader.LoadPages(docName, index, batchSize)));
+
+        [HttpGet("/skills/load/{docName}")]
+        public async Task<IActionResult> LoadSkillDocument(string docName)
+            => Ok(_mapper.Map<Document, DocumentDto>(await _skillsLoader.LoadDocument(docName)));
+
+        [HttpGet("/skills/load/{docName}/page/{index}")]
+        public async Task<IActionResult> LoadSkillSection(string docName, int index)
+            => Ok(_mapper.Map<DocumentPage, DocumentPageDto>(await _skillsLoader.LoadPage(docName, index)));
+
+        [HttpGet("/skills/load/{docName}/page/{index}/size/{batchSize}")]
+        public async Task<IActionResult> LoadSkillSections(string docName, int index, int batchSize)
+            => Ok(_mapper.Map<IEnumerable<DocumentPage>, IEnumerable<DocumentPageDto>>(await _skillsLoader.LoadPages(docName, index, batchSize)));
     }
 }

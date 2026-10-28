@@ -175,29 +175,26 @@ namespace DotnetLlamaSharp.Controllers.Samples
              *  and more specific details about the case your dealing with in the user prompt)
              *  
          
-               {
-                  "prompt": "Select any month corresponding to the summer season present in the choices list (according to the North Hemisphere seasons). ### IMPORTANT: If there are no matching choices in the list, return an empty list.",
-                  "systemMessage": "Select a range of choices (if any) according to the maximum requested choices and the actual available choices given the user query",
-                  "settings": {
-                    "model": "hermes3",
-                    "maxTokens": 600,
-                    "contextLength": 6000,
-                    "temperature": 0.0,
-                    "topP": 0.1,
-                    "topK": 5,
-                    "miroStat": 0,
-                    "miroStatEta": 0.4,
-                    "miroStatTau": 4.0,
-                    "repeatPenalty": 1.0,
-                    "repeatLastN": -1,
-                    "commandValidations": 1,
-                    "validationType": 2,
-                    "useDefaultCommandMessage": true
-                  },
-                  "choices": [
-                    "DECEMBER", "JANUARY", "FEBRUARY", "OCTOBER", "APRIL"
-                  ]
-                }
+{
+    "prompt": "Select any month corresponding to the summer season present in the choices list (according to the North Hemisphere seasons). ### IMPORTANT: If there are no matching choices in the list, return an empty list.",
+    "systemMessage": "Select a range of choices (if any) according to the maximum requested choices and the actual available choices given the user query",
+    "settings": {
+      "model": "gpt-oss:20b",
+      "maxTokens": 600,
+      "contextLength": 6000,
+      "temperature": 0.0,
+      "topP": 0.4,
+      "topK": 10,
+     
+      "repeatLastN": 2147483647,
+      "commandValidations": 1,
+      "validationType": 2,
+      "useDefaultCommandMessage": true
+    },
+    "choices": [
+      "DECEMBER", "JANUARY", "FEBRUARY", "OCTOBER", "APRIL", "JUNE", "JULY", "AUGUST" 
+    ]
+  }
              */
             var response = await _ollamaCommands.MultiChoice(dto.Prompt, dto.Choices, maxChoices:  maxChoices, guidanceMessage: dto.SystemMessage, dto.IsGuidanceAppend, _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(dto).Settings);
 
@@ -507,7 +504,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             // Name and description are added to the system message and modifies the behavior of the agent. This is a simple / naive test to add another condition to the final response
             // You don't need to add a name and description to build the agent, these are extra optional parameters
-            var response = await _samplesService.AgentPromptSample_ToolsAndSkill(commandReq.Model, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
+            var response = await _samplesService.AgentPromptSample_ToolsAndSkill(request.Settings.Model ?? string.Empty, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
                 return Ok(response);
@@ -522,7 +519,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
-            var response = await _samplesService.AgentPromptSample_ToolsFromSkills(commandReq.Model, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
+            var response = await _samplesService.AgentPromptSample_ToolsFromSkills(request.Settings.Model ?? string.Empty, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
                 return Ok(response);
@@ -537,7 +534,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
-            var response = await _samplesService.AgentPromptSample_ChromaAgent(commandReq.Model, request.Prompt, "Chromy", "A helpful corporative pet and assistant to read, write and create ChromaDB collections", chatCommandReq.Settings, request.SystemMessage);
+            var response = await _samplesService.AgentPromptSample_ChromaAgent(request.Settings.Model ?? string.Empty, request.Prompt, "Chromy", "A helpful corporative pet and assistant to read, write and create ChromaDB collections", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
                 return Ok(response);
@@ -552,7 +549,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
-            var response = await _samplesService.AgentPromptSample_SelectedSkillsAgent(commandReq.Model, request.Prompt, "Assistant", "A helpful assistant with skill selection features", chatCommandReq.Settings, request.SystemMessage);
+            var response = await _samplesService.AgentPromptSample_SelectedSkillsAgent(request.Settings.Model ?? string.Empty, request.Prompt, "Assistant", "A helpful assistant with skill selection features", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
                 return Ok(response);
@@ -567,7 +564,7 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
-            var response = await _samplesService.AgentPromptSample_AutoSkilledAgent(commandReq.Model, request.Prompt, "Assistant", "A helpful assistant with skill discovery and progressive loading features", chatCommandReq.Settings, request.SystemMessage);
+            var response = await _samplesService.AgentPromptSample_AutoSkilledAgent(request.Settings.Model ?? string.Empty, request.Prompt, "Assistant", "A helpful assistant with skill discovery and progressive loading features", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
                 return Ok(response);

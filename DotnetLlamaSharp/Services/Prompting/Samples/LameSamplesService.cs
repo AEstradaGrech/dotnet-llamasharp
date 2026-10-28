@@ -12,6 +12,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Enums;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services.Tools;
@@ -1025,7 +1026,13 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             => await _agentsFactory.CreateSelectedSkillsAgent(model, name, description, settings)
                 .WithBroadcast(agentBroadcaster)
                 .WithSkills(["chroma-dba", "mongo-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
-                .RunPrompt(prompt, instruction);
+                .RunPrompt(prompt, instruction, reasoning: EReasoning.None);
+
+        public async Task<string> AgentPromptSample_AutoSkilledAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
+           => await _agentsFactory.CreateAutoSkilledAgent(model, name, description, settings)
+               .WithBroadcast(agentBroadcaster)
+               .WithSkills(["chroma-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
+               .RunPrompt(prompt, instruction, reasoning: EReasoning.None);
 
         private void chainBroadcaster(Guid runnerId, string message, LogLevel level)
         {
@@ -1070,11 +1077,5 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     break;
             }
         }
-
-        public async Task<string> AgentPromptSample_AutoSkilledAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null)
-            => await _agentsFactory.CreateAutoSkilledAgent(model, name, description, settings)
-                .WithBroadcast(agentBroadcaster)
-                .WithSkills(["chroma-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
-                .RunPrompt(prompt, instruction);
     }
 }

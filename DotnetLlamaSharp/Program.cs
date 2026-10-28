@@ -59,6 +59,7 @@ try
         .AddChromaDbClient(builder.Configuration)
         .AddPdfDocumentLoader()
         .AddMarkdownDocumentLoader()
+        .AddSkillsLoader()
         .AddAutoMapper(cfg => {
             cfg.AddMaps(new[] {
                 typeof(DocumentsMappingProfile),
@@ -84,9 +85,6 @@ try
         });
     
     var app = builder.Build();
-
-    // Configure the HTTP request pipeline.
-    // Configure the HTTP request pipeline.
 
     app.UseSwagger()
        .UseSwaggerUI(cfg => {
