@@ -1,6 +1,14 @@
 services:
   dotllama:
     image: dotllama:0.0.1
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_CONFIGURATION: Debug
+    pull_policy: build
+    labels:
+      com.microsoft.visual-studio.project-name: "DotnetLlamaSharp"
     container_name: dotllama
     ports:
       - 5150:5150
