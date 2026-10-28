@@ -7,7 +7,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ChromaSettings__ServerUrl=http://chromadb:8000
-      - DocumentLoader__PdfsPath=/data
+      - DocumentLoader__ResourcesPath=/data/Resources
+      - DocumentLoader__SkillsPath=/data/Resources/markdowns
       - OllamaSettings__OllamaUrl=http://host.docker.internal:11434
       - ApiSettings__Endpoints__ollama=http://host.docker.internal:11434
     depends_on:
@@ -15,9 +16,23 @@ services:
     volumes:
       - C:\dotllama-data:/data
   chromadb:
-    image: chromadb/chroma:0.4.24
-    container_name: chromadb
+    image: chromadb/chroma:1.5.10.dev296
+    container_name: chroma
     ports:
       - 8000:8000
     volumes:
       - C:\chroma-data:/data
+  ollama:
+    image: ollama/ollama:0.34.2
+    container_name: ollama
+    ports:
+      - 11434:11434
+    volumes:
+      - C:\ollama-data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

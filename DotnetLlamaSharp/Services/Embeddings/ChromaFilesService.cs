@@ -14,7 +14,6 @@ using Microsoft.Extensions.Options;
 using System.Net;
 using System.Text;
 
-#pragma warning disable SKEXP0020 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 namespace DotnetLlamaSharp.Services.Embeddings
 {
     public class ChromaFilesService : IChromaFilesService
