@@ -299,7 +299,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.LLM_MODEL).ToLower(), request.Settings.Model, resetDefault: true);
 
-                currentChunk = await generateNextChunk(sessionChunk, sessionChunk, collection, [new ChatMessage(ChatRole.User.ToString(), request.Prompt)], isSessionInit: true);
+                currentChunk = await generateNextChunk(sessionChunk, sessionChunk, collection, "", isSessionInit: true);
 
                 collection = await _chatsRepo.GetCollection(collection.Name);
 
@@ -318,16 +318,14 @@ namespace DotnetLlamaSharp.Services.Prompting
                     throw new InvalidDataException($"No CURRENT chunk has been found for collection: {collectionName} | session chunk: {sessionChunk.Id}");
 
                 currentChunk = chunks.First();
-                currentChunk.AppendMessage(ChatRole.User.ToString(), request.Prompt);
                 sessionChunk.AddMetadata(nameof(ChatChunkMetadata.TOTAL_MESSAGES).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().TOTAL_MESSAGES + 1, resetDefault: true);
 
             }
-            var messages = currentChunk.TextAsMessages();
-
+            
             var systemMessage = sessionChunk.TextAsMessages().FirstOrDefault();
             // SYSTEM MESSAGE / RAG stuff
             var memoBuilder = new StringBuilder();
-            if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 2)
+            if (currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 3)
             {
                 var chatMemos = new List<ChromaQueryChunk>();
 
@@ -357,20 +355,23 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             systemMessage.Content = systemMessage.Content.Replace("[[-RETRIEVED_DATA-]]", string.IsNullOrEmpty(ragData) ? "(Nothing relevant...)" : ragData);
 
+            var messages = currentChunk.TextAsMessages();
+
             request.ChatHistory = [systemMessage];
 
-            if (currentChunk.Id == sessionChunk.Id)
-                request.ChatHistory.AddRange(messages.Skip(1).Take(messages.Count - 1).ToList());
+            if(sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS > 2) 
+            {
+                var prev = await _chatsRepo.GetChunkById(sessionChunk.GetMeta<ChatChunkMetadata>().DOCUMENT_NAME, $"{int.Parse(currentChunk.Id) - 1}");
 
-            else request.ChatHistory.AddRange(messages);
+                request.ChatHistory.AddRange(prev.TextAsMessages());
+            }
 
-            if (request.ChatHistory.Last().Role == ChatRole.User.ToString())
-                request.ChatHistory = request.ChatHistory.SkipLast(1).ToList();
-
+            request.ChatHistory.AddRange(messages);
+            // GET_RAG_CHAT_HISTORY <- current + el anterior si session chunks > 2 + ragMemos if > 3
             var response = await _chatService.ChatPrompt(_mapper.Map<RagChatCommandRequest, CommandChatRequest>(request));
-
+            currentChunk.AppendMessage(ChatRole.User.ToString(), response.Input);
             currentChunk.AppendMessage(ChatRole.Assistant.ToString(), response.Output);
-
+            currentChunk.Text = currentChunk.Text.Replace("[[-CHUNK_INIT-]]", "").Trim();
             currentChunk = await _chatsRepo.UpsertChunk(collectionName, currentChunk);
 
             //TotalMessages does not count original Session message (with instrucition message)
@@ -380,9 +381,30 @@ namespace DotnetLlamaSharp.Services.Prompting
 
             if (currentChunk.Text.Length >= _apiSettings.RagChatChunkSize)
             {
-                var overlaps = new List<ChatMessage> { new ChatMessage(ChatRole.User.ToString(), response.Input) };
-                overlaps.Add(new ChatMessage(ChatRole.Assistant.ToString(), response.Output));
-                var nextChunk = await generateNextChunk(currentChunk, sessionChunk, collection, overlaps);
+                var overlaps = new List<ChatMessage>();
+
+                var output = response.Output;
+
+                var prevId = int.Parse(currentChunk.Id) - 1;
+                var textOverlap = string.Empty;
+                if (prevId != int.Parse(sessionChunk.Id))
+                {
+                    //DB.GET PREV.GET RagChatChunkSize / 2 Text. Embedd overlapped
+                    var prev = await _chatsRepo.GetChunkById(sessionChunk.GetMeta<ChatChunkMetadata>().DOCUMENT_NAME, $"{prevId}");
+
+                    var prevMsg = prev.TextAsMessages();
+
+                    if(prevMsg.Count > 0)
+                    {
+                        var last = prevMsg.Last();
+
+                        var overlapSize = (int)Math.Floor((decimal)(_apiSettings.RagChatChunkSize / 2));
+
+                        textOverlap = last.Content.Substring(last.Content.Length - overlapSize, overlapSize);
+                    }
+                }
+                
+                var nextChunk = await generateNextChunk(currentChunk, sessionChunk, collection, textOverlap);
             }
 
             return response;
@@ -433,9 +455,11 @@ namespace DotnetLlamaSharp.Services.Prompting
         }
 
         // RagChat chunks processor
-        private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatsCollection collection, List<ChatMessage> overlaps, bool isSessionInit = false)
+        private async Task<ChromaChatChunk> generateNextChunk(ChromaChatChunk currentChunk, ChromaChatChunk sessionChunk, ChromaChatsCollection collection, string? previousOverlap = null, bool isSessionInit = false)
         {
-            var embeddings = await _embeddingsService.GenerateEmbeddings(currentChunk.EmbeddedText(collection.AgentName, collection.UserName), collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
+            var chunkText = currentChunk.EmbeddedText(collection.AgentName, collection.UserName);
+            var embeddedText = !string.IsNullOrEmpty(previousOverlap) ? $"{previousOverlap}\n{chunkText}" : chunkText;
+            var embeddings = await _embeddingsService.GenerateEmbeddings(embeddedText.Trim(), collection.DefaultMetadata.DIMENSIONS, collection.DefaultMetadata.MODEL);
 
             if (!embeddings.GeneratedEmbeddings.Any())
                 throw new ArgumentNullException($"An error has occured while generating the embeddings for chat collection: {collection.Name} >> CHUNK: {currentChunk.Id} >> No generated embeddings");
@@ -465,16 +489,17 @@ namespace DotnetLlamaSharp.Services.Prompting
             //Both the last chunk and the first one (sessionChunk) track the total session chunks
             nextChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), currentChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
 
-            if (overlaps.Count > 0)
-                overlaps.ForEach(message => nextChunk.AppendMessage(new ChatRole(message.Role), message.Content));
+            //if (overlaps.Count > 0)
+            //    overlaps.ForEach(message => nextChunk.AppendMessage(new ChatRole(message.Role), message.Content));
 
-            var nextChunkEmbeddings = await _embeddingsService.GenerateEmbeddings(nextChunk.EmbeddedText(collection.AgentName, collection.UserName), nextChunk.DefaultMetadata.DIMENSIONS, nextChunk.DefaultMetadata.MODEL);
+            //var nextChunkEmbeddings = await _embeddingsService.GenerateEmbeddings(nextChunk.EmbeddedText(collection.AgentName, collection.UserName), nextChunk.DefaultMetadata.DIMENSIONS, nextChunk.DefaultMetadata.MODEL);
 
-            if (!nextChunkEmbeddings.GeneratedEmbeddings.Any())
-                throw new InvalidDataException($"An error has occured while generating the chunk overlap for the next chunk >> NO EMBEDDINGS >> collection: {collection.Name} >> current chunk ID: {currentChunk.Id}");
+            //if (!nextChunkEmbeddings.GeneratedEmbeddings.Any())
+            //    throw new InvalidDataException($"An error has occured while generating the chunk overlap for the next chunk >> NO EMBEDDINGS >> collection: {collection.Name} >> current chunk ID: {currentChunk.Id}");
 
-            nextChunk.Embedding = nextChunkEmbeddings.GeneratedEmbeddings.First().Vector;
-
+            //nextChunk.Embedding = nextChunkEmbeddings.GeneratedEmbeddings.First().Vector;
+            nextChunk.Text = "[[-CHUNK_INIT-]]";
+            nextChunk.Embedding = _chatsRepo.GetDummyEmbedding(collection.DefaultMetadata.DIMENSIONS);
             nextChunk = await _chatsRepo.InsertChunk(collection.Name, nextChunk);
 
             sessionChunk.AddMetadata(nameof(ChatChunkMetadata.SESSION_CHUNKS).ToLower(), sessionChunk.GetMeta<ChatChunkMetadata>().SESSION_CHUNKS + 1);
