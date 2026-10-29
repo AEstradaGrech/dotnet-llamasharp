@@ -312,7 +312,7 @@ namespace DotnetLlamaSharp.Services.Prompting
                 filterMetas.Add(nameof(ChatChunkMetadata.CURRENT).ToLower(), true);
                 filterMetas.Add(nameof(ChatChunkMetadata.SESSION_ID).ToLower(), collection.GetMeta<ChatCollectionMetadata>().CURRENT_SESSION_ID);
 
-                var chunks = await _chatsRepo.GetChunks(collectionName, filterMetas, withEmbeddings: false);
+                var chunks = await _chatsRepo.GetChunks(collectionName, filterMetas, withEmbeddings: true);
 
                 if (!chunks.Any())
                     throw new InvalidDataException($"No CURRENT chunk has been found for collection: {collectionName} | session chunk: {sessionChunk.Id}");
