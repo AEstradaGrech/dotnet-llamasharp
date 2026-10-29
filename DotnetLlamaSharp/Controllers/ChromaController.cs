@@ -75,11 +75,11 @@ namespace DotnetLlamaSharp.Controllers
         public async Task<IActionResult> GetChatsCollectionsCatalogue()
             => Ok(await _service.GetChatsCollectionsCatalogue());
 
-        [HttpPost("/collection/chats/{name}/page/{page}/size/{pageSize}/chunks")]
+        [HttpGet("/collection/chats/{name}/page/{page}/size/{pageSize}/chunks")]
         public async Task<IActionResult> GetSessionChunkPage(string name, int page, int pageSize, [FromQuery] bool excludeSession = false)
            => Ok(_mapper.Map<ChromaChatsCollection, ChromaChatsCollectionDto>(await _service.GetChatsCollection(name, excludeSession, null, pageSize, page)));
 
-        [HttpPost("/collection/chats/{name}/{sessionId}/page/{page}/size/{pageSize}/chunks")]
+        [HttpGet("/collection/chats/{name}/{sessionId}/page/{page}/size/{pageSize}/chunks")]
         public async Task<IActionResult> GetSessionChunksPage(string name, string sessionId, int page, int pageSize, [FromQuery] bool excludeSession = false)
            => Ok(_mapper.Map<ChromaChatsCollection, ChromaChatSessionDto>(await _service.GetChatsCollection(name, excludeSession, sessionId, pageSize, page)));
 

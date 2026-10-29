@@ -57,7 +57,13 @@ namespace DotnetLlamaSharp.Infrastructure.Repositories.Chroma
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.AGENT_NAME).ToLower(), agentName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.USER_NAME).ToLower(), userName);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.CHUNK_TYPE).ToLower(), EChunkType.CHAT);
+            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_ID).ToLower(), "0");
+            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.SESSION_IDS).ToLower(), "");
+            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_SESSIONS).ToLower(), 0);
+            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.CURRENT_SESSION_CHUNKS).ToLower(), 0);
+            collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.TOTAL_CHUNKS).ToLower(), 0);
             collectionChunk.AddMetadata(nameof(ChatCollectionMetadata.DOCUMENT_NAME).ToLower(), validatedName, resetDefault: true);
+
             collectionChunk.Text = description ?? $"Chat History >> {agentName} - {userName} >> Creation date: {DateTime.Now}";
 
             return await CreateCollection(validatedName, collectionChunk);

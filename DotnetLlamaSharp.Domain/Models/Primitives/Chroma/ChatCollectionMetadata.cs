@@ -8,7 +8,7 @@ namespace DotnetLlamaSharp.Domain.Models.Primitives.Chroma
         [JsonPropertyName("total_sessions")]
         public int TOTAL_SESSIONS { get; set; }
         [JsonPropertyName("session_ids")]
-        public string SESSION_IDS { get; set; } // CONCAT(SELECT ID FROM collection WHERE metadata = chat_init, ",")
+        public string SESSION_IDS { get; set; }
         [JsonPropertyName("current_session_id")]
         public string CURRENT_SESSION_ID { get; set; }
         [JsonPropertyName("current_session_chunks")]
