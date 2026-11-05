@@ -19,6 +19,7 @@ services:
       - DocumentLoader__SkillResourcesPath=/data/Resources/markdowns
       - OllamaSettings__OllamaUrl=http://host.docker.internal:11434
       - ApiSettings__Endpoints__ollama=http://host.docker.internal:11434
+      - LangfuseSettings__BaseUrl=http://host.docker.internal:3000
     depends_on:
       - chromadb
     volumes:

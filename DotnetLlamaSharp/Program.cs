@@ -60,6 +60,7 @@ try
         .AddPdfDocumentLoader()
         .AddMarkdownDocumentLoader()
         .AddSkillsLoader()
+        .AddLangfuseTracing(builder.Configuration)
         .AddAutoMapper(cfg => {
             cfg.AddMaps(new[] {
                 typeof(DocumentsMappingProfile),
