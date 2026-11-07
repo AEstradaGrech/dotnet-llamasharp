@@ -1,6 +1,7 @@
 using Dotnet.Chroma.Repositories.Extensions;
 using Dotnet.LangSearch.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Utilities.Telemetry;
 using DotnetLlamaSharp.Extensions;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
 using DotnetLlamaSharp.Mappers;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.DependencyModel;
 using Microsoft.OpenApi;
 using Serilog;
 using System.Reflection;
-
 
 /*
  * [!!!] https://langsearch.com/overview
@@ -107,10 +107,12 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "App terminated unexpectedly");
+    Log.Fatal(ex, $"App terminated unexpectedly >> REASON: {ex.Message}");
 }
 finally
 {
+    if(LameTelemetry.HasSource)
+        LameTelemetry.StopSource();
     Log.Information("Shut down complete...");
     Log.CloseAndFlush();
 }

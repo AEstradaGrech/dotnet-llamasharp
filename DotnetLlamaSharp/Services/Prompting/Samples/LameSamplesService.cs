@@ -456,7 +456,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     ) // Enforce the instruction (specially if you are using small local models and the context window is relatively filled)
                     .FeedFrom(thenId) // Feed the name and age to ensure it uses the one generated at this step (dumb models may have alucinated with the background story and the rebujito feeds)
                 )
-                .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings);
+                .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings, traceConfig: new TraceConfig());
 
         // You can request a final 'user-friendly' message that would make use of the chain output to generate the response, but
         // allows individual guidancemessage and settings allowing more flexibility in the usage
@@ -570,7 +570,7 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     guidance: "Use this data as a source of style references and add merge them in your final response along with the generated game lore. Output your response in always in English despite the source language.", // It is possible to add guidance instruction about the rebujito content to help the lLM to use it
                     feedDose: 300)
                 .ChainFeedsFrom([thenId, stashId])
-                .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings);
+                .ThenExecuteAsync(request.WithFinalMessage, request.WithReport, request.FinalMessageSettings ?? request.Settings, new TraceConfig());
 
         // CONDITIONAL STASH OF A SOURCEABLE COMMAND
         // So far I have provided examples of sequencing, parallelizing and feeding steps. In every step
