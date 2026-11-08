@@ -113,6 +113,7 @@ finally
 {
     if(LameTelemetry.HasSource)
         LameTelemetry.StopSource();
+
     Log.Information("Shut down complete...");
     Log.CloseAndFlush();
 }
