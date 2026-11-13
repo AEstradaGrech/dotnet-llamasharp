@@ -501,6 +501,44 @@ namespace DotnetLlamaSharp.Controllers.Samples
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
+        [HttpPost("/commands/python-coding-chain")]
+        public async Task<IActionResult> PythonCodingChain([FromBody] SimplePromptRequestDto request)
+        {
+            /*
+             INPUT:
+            {
+              "prompt": "I have these sales records (region, quarter, amount):\nNorth Q1 1200.5, South Q1 980.0, East Q1 1530.25, West Q1 870.75,North Q2 1340.0, South Q2 1105.5, East Q2 1610.0, West Q2 920.25.\nUse pandas to compute the total amount, the total per region, the region with the highest total and the Q2 vs Q1 growth percentage (rounded to 2 decimals). Print how many rows were processed.\nReturn a dict with the keys: total, best_region, by_region, q2_vs_q1_growth_pct.",
+              "settings": {
+                "model": "gpt-oss:20b",
+                "maxTokens": 4000,
+                "contextLength": 10000,
+                "temperature": 0.3,
+                "topP": 0.6,
+                "topK": 20,
+                "repeatPenalty": 1.1,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "string",
+                "useDefaultCommandMessage": true
+              }
+            }
+
+            OUTPUT:
+
+            {
+                "role": "assistant",
+                "content": "The script processed 8 rows, calculated a total sales amount of $9,557.25, determined “East” as the best region, reported regional totals (East $3,140.25, North $2,540.50, South $2,085.50, West $1,791.00), and found a Q2‑vs‑Q1 growth of 8.61%."
+            }
+             */
+            var response = await _samplesService.PythonCodingChain(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
+
+            if (response != null)
+                return Ok(_mapper.Map<ChatMessage, ChatMessageDto>(response));
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
         [HttpPost("/commands/tools/rag-example")]
         public async Task<IActionResult> ToolsUsageExample([FromBody] ChatPromptRequestDto request)
         {

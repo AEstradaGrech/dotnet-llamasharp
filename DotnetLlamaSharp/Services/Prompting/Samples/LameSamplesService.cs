@@ -955,6 +955,25 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
 
             return await cmd.Prompt(new PythonCodingRequest(request.CodeRequest));
         }
+        public async Task<ChatMessage> PythonCodingChain(SimpleCommandRequest request)
+        {
+            var chainResult = await LameChain.StartWith(
+                new StepSettings(
+                        _factory.GetPythonGeneratorCommand(),
+                        new PromptCommandRequest(message: request.Prompt)
+                    ),
+                    defaultSettings: request.Settings,
+                    chainIntent: "Generate and execute Python code")
+                .ExecutePython(
+                    new StepSettings(
+                        _factory.GetPythonExecutorCommand(),
+                        new PythonCodingRequest())
+                )
+                .ExecuteChainAsync(traceConfig: new TraceConfig());
+
+            return chainResult.ResultAs<ChatMessage>() ?? new ChatMessage(ChatRole.Assistant.ToString(), "No ChatMessage result returned from Chain");
+        }
+
         /* 06-10-2026 
          checked with:
 

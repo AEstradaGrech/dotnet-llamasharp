@@ -29,7 +29,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
 
         Task<PythonGeneratorResponse> PythonGeneratorCommand(SimpleCommandRequest request);
         Task<ChatMessage> PythonExecutorCommand(PythonCodingCommandRequest request);
-
+        Task<ChatMessage> PythonCodingChain(SimpleCommandRequest request);
         Task<string> AgentPromptSample_ToolsAndSkill(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ToolsFromSkills(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ChromaAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);

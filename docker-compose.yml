@@ -21,7 +21,6 @@ services:
       - ApiSettings__Endpoints__ollama=http://host.docker.internal:11434
       - LangfuseSettings__BaseUrl=http://host.docker.internal:3000
       - PythonExecutionOptions__UseUv=true
-      #- PythonExecutionOptions__UvPath=/bin/uv
       - PythonExecutionOptions__WorkRoot=/data/Resources/PythonEnv
       - UV_CACHE_DIR=/opt/lamepy/cache
       - UV_PYTHON_INSTALL_DIR=/opt/lamepy/python
