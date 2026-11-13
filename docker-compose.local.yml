@@ -1,0 +1,11 @@
+# Local development: builds the API against the local LameChain SDK repo instead of the published NuGet.
+# Applied on top of docker-compose.yml only when passed explicitly:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Requires the ProjectReference to the local SDK in the .csproj files.
+services:
+  dotllama:
+    image: dotllama:local
+    build:
+      dockerfile: Dockerfile.local
+      additional_contexts:
+        lamechain-sdk: ../dotnet-lamechain-sdk

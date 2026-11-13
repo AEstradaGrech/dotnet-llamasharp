@@ -10,27 +10,6 @@ using Microsoft.OpenApi;
 using Serilog;
 using System.Reflection;
 
-/*
- * [!!!] https://langsearch.com/overview
- SEMKER: https://github.com/elbruno/semantickernel-localLLMs/blob/main/src/sk-ollamacsharp/OllamaChatCompletionService.cs
-
-OLLAMASHARP: https://awaescher.github.io/OllamaSharp/docs/getting-started.html
-    -- OllamaSharp vs. Microsoft.Extensions.AI vs. Semantic Kernel --
-    
-        Prefer OllamaSharp if:
-            - you plan to use Ollama models only
-            - you want to use the native Ollama API, not only chats and embeddings but model management, usage information and more
-    
-        Prefer Microsoft.Extensions.AI if: 
-            - you only need chat and embedding functionality
-            - you want to be able to use different providers like Ollama, OpenAI, Hugging Face, etc.
-    
-        Prefer Semantic Kernel if:
-            - you need the highest flexibility with different providers, plugins, middlewares, caching, memory and more
-            - you need advanced prompt techniques like variable substitution and templating
-            - you want to build agentic systems
- */
-
 Log.Logger = new LoggerConfiguration()
     .WriteTo
     .Console()
@@ -48,15 +27,16 @@ try
 
     builder.Services
         .AddConfigurations(builder.Configuration)
+        .AddChromaConfiguration(builder.Configuration)
+        .AddDefaultChromaRepository()
+        .AddChromaDbClient(builder.Configuration)
         .ConfigureGroqSettings(builder.Configuration)
         .AddGroqApiClient(builder.Configuration)
         .ConfigureClaudeApiClient(builder.Configuration)
         .ConfigureLameChain(builder.Configuration, ServiceLifetime.Scoped)
+        .WithPythonExecutor(builder.Configuration, ServiceLifetime.Scoped)
         .WithToolsFrom<ChromaTools>(ServiceLifetime.Scoped)
         .ConfigureLangSearch(builder.Configuration)
-        .AddChromaConfiguration(builder.Configuration)
-        .AddDefaultChromaRepository()
-        .AddChromaDbClient(builder.Configuration)
         .AddPdfDocumentLoader()
         .AddMarkdownDocumentLoader()
         .AddSkillsLoader()

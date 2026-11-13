@@ -20,10 +20,16 @@ services:
       - OllamaSettings__OllamaUrl=http://host.docker.internal:11434
       - ApiSettings__Endpoints__ollama=http://host.docker.internal:11434
       - LangfuseSettings__BaseUrl=http://host.docker.internal:3000
+      - PythonExecutionOptions__UseUv=true
+      #- PythonExecutionOptions__UvPath=/bin/uv
+      - PythonExecutionOptions__WorkRoot=/data/Resources/PythonEnv
+      - UV_CACHE_DIR=/opt/lamepy/cache
+      - UV_PYTHON_INSTALL_DIR=/opt/lamepy/python
     depends_on:
       - chromadb
     volumes:
       - C:\dotllama-data:/data
+      - lamepy:/opt/lamepy
   chromadb:
     image: chromadb/chroma:1.5.10.dev296
     container_name: chroma
@@ -45,3 +51,5 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+volumes:
+  lamepy:

@@ -4,16 +4,19 @@ using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services.Tools;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
+using DotnetLlamaSharp.Domain;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
+using DotnetLlamaSharp.Models.Common;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Request.Chains.Samples;
@@ -472,6 +475,28 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             if (response != null)
                 return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/python-generator")]
+        public async Task<IActionResult> PythonGeneratorCommand([FromBody] SimplePromptRequestDto request)
+        {
+            var response = await _samplesService.PythonGeneratorCommand(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
+
+            if (response != null)
+                return Ok(_mapper.Map<PythonGeneratorResponse, PythonGeneratorResponseDto>(response));
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/python-executor")]
+        public async Task<IActionResult> PythonExecutorCommand([FromBody] PythonExecutorRequestDto request)
+        {
+            var response = await _samplesService.PythonExecutorCommand(_mapper.Map<PythonExecutorRequestDto, PythonCodingCommandRequest>(request));
+
+            if (response != null)
+                return Ok(_mapper.Map<ChatMessage, ChatMessageDto>(response));
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }

@@ -19,5 +19,7 @@ COPY . ./
 RUN dotnet publish DotnetLlamaSharp/DotnetLlamaSharp.csproj -c $BUILD_CONFIGURATION -o /app/publish --no-restore
 
 FROM base AS final
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY --from=build /app/publish .
+
 ENTRYPOINT ["dotnet", "DotnetLlamaSharp.dll"]

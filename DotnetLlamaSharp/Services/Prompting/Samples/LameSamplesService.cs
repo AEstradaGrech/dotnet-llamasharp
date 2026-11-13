@@ -7,8 +7,10 @@ using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Coding;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
@@ -23,6 +25,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step.ValueObjects;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Steps;
+using DotnetLlamaSharp.Domain;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
@@ -939,6 +942,19 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
         public StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class
             => _factory.GetStoreable<TStored>(storingLambda);
 
+        public async Task<PythonGeneratorResponse> PythonGeneratorCommand(SimpleCommandRequest request)
+        {
+            var cmd = _factory.GetPythonGeneratorCommand(settings:request.Settings);
+
+            return await cmd.Prompt(new PromptCommandRequest(request.Prompt, isGuidanceAppend: true, model: request.Settings.Model));
+        }
+
+        public async Task<ChatMessage> PythonExecutorCommand(PythonCodingCommandRequest request)
+        {
+            var cmd = _factory.GetPythonExecutorCommand(settings: request.Settings);
+
+            return await cmd.Prompt(new PythonCodingRequest(request.CodeRequest));
+        }
         /* 06-10-2026 
          checked with:
 

@@ -1,5 +1,6 @@
 ﻿using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Model;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
@@ -25,6 +26,9 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<List<ILameSearchResult>> VectorSearchCommand(VectorSearchRequest request);
         Task<List<string>> VectorSearchSourceable(VectorSearchRequest request);
         StoreableCommand<TStored> StoreableCommand<TStored>(Func<TStored, string, Task<TStored>> storingLambda) where TStored : class;
+
+        Task<PythonGeneratorResponse> PythonGeneratorCommand(SimpleCommandRequest request);
+        Task<ChatMessage> PythonExecutorCommand(PythonCodingCommandRequest request);
 
         Task<string> AgentPromptSample_ToolsAndSkill(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ToolsFromSkills(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);

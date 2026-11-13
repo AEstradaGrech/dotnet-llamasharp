@@ -1,10 +1,15 @@
 ﻿using AutoMapper;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Coding;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
+using DotnetLlamaSharp.Domain;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
+using DotnetLlamaSharp.Models.Request.Chains.Samples;
 using DotnetLlamaSharp.Models.Response;
 using OllamaSharp.Models.Chat;
 
@@ -33,6 +38,11 @@ namespace DotnetLlamaSharp.Mappers
 
             CreateMap<CommandChatRequest, ChatCommandRequest>()
                 .ForMember(dest => dest.Model, opt => opt.MapFrom(src => src.Settings.Model));
+
+            CreateMap<PythonGeneratorResponse, PythonGeneratorResponseDto>();
+
+            CreateMap<PythonExecutorRequestDto, PythonCodingCommandRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Dotnet.LangSearch.SDK.Models.Request;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
@@ -42,6 +43,9 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<RagPrompt, RagPromptResponseDto>();
 
             CreateMap<ChatMessage, ChatMessageDto>()
+                .ReverseMap();
+
+            CreateMap<PythonGeneratorResponse, PythonGeneratorResponseDto>()
                 .ReverseMap();
 
             //DTO to Domain

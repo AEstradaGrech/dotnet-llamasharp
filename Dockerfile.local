@@ -1,0 +1,35 @@
+# Local development build: same as Dockerfile, but compiles against the local LameChain SDK repo
+# (ProjectReference ..\..\dotnet-lamechain-sdk) instead of the published NuGet.
+# Used by docker-compose.local.yml, which provides the "lamechain-sdk" build context:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+WORKDIR /app
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_HTTP_PORTS=5150
+EXPOSE 5150
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+# Local SDK project at the path the ProjectReferences expect from /src/<project>/: ..\..\dotnet-lamechain-sdk
+# bin/obj come from the Windows builds: removed so they do not mix with the Linux build
+COPY --from=lamechain-sdk Dotnet.OllamaSharp.LameChain.SDK/ /dotnet-lamechain-sdk/Dotnet.OllamaSharp.LameChain.SDK/
+RUN rm -rf /dotnet-lamechain-sdk/Dotnet.OllamaSharp.LameChain.SDK/bin /dotnet-lamechain-sdk/Dotnet.OllamaSharp.LameChain.SDK/obj
+
+COPY DotnetLlamaSharp/DotnetLlamaSharp.csproj ./DotnetLlamaSharp/
+COPY DotnetLlamaSharp.Domain/DotnetLlamaSharp.Domain.csproj ./DotnetLlamaSharp.Domain/
+COPY DotnetLlamaSharp.Infrastructure/DotnetLlamaSharp.Infrastructure.csproj ./DotnetLlamaSharp.Infrastructure/
+
+RUN dotnet restore DotnetLlamaSharp/DotnetLlamaSharp.csproj
+
+COPY . ./
+
+RUN dotnet publish DotnetLlamaSharp/DotnetLlamaSharp.csproj -c $BUILD_CONFIGURATION -o /app/publish --no-restore
+
+FROM base AS final
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "DotnetLlamaSharp.dll"]

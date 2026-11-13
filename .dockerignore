@@ -12,3 +12,5 @@ Dockerfile
 docker-compose*.yml
 *.dcproj
 Dotnet.LlamaSharp.Tests/
+
+**/PythonEnv/
