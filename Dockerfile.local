@@ -8,6 +8,7 @@ WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Development
 ENV ASPNETCORE_HTTP_PORTS=5150
 EXPOSE 5150
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
@@ -29,7 +30,6 @@ COPY . ./
 RUN dotnet publish DotnetLlamaSharp/DotnetLlamaSharp.csproj -c $BUILD_CONFIGURATION -o /app/publish --no-restore
 
 FROM base AS final
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "DotnetLlamaSharp.dll"]
