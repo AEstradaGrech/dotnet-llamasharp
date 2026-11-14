@@ -20,6 +20,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuratio
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Services.Tools;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Utilities.Telemetry;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
+using Dotnet.OllamaSharp.LameChain.SDK.Models.Agents;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Step;
@@ -1075,6 +1076,11 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                .WithSkills(["chroma-dba", "jamaican-assistant", "pirate-assistant", "web-search", "senior-code-reviewer"])
                .RunPrompt(prompt, instruction, reasoning: EReasoning.None);
 
+        public async Task<string> AgentPromptSample_PythonCodingAgent(string model, string prompt, PromptSettings? settings)
+            => await _agentsFactory.CreateAgent<PythonAgent>(model, settings)
+               .WithBroadcast(agentBroadcaster)
+               .WithLangfuseTraces(new TraceConfig())
+               .RunPrompt(prompt, reasoning: EReasoning.None);
         private void chainBroadcaster(Guid runnerId, string message, LogLevel level)
         {
             string logMessage = $"{level} >> CHAIN STEP {runnerId} >> {message}";

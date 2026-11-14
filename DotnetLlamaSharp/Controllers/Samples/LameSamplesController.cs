@@ -542,7 +542,6 @@ namespace DotnetLlamaSharp.Controllers.Samples
         [HttpPost("/commands/tools/rag-example")]
         public async Task<IActionResult> ToolsUsageExample([FromBody] ChatPromptRequestDto request)
         {
-            
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
             
             var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
@@ -563,8 +562,6 @@ namespace DotnetLlamaSharp.Controllers.Samples
         {
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
 
-            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
-
             // Name and description are added to the system message and modifies the behavior of the agent. This is a simple / naive test to add another condition to the final response
             // You don't need to add a name and description to build the agent, these are extra optional parameters
             var response = await _samplesService.AgentPromptSample_ToolsAndSkill(request.Settings.Model ?? string.Empty, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
@@ -579,8 +576,6 @@ namespace DotnetLlamaSharp.Controllers.Samples
         public async Task<IActionResult> LameAgentExample_ToolsFromSkills([FromBody] ChatPromptRequestDto request)
         {
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
-
-            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
 
             var response = await _samplesService.AgentPromptSample_ToolsFromSkills(request.Settings.Model ?? string.Empty, request.Prompt, "Bobby", "A 'know-it-all' assistant that does NOT tolerate to be called other than his name", chatCommandReq.Settings, request.SystemMessage);
 
@@ -610,8 +605,6 @@ namespace DotnetLlamaSharp.Controllers.Samples
         {
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
 
-            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
-
             var response = await _samplesService.AgentPromptSample_SelectedSkillsAgent(request.Settings.Model ?? string.Empty, request.Prompt, "Assistant", "A helpful assistant with skill selection features", chatCommandReq.Settings, request.SystemMessage);
 
             if (response != null)
@@ -625,9 +618,21 @@ namespace DotnetLlamaSharp.Controllers.Samples
         {
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
 
-            var commandReq = _mapper.Map<CommandChatRequest, ChatCommandRequest>(chatCommandReq);
-
             var response = await _samplesService.AgentPromptSample_AutoSkilledAgent(request.Settings.Model ?? string.Empty, request.Prompt, "Assistant", "A helpful assistant with skill discovery and progressive loading features", chatCommandReq.Settings, request.SystemMessage);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/agents/example/python-coding-agent")]
+        public async Task<IActionResult> LameAgentExample_PythonAgent([FromBody] SimplePromptRequestDto request)
+        {
+           
+            var commandReq = _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request);
+
+            var response = await _samplesService.AgentPromptSample_PythonCodingAgent(request.Settings.Model ?? string.Empty, request.Prompt, commandReq.Settings);
 
             if (response != null)
                 return Ok(response);
