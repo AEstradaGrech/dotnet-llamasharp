@@ -5,6 +5,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Base;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.Evaluators;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Coding;
@@ -956,6 +957,42 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
 
             return await cmd.Prompt(new PythonCodingRequest(request.CodeRequest));
         }
+        public async Task<ChatMessage> PythonCodingConditionalChain(SimpleCommandRequest request)
+        {
+            var chainResult = await LameChain.StartWith(
+                new StepSettings(
+                        _factory.GetCommand<UserIntentCommand, ChatMessage>(), // Analyze user intent to help the conditional step with its reasoning
+                        new PromptCommandRequest(message: request.Prompt)
+                    ),
+                    defaultSettings: request.Settings,
+                    chainIntent: "Chat with the user")
+                .ThenIf( // Use the User Intent analysis to decide whether to use python to generate the final answer or keep chatting with the user
+                    new StepSettings(
+                        _factory.GetCommand<ReasonedBoolCommand, ReasonedBoolResponse>(),
+                        new PromptCommandRequest(message: "Determine if the user query involves the usage of python code to be solved or can be solved using python code to provide a more accurate answer")
+                        ),
+                    LameChain.SubChainWith<SingleThrowStep>(
+                    new StepSettings(
+                            _factory.GetPythonGeneratorCommand(),
+                            new PromptCommandRequest(message: request.Prompt)
+                        ))
+                    .ExecutePython(
+                        new StepSettings(
+                            _factory.GetPythonExecutorCommand(),
+                            new PythonCodingRequest())
+                    )
+                    .ForwardFirstType<SingleThrowStep>() // Required for the ConditionalStep.TrueBranch swap. 
+                                                        // Or use the 'ThenForwardedIf<SingleThrowStep>()' extension mmethod (pass the type of the FirstSubStep)
+                )
+                .Then(new StepSettings( // Answer the user query using the LLM built-in knowledge or using the python step output (if any)
+                    _factory.GetMessagePromptCommand(systemMessage: request.SystemMessage),
+                    new ChatCommandRequest(message: request.Prompt, guidanceMessage: "# IMPORTANT: Your task is to chat with the user using the CONTEXT INFORMATION to provide a more accurate response while chatting with the user\n")
+                 ))
+                .ExecuteChainAsync(traceConfig: new TraceConfig());
+
+            return chainResult.ResultAs<ChatMessage>() ?? new ChatMessage(ChatRole.Assistant.ToString(), "No ChatMessage result returned from Chain");
+        }
+
         public async Task<ChatMessage> PythonCodingChain(SimpleCommandRequest request)
         {
             var chainResult = await LameChain.StartWith(

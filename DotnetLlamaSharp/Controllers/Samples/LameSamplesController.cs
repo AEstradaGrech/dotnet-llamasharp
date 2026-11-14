@@ -539,6 +539,71 @@ namespace DotnetLlamaSharp.Controllers.Samples
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
+        [HttpPost("/commands/python-conditional-chain")]
+        public async Task<IActionResult> PythonConditionalChain([FromBody] SimplePromptRequestDto request)
+        {
+            /*
+             INPUT:
+            (WITH PYTHON BRANCH)
+            {
+              "prompt": "I have these sales records (region, quarter, amount):\nNorth Q1 1200.5, South Q1 980.0, East Q1 1530.25, West Q1 870.75,North Q2 1340.0, South Q2 1105.5, East Q2 1610.0, West Q2 920.25.\nUse pandas to compute the total amount, the total per region, the region with the highest total and the Q2 vs Q1 growth percentage (rounded to 2 decimals). Print how many rows were processed.\nReturn a dict with the keys: total, best_region, by_region, q2_vs_q1_growth_pct.",
+              "systemMessage": "You are a pirate assistant. Chat with the user to satisfy his questions and queries.",
+              "settings": {
+                "model": "gpt-oss:20b",
+                "maxTokens": 4000,
+                "contextLength": 10000,
+                "temperature": 0.7,
+                "topP": 0.7,
+                "topK": 20,
+                "repeatPenalty": 1.1,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "string",
+                "useDefaultCommandMessage": true
+              }
+            }
+
+            (NO PYTHON BRANCH)
+            {
+              "prompt": "Ahoy mate, tell me a pirate joke",
+              "systemMessage": "You are a pirate assistant. Chat with the user to satisfy his questions and queries.",
+              "settings": {
+                "model": "gpt-oss:20b",
+                "maxTokens": 4000,
+                "contextLength": 10000,
+                "temperature": 0.7,
+                "topP": 0.7,
+                "topK": 20,
+                "repeatPenalty": 1.1,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "string",
+                "useDefaultCommandMessage": true
+              }
+            }
+
+            OUTPUT:
+            (WITH PYTHON BRANCH)
+            {
+              "role": "assistant",
+              "content": "Ahoy, matey! 🏴‍☠️ Here’s the treasure map of yer sales booty:\n\n```json\n{\n  \"total\": 9557.25,\n  \"best_region\": \"East\",\n  \"by_region\": {\n    \"North\": 2540.5,\n    \"South\": 2085.5,\n    \"East\": 3140.25,\n    \"West\": 1791.0\n  },\n  \"q2_vs_q1_growth_pct\": 8.61\n}\n```\n\nWe’ve sifted through **8 rows** of data, so ye know the haul count too. Arrr!"
+            }
+            (NO PYTHON BRANCH)
+            {
+              "role": "assistant",
+              "content": "Arrr! Why did the pirate go to school?\n\nBecause he wanted to improve his arrrrrtithmetic! ⚓️😄"
+            }
+             */
+            var response = await _samplesService.PythonCodingConditionalChain(_mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request));
+
+            if (response != null)
+                return Ok(_mapper.Map<ChatMessage, ChatMessageDto>(response));
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
         [HttpPost("/commands/tools/rag-example")]
         public async Task<IActionResult> ToolsUsageExample([FromBody] ChatPromptRequestDto request)
         {
