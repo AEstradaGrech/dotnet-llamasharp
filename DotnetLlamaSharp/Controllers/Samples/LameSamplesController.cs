@@ -627,12 +627,83 @@ namespace DotnetLlamaSharp.Controllers.Samples
         }
 
         [HttpPost("/agents/example/python-coding-agent")]
-        public async Task<IActionResult> LameAgentExample_PythonAgent([FromBody] SimplePromptRequestDto request)
+        public async Task<IActionResult> LameAgentExample_PythonAgent([FromBody] PythonAgentRequestDto request)
         {
-           
-            var commandReq = _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request);
+            /* INPUT:
+             {
+                 "prompt": "I have these sales records (region, quarter, amount):\nNorth Q1 1200.5, South Q1 980.0, East Q1 1530.25, West Q1 870.75,North Q2 1340.0, South Q2 1105.5, East Q2 1610.0, West Q2 920.25.\nUse pandas to compute the total amount, the total per region, the region with the highest total and the Q2 vs Q1 growth percentage (rounded to 2 decimals). Print how many rows were processed.\nReturn a dict with the keys: total, best_region, by_region, q2_vs_q1_growth_pct.",
+                 "settings": {
+                   "model": "gpt-oss:20b",
+                   "maxTokens": 4000,
+                   "contextLength": 10000,
+                   "temperature": 0.3,
+                   "topP": 0.6,
+                   "topK": 20,
+                   "repeatPenalty": 1.1,
+                   "repeatLastN": 2147483647,
+                   "commandValidations": 0,
+                   "validationType": 0,
+                   "validatorModel": "string",
+                   "useDefaultCommandMessage": true
+                 }
+               }
 
-            var response = await _samplesService.AgentPromptSample_PythonCodingAgent(request.Settings.Model ?? string.Empty, request.Prompt, commandReq.Settings);
+                OR:
+
+            {
+              "prompt": "I have these sales records (region, quarter, amount):\nNorth Q1 1200.5, South Q1 980.0, East Q1 1530.25, West Q1 870.75,North Q2 1340.0, South Q2 1105.5, East Q2 1610.0, West Q2 920.25.\nUse pandas to compute the total amount, the total per region, the region with the highest total and the Q2 vs Q1 growth percentage (rounded to 2 decimals). Print how many rows were processed.\nReturn a dict with the keys: total, best_region, by_region, q2_vs_q1_growth_pct.",
+              "settings": {
+                "model": "gpt-oss:20b",
+                "maxTokens": 600,
+                "contextLength": 10000,
+                "temperature": 0.7,
+                "topP": 0.9,
+                "topK": 60,
+                "repeatPenalty": 1.1,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "useDefaultCommandMessage": true
+              },
+              "toolSettings": {
+                "model": "gpt-oss:20b",
+                "maxTokens": 4000,
+                "contextLength": 10000,
+                "temperature": 0.3,
+                "topP": 0.5,
+                "topK": 20,
+                "repeatPenalty": 1.0,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "useDefaultCommandMessage": true
+              }
+            }
+
+                OUTPUT:
+
+               Here’s what the script did:
+
+                * Created a `pandas` DataFrame from your eight records  
+                * Calculated the overall total, totals per region, identified the region with the highest total, and computed the Q‑2 versus Q‑1 growth percentage (rounded to two decimals)  
+                * Printed the number of rows processed  
+
+                **Resulting dictionary**
+
+                ```python
+                {
+                    'total': 8350.0,
+                    'best_region': 'North',
+                    'by_region': {'East': 2150.25, 'North': 2540.5, 'South': 2085.5, 'West': 1791.0},
+                    'q2_vs_q1_growth_pct': 28.77
+                }
+                ```
+
+                *(Rows processed: 8)*
+             */
+            var agentReq = _mapper.Map<PythonAgentRequestDto, PythonAgentRequest>(request);
+
+            var response = await _samplesService.AgentPromptSample_PythonCodingAgent(request.Settings.Model ?? string.Empty, request.Prompt, agentReq.Settings, agentReq.ToolSettings);
 
             if (response != null)
                 return Ok(response);

@@ -48,6 +48,8 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<PythonGeneratorResponse, PythonGeneratorResponseDto>()
                 .ReverseMap();
 
+            CreateMap<PythonAgentRequestDto, PythonAgentRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
             //DTO to Domain
             CreateMap<ChatPromptRequestDto, CommandChatRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
@@ -101,6 +103,7 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.EmbeddingFilters, opt => opt.Ignore())
                 .ForMember(dest => dest.MaxDistance, opt => opt.Ignore());
             CreateMap<RagCommandRequest, SimpleCommandRequest>();
+
 
             // LangSearch models
             CreateMap<LangSearchWebSearchDto, WebSearchRequest>()

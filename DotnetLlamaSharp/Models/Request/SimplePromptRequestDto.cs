@@ -5,7 +5,7 @@ namespace DotnetLlamaSharp.Models.Request
 {
     public class SimplePromptRequestDto
     {
-        public string Prompt { get; set; }
+        public required string Prompt { get; set; }
         public string? SystemMessage { get; set; } = null;
         public bool IsGuidanceAppend { get; set; }
         public EReasoning? Reasoning { get; set; }
