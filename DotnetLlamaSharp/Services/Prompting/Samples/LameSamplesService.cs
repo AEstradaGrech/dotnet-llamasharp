@@ -1164,5 +1164,11 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                     break;
             }
         }
+
+        public async Task<string> AgentPromptSample_PhilosopherAgent(string model, string prompt, string? systemMessage = null, PromptSettings? settings = null)
+            => await _agentsFactory.CreateAgent<PhilosopherAgent>(model, null, null, settings)
+               .WithBroadcast(agentBroadcaster)
+               .WithLangfuseTraces(new TraceConfig())
+               .RunPrompt(prompt, systemMessage, reasoning: EReasoning.None);
     }
 }

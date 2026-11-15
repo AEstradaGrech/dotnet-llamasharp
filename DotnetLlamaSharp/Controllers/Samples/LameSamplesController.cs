@@ -775,5 +775,18 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
+
+        [HttpPost("/agents/example/philosopher-agent")]
+        public async Task<IActionResult> LameAgentExample_PhilosopherAgent([FromBody] ChatPromptRequestDto request)
+        {
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var response = await _samplesService.AgentPromptSample_PhilosopherAgent(request.Settings.Model ?? string.Empty, request.Prompt, request.SystemMessage, chatCommandReq.Settings);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
     }
 }

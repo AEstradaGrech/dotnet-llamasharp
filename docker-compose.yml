@@ -24,6 +24,7 @@ services:
       - PythonExecutionOptions__WorkRoot=/data/Resources/PythonEnv
       - UV_CACHE_DIR=/opt/lamepy/cache
       - UV_PYTHON_INSTALL_DIR=/opt/lamepy/python
+      - HOST_BIND_MOUNT=C:/dotllama-data
     depends_on:
       - chromadb
     volumes:
