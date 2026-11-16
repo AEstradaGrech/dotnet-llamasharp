@@ -1,4 +1,6 @@
-﻿namespace DotnetLlamaSharp.Models.Request.Chains.Samples
+﻿using DotnetLlamaSharp.Models.Request.Prompting;
+
+namespace DotnetLlamaSharp.Models.Request.Chains.Samples
 {
     public class StringChoiceRequestDto : SimplePromptRequestDto
     {

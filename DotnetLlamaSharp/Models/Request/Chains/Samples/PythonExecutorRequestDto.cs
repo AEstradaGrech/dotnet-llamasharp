@@ -1,4 +1,5 @@
-﻿using DotnetLlamaSharp.Models.Response;
+﻿using DotnetLlamaSharp.Models.Request.Prompting;
+using DotnetLlamaSharp.Models.Response.Prompting.Commands;
 
 namespace DotnetLlamaSharp.Models.Request.Chains.Samples
 {

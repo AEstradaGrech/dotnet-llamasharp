@@ -1,7 +1,7 @@
 ﻿
 
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
-using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 
 namespace DotnetLlamaSharp.Domain
 {

@@ -1,4 +1,0 @@
-﻿namespace DotnetLlamaSharp.Models.Response
-{
-    
-}

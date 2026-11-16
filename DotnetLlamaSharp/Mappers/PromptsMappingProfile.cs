@@ -4,12 +4,13 @@ using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands.Rag;
 using DotnetLlamaSharp.Models.Common;
-using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.LangSearch;
-using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Request.Prompting;
+using DotnetLlamaSharp.Models.Request.Prompting.Rags;
+using DotnetLlamaSharp.Models.Response.Prompting;
 
 namespace DotnetLlamaSharp.Mappers
 {

@@ -1,6 +1,6 @@
 ﻿using DotnetLlamaSharp.Models.Response.Chroma;
 
-namespace DotnetLlamaSharp.Models.Response
+namespace DotnetLlamaSharp.Models.Response.Prompting
 {
     public class RagPromptResponseDto : ChatPromptResponseDto
     {

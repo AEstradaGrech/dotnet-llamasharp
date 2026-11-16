@@ -2,11 +2,12 @@
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Interfaces.Service;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands.Rag;
 using DotnetLlamaSharp.Domain.Services.Prompting;
-using DotnetLlamaSharp.Models.Request;
-using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Request.Prompting;
+using DotnetLlamaSharp.Models.Request.Prompting.Rags;
+using DotnetLlamaSharp.Models.Response.Prompting;
 using Microsoft.AspNetCore.Mvc;
 using OllamaSharp;
 using System.Net;

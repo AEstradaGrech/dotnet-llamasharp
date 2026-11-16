@@ -1,5 +1,4 @@
-﻿
-namespace DotnetLlamaSharp.Models.Response
+﻿namespace DotnetLlamaSharp.Models.Response.Prompting.Commands
 {
     public class ScriptGeneratorResponseDto
     {

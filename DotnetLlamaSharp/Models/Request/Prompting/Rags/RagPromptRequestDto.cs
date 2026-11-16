@@ -1,4 +1,4 @@
-﻿namespace DotnetLlamaSharp.Models.Request
+﻿namespace DotnetLlamaSharp.Models.Request.Prompting.Rags
 {
     public class RagPromptRequestDto : SimplePromptRequestDto
     {

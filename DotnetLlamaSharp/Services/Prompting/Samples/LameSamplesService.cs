@@ -33,8 +33,7 @@ using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
@@ -1184,6 +1183,13 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
             var cmd = _factory.GetScriptGeneratorCommand(settings: request.Settings);
 
             return await cmd.Prompt(new ScriptGeneratorCommandRequest(request.Prompt, request.RequestedShell, isGuidanceAppend: true, model: request.Settings.Model));
+        }
+
+        public async Task<ChatMessage> ScriptExecutorCommand(ScriptExecutorRequest request)
+        {
+            var cmd = _factory.GetScriptExecutorCommand(settings: request.Settings);
+
+            return await cmd.Prompt(new ScriptExecutionCommandRequest(request.ScriptPath, request.Prompt, isGuidanceAppend: true, model: request.Settings.Model));
         }
     }
 }

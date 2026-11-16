@@ -1,7 +1,7 @@
 ﻿
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 
-namespace DotnetLlamaSharp.Domain.Models.Request
+namespace DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands
 {
     /// <summary>
     /// Chat version of the SimpleCommandRequest to be used with Lame Commands

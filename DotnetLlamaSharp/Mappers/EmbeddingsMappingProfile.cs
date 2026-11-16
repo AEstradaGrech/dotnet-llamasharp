@@ -10,7 +10,6 @@ using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request.Chroma;
 using DotnetLlamaSharp.Models.Request.Chroma;
 using DotnetLlamaSharp.Models.Request.Embeddings;
-using DotnetLlamaSharp.Models.Response;
 using DotnetLlamaSharp.Models.Response.Chroma;
 
 namespace DotnetLlamaSharp.Mappers

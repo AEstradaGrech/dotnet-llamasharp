@@ -1,6 +1,8 @@
-﻿namespace DotnetLlamaSharp.Domain.Models.Request.Prompting
+﻿using DotnetLlamaSharp.Domain.Models.Request;
+
+namespace DotnetLlamaSharp.Models.Request.Prompting.Rags
 {
-    public class SimpleSmartQueryRequest : SimpleCommandRequest
+    public class SmartQueryRequestDto : SimplePromptRequestDto
     {
         public bool WithChatCollections { get; set; } // include the catalogue of chat collections in the available collections catalogue;
         public int QueryAugments { get; set; } // generate N variants of the input to cover more similarity points;

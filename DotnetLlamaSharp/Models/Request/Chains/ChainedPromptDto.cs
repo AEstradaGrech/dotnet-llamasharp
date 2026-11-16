@@ -1,4 +1,5 @@
 ﻿using DotnetLlamaSharp.Models.Common;
+using DotnetLlamaSharp.Models.Request.Prompting;
 
 namespace DotnetLlamaSharp.Models.Request.Chains
 {

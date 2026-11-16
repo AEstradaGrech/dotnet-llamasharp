@@ -7,12 +7,14 @@ using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Enums;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain;
-using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
-using DotnetLlamaSharp.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Agents;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Request.Chains.Samples;
-using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Request.Prompting;
+using DotnetLlamaSharp.Models.Request.Prompting.Agents;
+using DotnetLlamaSharp.Models.Request.Prompting.Commands;
+using DotnetLlamaSharp.Models.Response.Prompting.Commands;
 using OllamaSharp.Models.Chat;
 
 namespace DotnetLlamaSharp.Mappers
@@ -55,6 +57,9 @@ namespace DotnetLlamaSharp.Mappers
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
 
             CreateMap<ScriptGeneratorRequestDto, ScriptGeneratorRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
+
+            CreateMap<ScriptExecutorRequestDto, ScriptExecutorRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
 
             CreateMap<string, EScriptShell>().ConvertUsing(s => Enum.Parse<EScriptShell>(s));

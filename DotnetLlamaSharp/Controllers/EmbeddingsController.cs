@@ -3,7 +3,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Embedding;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using DotnetLlamaSharp.Models.Request.Embeddings;
-using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Response.Chroma;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DotnetLlamaSharp.Controllers

@@ -1,7 +1,7 @@
 ﻿
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Enums;
 
-namespace DotnetLlamaSharp.Domain.Models.Request.Prompting
+namespace DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands
 {
     public class ScriptGeneratorRequest : SimpleCommandRequest
     {

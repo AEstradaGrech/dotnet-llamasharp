@@ -1,6 +1,6 @@
 ﻿using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 
-namespace DotnetLlamaSharp.Domain.Models.Request
+namespace DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands.Rag
 {
     public class RagChatCommandRequest : RagCommandRequest
     {

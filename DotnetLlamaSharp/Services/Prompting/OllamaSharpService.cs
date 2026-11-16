@@ -2,7 +2,7 @@
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 using DotnetLlamaSharp.Domain.Services.Prompting;
 using Microsoft.Extensions.Options;
 using OllamaSharp.Models;

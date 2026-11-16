@@ -1,6 +1,6 @@
 ﻿using DotnetLlamaSharp.Models.Common;
 
-namespace DotnetLlamaSharp.Models.Request
+namespace DotnetLlamaSharp.Models.Request.Prompting.Agents
 {
     public class PythonAgentRequestDto : SimplePromptRequestDto
     {

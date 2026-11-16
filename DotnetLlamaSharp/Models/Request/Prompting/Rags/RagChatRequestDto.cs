@@ -1,7 +1,7 @@
 ﻿using DotnetLlamaSharp.Models.Common;
 using System.ComponentModel;
 
-namespace DotnetLlamaSharp.Models.Request
+namespace DotnetLlamaSharp.Models.Request.Prompting.Rags
 {
     public class RagChatRequestDto : RagPromptRequestDto
     {

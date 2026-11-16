@@ -12,19 +12,21 @@ using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
-using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Agents;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
 using DotnetLlamaSharp.Models.Common;
-using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Request.Chains.Samples;
 using DotnetLlamaSharp.Models.Request.Chroma;
 using DotnetLlamaSharp.Models.Request.Embeddings;
-using DotnetLlamaSharp.Models.Response;
+using DotnetLlamaSharp.Models.Request.Prompting;
+using DotnetLlamaSharp.Models.Request.Prompting.Agents;
+using DotnetLlamaSharp.Models.Request.Prompting.Commands;
 using DotnetLlamaSharp.Models.Response.Chroma;
+using DotnetLlamaSharp.Models.Response.Prompting.Commands;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -647,6 +649,23 @@ namespace DotnetLlamaSharp.Controllers.Samples
 
             if (response != null)
                 return Ok(_mapper.Map<ScriptGeneratorResponse, ScriptGeneratorResponseDto>(response));
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/commands/script-executor")]
+        public async Task<IActionResult> ScriptExecutorCommand([FromBody] ScriptExecutorRequestDto request)
+        {
+            /*
+             * INPUT:
+  
+                OUTPUT:
+            
+             */
+            var response = await _samplesService.ScriptExecutorCommand(_mapper.Map<ScriptExecutorRequestDto, ScriptExecutorRequest>(request));
+
+            if (response != null)
+                return Ok(_mapper.Map<ChatMessage, ChatMessageDto>(response));
 
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }

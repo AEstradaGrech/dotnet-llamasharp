@@ -1,6 +1,6 @@
 ﻿using DotnetLlamaSharp.Models.Common;
 
-namespace DotnetLlamaSharp.Models.Response
+namespace DotnetLlamaSharp.Models.Response.Prompting
 {
     public class ChatPromptResponseDto
     {

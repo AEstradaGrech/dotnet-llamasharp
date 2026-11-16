@@ -3,7 +3,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using Dotnet.OllamaSharp.LameChain.SDK.Interfaces.Command.Services;
-using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 using DotnetLlamaSharp.Services.Prompting;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;

@@ -1,5 +1,5 @@
 ﻿using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 using OllamaSharp.Models;
 
 namespace DotnetLlamaSharp.Domain.Services.Prompting

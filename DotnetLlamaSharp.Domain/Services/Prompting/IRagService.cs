@@ -1,8 +1,8 @@
 ﻿using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
-using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands.Rag;
 
 namespace DotnetLlamaSharp.Domain.Services.Prompting
 {

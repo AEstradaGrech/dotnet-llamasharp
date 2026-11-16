@@ -6,8 +6,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuration;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
-using DotnetLlamaSharp.Domain.Models.Request;
-using DotnetLlamaSharp.Domain.Models.Request.Prompting;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting.Commands;
 
 namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
 {
@@ -34,6 +33,7 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<ChatMessage> PythonCodingConditionalChain(SimpleCommandRequest request);
 
         Task<ScriptGeneratorResponse> ScriptGeneratorCommand(ScriptGeneratorRequest request);
+        Task<ChatMessage> ScriptExecutorCommand(ScriptExecutorRequest request);
         Task<string> AgentPromptSample_ToolsAndSkill(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ToolsFromSkills(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ChromaAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
