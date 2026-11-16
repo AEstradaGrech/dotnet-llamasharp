@@ -13,6 +13,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain;
 using DotnetLlamaSharp.Domain.Models.Entities.Chroma;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
@@ -604,6 +605,52 @@ namespace DotnetLlamaSharp.Controllers.Samples
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
+        [HttpPost("/commands/script-generator")]
+        public async Task<IActionResult> ScriptGeneratorCommand([FromBody] ScriptGeneratorRequestDto request)
+        {
+            /*
+             * INPUT:
+             {
+              "prompt": "Crea un script reutilizable que reciba como parámetros un host y un puerto, y compruebe si hay conexión TCP con ese host en ese puerto. Quiero usarlo ahora con chromadb y el puerto 8000. Guárdalo en la carpeta network-checks.",
+             "settings": {
+                "model": "gpt-oss:20b",
+                "maxTokens": 4000,
+                "contextLength": 10000,
+                "temperature": 0.3,
+                "topP": 0.6,
+                "topK": 20,
+                "repeatPenalty": 1.1,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "string",
+                "useDefaultCommandMessage": true
+              }
+            }
+            OUTPUT:
+             {
+              "script": "#!/usr/bin/env bash\nset -euo pipefail\n\n# ------------------------------------------------------------------\n#  Network connectivity checker – reusable Bash script\n# ------------------------------------------------------------------\n# This script takes two arguments:\n#   1) host   – hostname or IP address to connect to\n#   2) port   – TCP port number\n# It attempts to open a TCP socket to the given host/port and reports\n# whether the connection succeeds.\n# ------------------------------------------------------------------\n\n# Verify argument count\nif [[ $# -ne 2 ]]; then\n    echo \"Usage: $0 <host> <port>\" >&2\n    exit 2\nfi\n\nhost=\"$1\"\nport=\"$2\"\n\n# Basic sanity check for port number\nif ! [[ \"$port\" =~ ^[0-9]+$ ]] ; then\n    echo \"Error: port must be a positive integer\" >&2\n    exit 3\nfi\n\n# Attempt a TCP connection using the /dev/tcp pseudo-device\n# Timeout after 5 seconds to avoid hanging indefinitely\nif timeout 5 bash -c \"exec 3<>/dev/tcp/${host}/${port}\" 2>/dev/null; then\n    echo \"Connection to ${host}:${port} succeeded\"\n    exit 0\nelse\n    echo \"Connection to ${host}:${port} failed\"\n    exit 1\nfi",
+              "shell": "Bash",
+              "summary": "Comprueba si se puede abrir una conexión TCP al host y puerto indicados. El script acepta dos argumentos (host y puerto), intenta conectarse y muestra “Connection … succeeded” o “Connection … failed”. Devuelve código de salida 0 cuando la conexión funciona y 1 cuando falla.",
+              "changesSystem": false,
+              "requiresAdmin": false,
+              "undo": null,
+              "arguments": [
+                "host = chromadb",
+                "port = 8000"
+              ],
+              "outputFolder": "network-checks",
+              "scriptPath": "/data/Resources/SysAdmin/network-checks/script.sh"
+            }
+             */
+            var response = await _samplesService.ScriptGeneratorCommand(_mapper.Map<ScriptGeneratorRequestDto, ScriptGeneratorRequest>(request));
+
+            if (response != null)
+                return Ok(_mapper.Map<ScriptGeneratorResponse, ScriptGeneratorResponseDto>(response));
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
         [HttpPost("/commands/tools/rag-example")]
         public async Task<IActionResult> ToolsUsageExample([FromBody] ChatPromptRequestDto request)
         {
@@ -746,25 +793,28 @@ namespace DotnetLlamaSharp.Controllers.Samples
             }
 
                 OUTPUT:
+            **Exact Result**
 
-               Here’s what the script did:
+            ```python
+            {
+              "total": 9557.25,
+              "best_region": "East",
+              "by_region": {
+                "East": 3140.25,
+                "North": 2540.5,
+                "South": 2085.5,
+                "West": 1791.0
+              },
+              "q2_vs_q1_growth_pct": 8.61
+            }
+            ```
 
-                * Created a `pandas` DataFrame from your eight records  
-                * Calculated the overall total, totals per region, identified the region with the highest total, and computed the Q‑2 versus Q‑1 growth percentage (rounded to two decimals)  
-                * Printed the number of rows processed  
+            This dictionary contains:
 
-                **Resulting dictionary**
-
-                ```python
-                {
-                    'total': 8350.0,
-                    'best_region': 'North',
-                    'by_region': {'East': 2150.25, 'North': 2540.5, 'South': 2085.5, 'West': 1791.0},
-                    'q2_vs_q1_growth_pct': 28.77
-                }
-                ```
-
-                *(Rows processed: 8)*
+            * `total` – the sum of all sales amounts.  
+            * `best_region` – the region with the highest total sales.  
+            * `by_region` – a sub‑dictionary listing each region’s total sales.  
+            * `q2_vs_q1_growth_pct` – the percentage growth from Q1 to Q2, rounded to two decimals.
              */
             var agentReq = _mapper.Map<PythonAgentRequestDto, PythonAgentRequest>(request);
 
@@ -782,6 +832,19 @@ namespace DotnetLlamaSharp.Controllers.Samples
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
 
             var response = await _samplesService.AgentPromptSample_PhilosopherAgent(request.Settings.Model ?? string.Empty, request.Prompt, request.SystemMessage, chatCommandReq.Settings);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
+        [HttpPost("/agents/example/smart-philosopher-agent")]
+        public async Task<IActionResult> LameAgentExample_SmartPhilosopherAgent([FromBody] ChatPromptRequestDto request)
+        {
+            var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
+
+            var response = await _samplesService.AgentPromptSample_SmartPhilosopherAgent(request.Settings.Model ?? string.Empty, request.Prompt, request.SystemMessage, chatCommandReq.Settings);
 
             if (response != null)
                 return Ok(response);

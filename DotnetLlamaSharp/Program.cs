@@ -35,6 +35,7 @@ try
         .ConfigureClaudeApiClient(builder.Configuration)
         .ConfigureLameChain(builder.Configuration, ServiceLifetime.Scoped)
         .WithPythonExecutor(builder.Configuration, ServiceLifetime.Scoped)
+        .WithScriptExecutor(builder.Configuration, ServiceLifetime.Scoped)
         .WithToolsFrom<ChromaTools>(ServiceLifetime.Scoped)
         .ConfigureLangSearch(builder.Configuration)
         .AddPdfDocumentLoader()

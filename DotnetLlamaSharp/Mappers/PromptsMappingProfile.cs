@@ -45,12 +45,8 @@ namespace DotnetLlamaSharp.Mappers
             CreateMap<ChatMessage, ChatMessageDto>()
                 .ReverseMap();
 
-            CreateMap<PythonGeneratorResponse, PythonGeneratorResponseDto>()
-                .ReverseMap();
-
-            CreateMap<PythonAgentRequestDto, PythonAgentRequest>()
-                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
             //DTO to Domain
+
             CreateMap<ChatPromptRequestDto, CommandChatRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
 

@@ -7,6 +7,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared.Configuratio
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Response;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting;
 
 namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
 {
@@ -31,6 +32,8 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<ChatMessage> PythonExecutorCommand(PythonCodingCommandRequest request);
         Task<ChatMessage> PythonCodingChain(SimpleCommandRequest request);
         Task<ChatMessage> PythonCodingConditionalChain(SimpleCommandRequest request);
+
+        Task<ScriptGeneratorResponse> ScriptGeneratorCommand(ScriptGeneratorRequest request);
         Task<string> AgentPromptSample_ToolsAndSkill(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ToolsFromSkills(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_ChromaAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
@@ -38,5 +41,6 @@ namespace DotnetLlamaSharp.Domain.Services.Prompting.Samples
         Task<string> AgentPromptSample_AutoSkilledAgent(string model, string prompt, string? name, string? description, PromptSettings? settings, string? instruction = null);
         Task<string> AgentPromptSample_PythonCodingAgent(string model, string prompt, PromptSettings? settings = null, CommandSettings? toolSettings = null);
         Task<string> AgentPromptSample_PhilosopherAgent(string model, string prompt, string? systemMessage = null, PromptSettings? settings = null);
+        Task<string> AgentPromptSample_SmartPhilosopherAgent(string model, string prompt, string? systemMessage = null, PromptSettings? settings = null);
     }
 }

@@ -10,6 +10,7 @@ using Dotnet.OllamaSharp.LameChain.SDK.Commands.Core.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.AtomicValues;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Coding;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
+using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Scripting;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Storeables;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Extensions;
@@ -33,6 +34,7 @@ using DotnetLlamaSharp.Domain.Models.Enums;
 using DotnetLlamaSharp.Domain.Models.Primitives.Chroma;
 using DotnetLlamaSharp.Domain.Models.Primitives.Prompting;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting;
 using DotnetLlamaSharp.Domain.Services.Embeddings;
 using DotnetLlamaSharp.Domain.Services.Prompting.Samples;
 using DotnetLlamaSharp.Infrastructure.Services.LlmTools;
@@ -1170,5 +1172,18 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
                .WithBroadcast(agentBroadcaster)
                .WithLangfuseTraces(new TraceConfig())
                .RunPrompt(prompt, systemMessage, reasoning: EReasoning.None);
+
+        public async Task<string> AgentPromptSample_SmartPhilosopherAgent(string model, string prompt, string? systemMessage = null, PromptSettings? settings = null)
+            => await _agentsFactory.CreateAgent<SmartPhilosopherAgent>(model, null, null, settings)
+               .WithBroadcast(agentBroadcaster)
+               .WithLangfuseTraces(new TraceConfig())
+               .RunPrompt(prompt, systemMessage, reasoning: EReasoning.None);
+
+        public async Task<ScriptGeneratorResponse> ScriptGeneratorCommand(ScriptGeneratorRequest request)
+        {
+            var cmd = _factory.GetScriptGeneratorCommand(settings: request.Settings);
+
+            return await cmd.Prompt(new ScriptGeneratorCommandRequest(request.Prompt, request.RequestedShell, isGuidanceAppend: true, model: request.Settings.Model));
+        }
     }
 }

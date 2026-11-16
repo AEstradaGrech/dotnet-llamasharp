@@ -3,10 +3,12 @@ using Dotnet.OllamaSharp.LameChain.SDK.Command.Responses.StructuredOutputs;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.Coding;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Request.QueryCommands;
 using Dotnet.OllamaSharp.LameChain.SDK.Commands.Response.StructuredOutputs;
+using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Enums;
 using Dotnet.OllamaSharp.LameChain.SDK.Infrastructure.Models.Shared;
 using Dotnet.OllamaSharp.LameChain.SDK.Models.Request;
 using DotnetLlamaSharp.Domain;
 using DotnetLlamaSharp.Domain.Models.Request;
+using DotnetLlamaSharp.Domain.Models.Request.Prompting;
 using DotnetLlamaSharp.Models.Request;
 using DotnetLlamaSharp.Models.Request.Chains;
 using DotnetLlamaSharp.Models.Request.Chains.Samples;
@@ -33,16 +35,29 @@ namespace DotnetLlamaSharp.Mappers
                 .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => src.Score))
                 .ForMember(dest => dest.Comment, opt => opt.MapFrom(src => src.Justification));
 
-            CreateMap<InstructionDto, Instruction>().ReverseMap();
-            CreateMap<ChainedPromptDto, ChainedPrompt>();
-
             CreateMap<CommandChatRequest, ChatCommandRequest>()
                 .ForMember(dest => dest.Model, opt => opt.MapFrom(src => src.Settings.Model));
 
-            CreateMap<PythonGeneratorResponse, PythonGeneratorResponseDto>();
+            CreateMap<PythonGeneratorResponse, PythonGeneratorResponseDto>()
+               .ReverseMap();
+
+            CreateMap<ScriptGeneratorResponse, ScriptGeneratorResponseDto>()
+                .ReverseMap();
+
+            //DTO to Domain
+            CreateMap<InstructionDto, Instruction>().ReverseMap();
+            CreateMap<ChainedPromptDto, ChainedPrompt>();
 
             CreateMap<PythonExecutorRequestDto, PythonCodingCommandRequest>()
+               .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
+
+            CreateMap<PythonAgentRequestDto, PythonAgentRequest>()
                 .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
+
+            CreateMap<ScriptGeneratorRequestDto, ScriptGeneratorRequest>()
+                .IncludeBase<SimplePromptRequestDto, SimpleCommandRequest>();
+
+            CreateMap<string, EScriptShell>().ConvertUsing(s => Enum.Parse<EScriptShell>(s));
         }
     }
 }
