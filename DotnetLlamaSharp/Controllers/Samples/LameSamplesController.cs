@@ -845,6 +845,19 @@ namespace DotnetLlamaSharp.Controllers.Samples
             return StatusCode((int)HttpStatusCode.InternalServerError);
         }
 
+        [HttpPost("/agents/example/sysadming-agent")]
+        public async Task<IActionResult> LameAgentExample_SysAdminAgent([FromBody] SimplePromptRequestDto request)
+        {
+            var commandReq = _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request);
+
+            var response = await _samplesService.AgentPromptSample_SysAdminAgent(request.Settings.Model ?? string.Empty, request.Prompt, commandReq.Settings);
+
+            if (response != null)
+                return Ok(response);
+
+            return StatusCode((int)HttpStatusCode.InternalServerError);
+        }
+
         [HttpPost("/agents/example/philosopher-agent")]
         public async Task<IActionResult> LameAgentExample_PhilosopherAgent([FromBody] ChatPromptRequestDto request)
         {

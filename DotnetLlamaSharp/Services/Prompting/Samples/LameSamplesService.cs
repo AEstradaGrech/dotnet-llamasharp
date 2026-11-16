@@ -1191,5 +1191,11 @@ namespace DotnetLlamaSharp.Services.Prompting.Samples
 
             return await cmd.Prompt(new ScriptExecutionCommandRequest(request.ScriptPath, request.Prompt, isGuidanceAppend: true, model: request.Settings.Model));
         }
+
+        public async Task<string> AgentPromptSample_SysAdminAgent(string model, string prompt, PromptSettings? settings = null)
+            => await _agentsFactory.CreateSysAdminAgent(model, settings)
+               .WithBroadcast(agentBroadcaster)
+               .WithLangfuseTraces(new TraceConfig())
+               .RunPrompt(prompt, reasoning: EReasoning.None);
     }
 }
