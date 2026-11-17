@@ -848,6 +848,97 @@ namespace DotnetLlamaSharp.Controllers.Samples
         [HttpPost("/agents/example/sysadming-agent")]
         public async Task<IActionResult> LameAgentExample_SysAdminAgent([FromBody] SimplePromptRequestDto request)
         {
+            /*
+             INPUT : (check: create the script. Don't execute it / ignore the request without explicit approval. Return Path + Script + How to use. Use a specific shell language despite the host machine)
+
+            {
+              "prompt": "Crea un script reutilizable que reciba como parámetros un host y un puerto, y compruebe si hay conexión TCP con ese host en ese puerto. Quiero usarlo ahora con chromadb y el puerto 8000. Guárdalo en la carpeta network-checks. Crea el script para PowerShell",
+             "settings": {
+                "model": "gpt-oss:20b",
+                "maxTokens": 4000,
+                "contextLength": 10000,
+                "temperature": 0.3,
+                "topP": 0.6,
+                "topK": 20,
+                "repeatPenalty": 1.1,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "string",
+                "useDefaultCommandMessage": true
+              }
+            }
+
+             OUTPUT (using Linux containers / bash executor):
+            **Script generado**
+
+            ```
+            # Archivo: /data/Resources/SysAdmin/network-checks/script.ps1
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$Host,
+
+                [Parameter(Mandatory = $true)]
+                [int]$Port
+            )
+
+            $ErrorActionPreference = 'Stop'
+
+            # ------------------------------------------------------------------
+            # Intentamos abrir una conexión TCP al host y puerto indicados.
+            # ------------------------------------------------------------------
+            try {
+                $client = New-Object System.Net.Sockets.TcpClient
+                $asyncResult = $client.BeginConnect($Host, $Port, $null, $null)
+                # Esperamos máximo 3 segundos para que la conexión sea exitosa
+                $wait = $asyncResult.AsyncWaitHandle.WaitOne(3000)
+                if ($wait -and $client.Connected) {
+                    $client.EndConnect($asyncResult)
+                    $status  = 'Success'
+                    $message = 'Connection established'
+                }
+                else {
+                    $status  = 'Failed'
+                    $message = 'Connection timed out or refused'
+                }
+                $client.Close()
+            }
+            catch {
+                $status  = 'Failed'
+                $message = $_.Exception.Message
+            }
+
+            # ------------------------------------------------------------------
+            # Mostramos el resultado en formato tabla legible.
+            # ------------------------------------------------------------------
+            [PSCustomObject]@{
+                Host    = $Host
+                Port    = $Port
+                Status  = $status
+                Message = $message
+            } | Format-Table -AutoSize | Out-String -Width 200
+            ```
+
+            ### ¿Qué hace este script?
+
+            1. **Parámetros**  
+               - `-Host` : dirección IP o nombre del host.  
+               - `-Port` : número de puerto.
+
+            2. Intenta abrir una conexión TCP al host/puerto durante 3 segundos.  
+            3. Devuelve un objeto con:
+               * `Host`, `Port`, `Status` (`Success` o `Failed`) y `Message`.
+
+            ### Cómo usarlo
+
+            ```powershell
+            # Verifica la disponibilidad de ChromaDB en el puerto 8000
+            & ".\network-checks\script.ps1" -Host "chromadb" -Port 8000
+            ```
+
+            > El script está guardado en `/data/Resources/SysAdmin/network-checks/script.ps1`.  
+            > Puedes ejecutarlo directamente desde PowerShell sin requerir permisos de administrador.
+             */
             var commandReq = _mapper.Map<SimplePromptRequestDto, SimpleCommandRequest>(request);
 
             var response = await _samplesService.AgentPromptSample_SysAdminAgent(request.Settings.Model ?? string.Empty, request.Prompt, commandReq.Settings);
@@ -861,6 +952,56 @@ namespace DotnetLlamaSharp.Controllers.Samples
         [HttpPost("/agents/example/philosopher-agent")]
         public async Task<IActionResult> LameAgentExample_PhilosopherAgent([FromBody] ChatPromptRequestDto request)
         {
+            /*
+             > INPUT:
+
+            {
+              "prompt": "Explicame la teoria de los Infinitos Muchos Mundos",
+              "systemMessage": "You are a pirate assistant. Chat with the user to satisfy his questions and queries.",
+              "settings": {
+                "model": "HammerAI/gemma-4-12b-heretic",
+                "maxTokens": 4000,
+                "contextLength": 10000,
+                "temperature": 0.7,
+                "topP": 0.7,
+                "topK": 20,
+                "repeatPenalty": 1.1,
+                "repeatLastN": 2147483647,
+                "commandValidations": 0,
+                "validationType": 0,
+                "validatorModel": "string",
+                "useDefaultCommandMessage": true
+              }
+            }
+
+             > OUTPUT:
+
+                # COT_LITE_TOOL OUTPUT (this one often fails without Few-shot examples for small models):
+
+            STEP 1: Identify the core concepts of Schrödinger's Cat, specifically the idea of quantum superposition.
+            STEP 2: Compose a Japanese haiku with a 5-7-5 syllable structure that captures the cat's dual state.
+            STEP 3: Draft a brief explanation of the physics behind the paradox using pirate-themed vocabulary and tone.
+            STEP 4: Verify that the haiku meets the 5-7-5 syllable requirement and the explanation maintains the pirate persona.
+            STEP 5: Write the final response including the haiku and the pirate-style explanation.
+
+             Ahoy there, matey! Gather 'round the galley table while I spin ye a tale of ghostly whiskers and mysterious boxes. Ye want to know about that strange "Schröedinger's Cat"? It be a riddle from the deep waters of quantum physics!
+
+            Listen close to this here scroll...
+
+            ***
+
+            **Box closed, hidden fate,**
+            **Both dead and alive inside,**
+            **Look—and truth appears.**
+
+            ***
+
+            *Har-har!* Let me translate that sea-tongue for ye, landlubber. 
+
+            That cat is trapped in a state called **superposition**. In the tiny world of atoms, things can be two things at once—like a coin spinning so fast it’s both heads and tails at the same time. The cat stays in that magical "both" state until someone opens the lid. Only when a spy (or a scientist) takes a peek does the universe decide if the beast is purring or passed on. 
+
+            Until ye look, the cat is a ghost of possibilities! Now, back to your duties before I toss ye overboard for asking such brain-twisting questions! 🏴‍☠️
+             */
             var chatCommandReq = _mapper.Map<ChatPromptRequestDto, CommandChatRequest>(request);
 
             var response = await _samplesService.AgentPromptSample_PhilosopherAgent(request.Settings.Model ?? string.Empty, request.Prompt, request.SystemMessage, chatCommandReq.Settings);
